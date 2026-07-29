@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Collabix — Work Lounge · Brand palette (Haloweave spec v1.0) */
+  --navy: #0b1f3a;
+  --navy-mid: #162942;
+  --gold: #c89b53;
+  --gold-light: #d9b97a;
+  --ivory: #f7f5f2;
+  --graphite: #4a4f58;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--navy);
+  color: var(--ivory);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--navy);
+}
+
+/* The 'ix' matrix grid motif — low-contrast gold lattice, radially masked */
+.grid-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(200, 155, 83, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 155, 83, 0.06) 1px, transparent 1px);
+  background-size: 46px 46px;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 25%, transparent 100%);
+}
+
+/* Warm navy vignette to give the flat background depth */
+.hero-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 38%, rgba(200, 155, 83, 0.10), transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.reveal.d1 { animation-delay: 0.12s; }
+.reveal.d2 { animation-delay: 0.24s; }
+.reveal.d3 { animation-delay: 0.36s; }
+.reveal.d4 { animation-delay: 0.48s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+    opacity: 1;
+  }
+}
