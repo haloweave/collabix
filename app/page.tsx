@@ -21,7 +21,7 @@ export default function Home() {
 
       {/* Headline */}
       <h1 className="reveal d2 relative z-10 max-w-[16ch] text-balance text-4xl font-bold leading-[1.03] tracking-[-0.03em] text-white sm:text-6xl">
-        Something serious is <em className="not-italic text-gold">coming.</em>
+        Under construction. <em className="not-italic text-gold">Coming soon.</em>
       </h1>
 
       {/* Tagline */}
