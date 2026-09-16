@@ -45,3 +45,14 @@ app/
   globals.css    # brand tokens, grid-texture motif, reveal animation
 public/          # logos + brand marks
 ```
+
+## Demo-based website
+
+The coming-soon page remains at `/`. The new experience is at `/home`, with
+`/home/amenities`, `/home/pricing`, and `/home/booking`. The development proposal is
+available directly at `/home/proposal`. These routes are previews and are marked
+`noindex`; booking does not persist data, collect payment, or send notifications.
+
+See [the feature audit and architecture plan](docs/coworking-architecture.md) for
+all proposed platform capabilities, open-source comparisons, data model and rollout.
+Run `npm run dev` and open `http://localhost:3000/home`.
