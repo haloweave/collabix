@@ -819,7 +819,18 @@
 .collabix-site .floor-seats {display:grid;grid-template-columns:repeat(6,1fr);gap:12px 6px;margin-top:16px;}
 .collabix-site .floor-seats button {border:2px solid var(--gold);border-radius:50%;aspect-ratio:1;background:transparent;color:var(--gold);font-size:.75rem;}
 .collabix-site .floor-seats button.selected {background:var(--gold);color:var(--navy);}
-.collabix-site .floor-seats button:disabled {border-color:#ffffff60;background:#ffffff30;color:white;}
+.collabix-site .floor-seats button:disabled {border-color:var(--line);background:#e7e2d8;color:#a9a293;cursor:not-allowed;}
+/* Live-booking additions: error, hold countdown, OTP input, room picker. */
+.collabix-site .booking-error {background:#fbeaea;border:1px solid #e5b3b3;color:#8a2b2b;border-radius:var(--radius);padding:.7rem 1rem;font-size:.86rem;margin:.4rem 0 1rem;}
+.collabix-site .hold-timer {font-size:.9rem;color:var(--graphite);}
+.collabix-site .hold-timer strong {font-family:var(--font-mono);color:var(--gold);font-size:1.05rem;}
+.collabix-site .hold-timer.expired {color:#8a2b2b;}
+.collabix-site .otp-input {font-family:var(--font-mono);letter-spacing:.5em;font-size:1.3rem;text-align:center;}
+.collabix-site .room-choices {margin-top:8px;}
+.collabix-site .room-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:12px;margin-top:12px;}
+.collabix-site .room-grid button {border:2px solid var(--gold);border-radius:var(--radius);padding:.9rem .6rem;background:transparent;color:var(--gold);font-size:.85rem;font-weight:600;}
+.collabix-site .room-grid button.selected {background:var(--gold);color:var(--navy);}
+.collabix-site .room-grid button:disabled {border-color:var(--line);background:#e7e2d8;color:#a9a293;cursor:not-allowed;}
 .collabix-site .summary {align-self:start;}
 .collabix-site {--font-sans:var(--font-inter),Arial,sans-serif;--font-mono:var(--font-jetbrains-mono),monospace;}
 .collabix-site .btn-outline {border:1px solid var(--line);background:transparent;color:var(--navy);}
