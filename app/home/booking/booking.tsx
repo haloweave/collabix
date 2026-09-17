@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { spaces, money } from "@/lib/spaces";
+import { autoAssignDesks } from "@/lib/floorplan";
 import FloorMap from "./floor-map";
 
 type Slot = { resourceId: string; code: string; available: boolean };
 type Quote = { subtotalMinor: number; taxMinor: number; totalMinor: number };
+type SpaceKey = (typeof spaces)[number]["key"];
 
 function localDate() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -17,8 +19,8 @@ function localDate() {
 
 const rupees = (minor: number) => money(Math.round(minor / 100));
 
-// Steps: Space(0) · Date & seat(1) · Details(2) · Verify(3) · Done(4)
-const STEPS = ["Space", "Date & seat", "Details", "Verify", "Done"];
+// Steps: Book(0) · Details(1) · Verify(2) · Done(3)
+const STEPS = ["Book", "Details", "Verify", "Done"];
 
 export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [key, setKey] = useState(
@@ -28,24 +30,51 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [date, setDate] = useState(() => localDate()); // default to today (IST)
   const [hour, setHour] = useState(8);
   const [duration, setDuration] = useState(8);
-  const [resourceId, setResourceId] = useState<string | null>(null);
+  const [seatCount, setSeatCount] = useState(1);
+  const [autoAssign, setAutoAssign] = useState(true);
+  const [manualIds, setManualIds] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [reservationId, setReservationId] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
+  const [confirmedCodes, setConfirmedCodes] = useState<string[] | null>(null);
 
   const space = spaces.find((s) => s.key === key)!;
+  const isDesk = space.desk;
   const label = STEPS[step];
-  const selected = slots.find((s) => s.resourceId === resourceId);
+
+  const availableCount = slots.filter((s) => s.available).length;
+  const codeById = new Map(slots.map((s) => [s.resourceId, s.code]));
+
+  // Auto-selection is derived, not stored: when the toggle is on we cluster
+  // `seatCount` available desks live off the current slots. Manual picks live
+  // in manualIds. Rooms are always manual (single-select). Cheap enough to
+  // recompute each render (~4 dozen seats), so no memo needed.
+  const autoIds =
+    isDesk && autoAssign
+      ? autoAssignDesks(
+          slots.filter((s) => s.available).map((s) => s.code),
+          seatCount,
+        )
+          .map((c) => slots.find((s) => s.code === c)?.resourceId)
+          .filter((id): id is string => Boolean(id))
+      : [];
+
+  const selectedIds = isDesk && autoAssign ? autoIds : manualIds;
+  const selectedCodes = selectedIds
+    .map((id) => codeById.get(id))
+    .filter((c): c is string => Boolean(c));
+  // Seats that drive the price: how many the guest has actually selected, or
+  // (before any selection) the auto target, so the estimate is never zero.
+  const priceSeats = isDesk ? selectedIds.length || seatCount : 1;
 
   const windowValid =
     date !== "" && date >= localDate() && hour + duration <= 20;
@@ -56,9 +85,9 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
       : phone.trim();
 
   // Live availability: refetch whenever the space or window changes on the
-  // combined step. Selection is cleared by the controls that change the window.
+  // Book step. Selection is cleared by the controls that change the window.
   useEffect(() => {
-    if (step !== 1 || !windowValid) return;
+    if (step !== 0 || !windowValid) return;
     let cancelled = false;
     (async () => {
       setLoadingSlots(true);
@@ -99,12 +128,53 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   ).padStart(2, "0")}`;
 
   const canContinue =
-    label === "Space" ||
-    (label === "Date & seat" && windowValid && selected?.available === true);
+    label === "Book" && windowValid && selectedIds.length >= 1;
+
+  function pickSpace(nextKey: SpaceKey) {
+    setKey(nextKey);
+    setManualIds([]);
+    setSeatCount(1);
+    setAutoAssign(true);
+    setSlots([]);
+  }
+
+  function resetSelection() {
+    setManualIds([]);
+    setAutoAssign(true);
+  }
+
+  // A tap on the floor plan. Rooms: single-select one room. Desks: switch to
+  // manual and toggle the seat, seeding from whatever was auto-selected so the
+  // auto picks are taken into consideration.
+  function selectSeat(resourceId: string) {
+    if (!isDesk) {
+      setManualIds((prev) => (prev[0] === resourceId ? [] : [resourceId]));
+      return;
+    }
+    if (autoAssign) {
+      const base = autoIds.includes(resourceId)
+        ? autoIds.filter((id) => id !== resourceId)
+        : [...autoIds, resourceId];
+      setManualIds(base);
+      setAutoAssign(false);
+      return;
+    }
+    setManualIds((prev) =>
+      prev.includes(resourceId)
+        ? prev.filter((id) => id !== resourceId)
+        : [...prev, resourceId],
+    );
+  }
+
+  function changeSeatCount(next: number) {
+    const clamped = Math.max(1, Math.min(next, availableCount || 1));
+    setSeatCount(clamped);
+    setAutoAssign(true); // bumping the count means "auto-pick this many"
+  }
 
   async function submitDetails(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim().length < 2 || !resourceId) return;
+    if (name.trim().length < 2 || selectedIds.length === 0) return;
     setBusy(true);
     setError(null);
     try {
@@ -113,7 +183,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           planKey: key,
-          resourceId,
+          resourceIds: selectedIds,
           date,
           start: hour,
           duration,
@@ -125,16 +195,19 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
       if (!res.ok) {
         setError(
           data.error === "seat_unavailable"
-            ? "That spot was just taken. Please pick another."
-            : "We couldn't hold that spot. Please check your details.",
+            ? "One of those spots was just taken. Please pick again."
+            : "We couldn't hold your spots. Please check your details.",
         );
-        if (data.error === "seat_unavailable") setStep(1);
+        if (data.error === "seat_unavailable") {
+          resetSelection();
+          setStep(0);
+        }
         return;
       }
-      setReservationId(data.reservationId);
+      setBookingId(data.bookingId);
       setHoldExpiresAt(data.holdExpiresAt);
       setQuote(data.quote);
-      setStep(3); // Verify
+      setStep(2); // Verify
       await sendOtp();
     } finally {
       setBusy(false);
@@ -153,7 +226,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
 
   async function verifyAndConfirm(e: React.FormEvent) {
     e.preventDefault();
-    if (otp.trim().length < 4 || !reservationId) return;
+    if (otp.trim().length < 4 || !bookingId) return;
     setBusy(true);
     setError(null);
     try {
@@ -169,7 +242,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
       const c = await fetch("/api/bookings/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ reservationId }),
+        body: JSON.stringify({ bookingId }),
       });
       const data = await c.json();
       if (!c.ok) {
@@ -180,8 +253,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
         );
         return;
       }
-      setConfirmedCode(selected?.code ?? null);
-      setStep(4); // Done
+      setConfirmedCodes(selectedCodes);
+      setStep(3); // Done
     } finally {
       setBusy(false);
     }
@@ -190,18 +263,26 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   function restart() {
     setStep(0);
     setDate(localDate());
-    setResourceId(null);
+    setSeatCount(1);
+    setAutoAssign(true);
+    setManualIds([]);
     setName("");
     setEmail("");
     setPhone("");
     setSlots([]);
-    setReservationId(null);
+    setBookingId(null);
     setHoldExpiresAt(null);
     setQuote(null);
     setOtp("");
     setError(null);
-    setConfirmedCode(null);
+    setConfirmedCodes(null);
   }
+
+  const spotSummary = isDesk
+    ? selectedCodes.length
+      ? `${selectedCodes.length} desk${selectedCodes.length > 1 ? "s" : ""} · ${selectedCodes.join(", ")}`
+      : "Choose your desks"
+    : selectedCodes[0] ?? "Choose a room";
 
   return (
     <section className="pad section-ivory booking-page">
@@ -230,38 +311,28 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               </p>
             )}
 
-            {label === "Space" && (
+            {label === "Book" && (
               <>
-                <h2>Choose your space.</h2>
-                <div className="booking-options">
+                <h2>Pick your space, time and seats.</h2>
+
+                <span className="filter-label">Space</span>
+                <div className="space-pills">
                   {spaces.map((s) => (
                     <button
-                      className={`opt ${key === s.key ? "sel" : ""}`}
                       key={s.key}
+                      className={`pill ${key === s.key ? "sel" : ""}`}
                       aria-pressed={key === s.key}
-                      onClick={() => {
-                        setKey(s.key);
-                        setResourceId(null);
-                        setSlots([]);
-                      }}
+                      onClick={() => pickSpace(s.key)}
                     >
-                      <span className="oinfo">
-                        <span className="on">{s.name}</span>
-                        <span className="od">{s.description}</span>
-                      </span>
-                      <span className="oprice">
-                        <span className="amt">{money(s.rate)}</span>
-                        <span className="per"> / hour</span>
+                      <span className="pn">{s.name}</span>
+                      <span className="pp">
+                        {money(s.rate)}
+                        <span className="per">/hr</span>
                       </span>
                     </button>
                   ))}
                 </div>
-              </>
-            )}
 
-            {label === "Date & seat" && (
-              <>
-                <h2>Pick your time, see live spots.</h2>
                 <div className="booking-when">
                   <div className="field">
                     <label htmlFor="booking-date">Date · Bengaluru time</label>
@@ -272,7 +343,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       value={date}
                       onChange={(e) => {
                         setDate(e.target.value);
-                        setResourceId(null);
+                        resetSelection();
                       }}
                     />
                   </div>
@@ -283,7 +354,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       value={hour}
                       onChange={(e) => {
                         setHour(Number(e.target.value));
-                        setResourceId(null);
+                        resetSelection();
                       }}
                     >
                       {Array.from({ length: 13 - duration }, (_, i) => i + 8).map(
@@ -296,6 +367,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     </select>
                   </div>
                 </div>
+
                 <span className="filter-label">Duration</span>
                 <div className="dur-toggle">
                   {[1, 2, 4, 8].map((d) => (
@@ -306,13 +378,52 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       onClick={() => {
                         setDuration(d);
                         setHour(Math.min(hour, 20 - d));
-                        setResourceId(null);
+                        resetSelection();
                       }}
                     >
                       {d === 8 ? "Full day" : `${d} ${d === 1 ? "hour" : "hours"}`}
                     </button>
                   ))}
                 </div>
+
+                {isDesk && (
+                  <div className="seats-control">
+                    <div className="seats-count">
+                      <span className="filter-label">Seats</span>
+                      <div className="stepper" role="group" aria-label="Number of seats">
+                        <button
+                          type="button"
+                          aria-label="One fewer seat"
+                          disabled={seatCount <= 1 || !autoAssign}
+                          onClick={() => changeSeatCount(seatCount - 1)}
+                        >
+                          −
+                        </button>
+                        <span className="stepper-val" aria-live="polite">
+                          {autoAssign ? seatCount : selectedIds.length}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="One more seat"
+                          disabled={
+                            !autoAssign || seatCount >= (availableCount || 1)
+                          }
+                          onClick={() => changeSeatCount(seatCount + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <label className="auto-toggle">
+                      <input
+                        type="checkbox"
+                        checked={autoAssign}
+                        onChange={(e) => setAutoAssign(e.target.checked)}
+                      />
+                      <span>Auto-select seats</span>
+                    </label>
+                  </div>
+                )}
 
                 <div className="booking-avail">
                   {!windowValid ? (
@@ -326,19 +437,22 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   ) : (
                     <>
                       <span className="filter-label">
-                        Live floor plan · tap a spot
+                        Live floor plan ·{" "}
+                        {isDesk
+                          ? autoAssign
+                            ? "auto-selected — tap to choose your own"
+                            : "tap seats to select"
+                          : "tap a room"}
                       </span>
                       <FloorMap
                         slots={slots}
-                        selectedResourceId={resourceId}
-                        onSelect={(id) =>
-                          setResourceId(resourceId === id ? null : id)
-                        }
+                        selectedResourceIds={selectedIds}
+                        onSelect={selectSeat}
                         priceLabel={`${money(space.rate)}/hr`}
                       />
                       <p aria-live="polite" className="avail-hint">
-                        {selected
-                          ? `Selected: ${selected.code}`
+                        {selectedCodes.length
+                          ? `Selected: ${selectedCodes.join(", ")}`
                           : "Select an available spot to continue."}
                       </p>
                     </>
@@ -351,8 +465,9 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               <>
                 <h2>Your workday, at a glance.</h2>
                 <p>
-                  We&#39;ll hold your spot and send a one-time code to your phone
-                  to confirm — no password needed.
+                  We&#39;ll hold your{" "}
+                  {selectedCodes.length > 1 ? "spots" : "spot"} and send a
+                  one-time code to your phone to confirm — no password needed.
                 </p>
                 <form onSubmit={submitDetails}>
                   <div className="field">
@@ -395,7 +510,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     <button
                       className="btn btn-outline"
                       type="button"
-                      onClick={() => setStep(1)}
+                      onClick={() => setStep(0)}
                     >
                       ← Back
                     </button>
@@ -420,7 +535,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                 <h2>Confirm it&#39;s you.</h2>
                 {holdExpiresAt && remaining > 0 ? (
                   <p className="hold-timer" aria-live="polite">
-                    Spot held for <strong>{mmss}</strong>
+                    {selectedCodes.length > 1 ? "Spots held" : "Spot held"} for{" "}
+                    <strong>{mmss}</strong>
                   </p>
                 ) : (
                   <p className="hold-timer expired">Your hold has expired.</p>
@@ -467,13 +583,19 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               <div className="confirm">
                 <h2>You&#39;re booked in.</h2>
                 <p>
-                  Thanks, {name}. Your spot is confirmed and your account is set
-                  up — next time, just verify your number to book.
+                  Thanks, {name}. Your{" "}
+                  {confirmedCodes && confirmedCodes.length > 1
+                    ? "spots are"
+                    : "spot is"}{" "}
+                  confirmed and your account is set up — next time, just verify
+                  your number to book.
                 </p>
                 <div className="confirm-details">
                   <p>
                     {space.name}
-                    {confirmedCode ? ` · ${confirmedCode}` : ""}
+                    {confirmedCodes && confirmedCodes.length
+                      ? ` · ${confirmedCodes.join(", ")}`
+                      : ""}
                   </p>
                   <p>
                     {date} · {hour}:00–{hour + duration}:00 IST
@@ -491,19 +613,15 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               </div>
             )}
 
-            {(label === "Space" || label === "Date & seat") && (
+            {label === "Book" && (
               <div className="step-actions">
-                <button
-                  className="btn btn-outline"
-                  disabled={step === 0}
-                  onClick={() => setStep(step - 1)}
-                >
+                <button className="btn btn-outline" disabled onClick={() => {}}>
                   ← Back
                 </button>
                 <button
                   className="btn btn-gold"
                   disabled={!canContinue}
-                  onClick={() => setStep(step + 1)}
+                  onClick={() => setStep(1)}
                 >
                   Continue →
                 </button>
@@ -521,16 +639,18 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                 ["Space", space.name],
                 ["Date", date || "Choose a date"],
                 ["Time", `${hour}:00–${hour + duration}:00 IST`],
-                ["Spot", selected ? selected.code : "Choose a spot"],
+                ["Spot", spotSummary],
                 [
                   "Subtotal",
-                  quote ? rupees(quote.subtotalMinor) : money(space.rate * duration),
+                  quote
+                    ? rupees(quote.subtotalMinor)
+                    : money(space.rate * duration * priceSeats),
                 ],
                 [
                   "Tax (18%)",
                   quote
                     ? rupees(quote.taxMinor)
-                    : money(Math.round(space.rate * duration * 0.18)),
+                    : money(Math.round(space.rate * duration * priceSeats * 0.18)),
                 ],
               ].map(([k, v]) => (
                 <div className="s-line" key={k}>
@@ -545,8 +665,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                 {quote
                   ? rupees(quote.totalMinor)
                   : money(
-                      space.rate * duration +
-                        Math.round(space.rate * duration * 0.18),
+                      space.rate * duration * priceSeats +
+                        Math.round(space.rate * duration * priceSeats * 0.18),
                     )}
               </span>
             </div>

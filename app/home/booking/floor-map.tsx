@@ -10,19 +10,16 @@ type Slot = { resourceId: string; code: string; available: boolean };
 // everything else is drawn faint for orientation.
 export default function FloorMap({
   slots,
-  selectedResourceId,
+  selectedResourceIds,
   onSelect,
   priceLabel,
 }: {
   slots: Slot[];
-  selectedResourceId: string | null;
+  selectedResourceIds: string[];
   onSelect: (resourceId: string) => void;
   priceLabel?: string;
 }) {
-  const seats = renderSeats(
-    slots,
-    selectedResourceId ? [selectedResourceId] : [],
-  );
+  const seats = renderSeats(slots, selectedResourceIds);
 
   return (
     <div className="floor-map">
