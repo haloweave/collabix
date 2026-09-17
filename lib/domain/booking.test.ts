@@ -72,6 +72,7 @@ describe("computeQuote", () => {
     expect(q).toEqual({
       rateMinor: 12000,
       hours: 2,
+      seats: 1,
       subtotalMinor: 24000,
       taxMinor: 4320,
       totalMinor: 28320,
@@ -83,6 +84,19 @@ describe("computeQuote", () => {
     const q = computeQuote(12500, 1); // 12500 * 0.18 = 2250 exact
     expect(q.taxMinor).toBe(2250);
     expect(q.totalMinor).toBe(14750);
+  });
+
+  test("defaults to a single seat", () => {
+    expect(computeQuote(12000, 2).seats).toBe(1);
+  });
+
+  test("scales subtotal, tax and total by the number of seats", () => {
+    const one = computeQuote(12000, 2, 1);
+    const three = computeQuote(12000, 2, 3);
+    expect(three.seats).toBe(3);
+    expect(three.subtotalMinor).toBe(one.subtotalMinor * 3);
+    expect(three.taxMinor).toBe(Math.round(one.subtotalMinor * 3 * 0.18));
+    expect(three.totalMinor).toBe(three.subtotalMinor + three.taxMinor);
   });
 });
 

@@ -52,18 +52,24 @@ export function toUtcWindow(input: WindowInput): { startAt: Date; endAt: Date } 
 export type Quote = {
   rateMinor: number;
   hours: number;
+  seats: number;
   subtotalMinor: number;
   taxMinor: number;
   totalMinor: number;
 };
 
 /** Server-computed price in integer minor units (paise). Never trust the client. */
-export function computeQuote(rateMinor: number, hours: number): Quote {
-  const subtotalMinor = rateMinor * hours;
+export function computeQuote(
+  rateMinor: number,
+  hours: number,
+  seats = 1,
+): Quote {
+  const subtotalMinor = rateMinor * hours * seats;
   const taxMinor = Math.round(subtotalMinor * TAX_RATE);
   return {
     rateMinor,
     hours,
+    seats,
     subtotalMinor,
     taxMinor,
     totalMinor: subtotalMinor + taxMinor,
