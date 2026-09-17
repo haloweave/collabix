@@ -19,5 +19,7 @@ export async function POST(req: Request) {
   if (!plan) {
     return NextResponse.json({ error: "unknown_plan" }, { status: 404 });
   }
-  return NextResponse.json({ quote: computeQuote(plan.rateMinor, parsed.data.duration) });
+  return NextResponse.json({
+    quote: computeQuote(plan.rateMinor, parsed.data.duration, parsed.data.seats),
+  });
 }

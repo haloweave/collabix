@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status });
   }
   return NextResponse.json({
-    reservationId: result.reservationId,
     bookingId: result.bookingId,
+    reservationIds: result.reservationIds,
     holdExpiresAt: result.holdExpiresAt,
     quote: result.quote,
   });

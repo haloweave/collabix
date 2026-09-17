@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { auth } from "@/lib/auth";
-import { confirmReservation } from "@/lib/domain/reservations";
+import { confirmBooking } from "@/lib/domain/reservations";
 import { confirmBody } from "@/lib/api/validation";
 
 // Confirm a held reservation. If the guest verified an OTP during checkout,
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
   const memberId = session?.user?.id ?? parsed.data.memberId;
 
-  const result = await confirmReservation(db, {
-    reservationId: parsed.data.reservationId,
+  const result = await confirmBooking(db, {
+    bookingId: parsed.data.bookingId,
     memberId,
   });
   if (!result.ok) {
