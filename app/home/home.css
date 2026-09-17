@@ -180,7 +180,7 @@
 .collabix-site .site-footer { background: var(--navy); color: rgba(247,245,242,.6); position: relative; }
 .collabix-site .site-footer .grid-texture::before { opacity: .7; }
 .collabix-site .footer-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 3rem; padding-block: clamp(56px,7vw,88px); }
-.collabix-site .site-footer .flogo { height: 34px; margin-bottom: 1.4rem; }
+.collabix-site .site-footer .flogo { height: 34px; width: auto; margin-bottom: 1.4rem; }
 .collabix-site .site-footer h5 {
   font-family: var(--font-mono); font-size: .72rem; letter-spacing: .28em;
   text-transform: uppercase; color: var(--gold); margin-bottom: 1.2rem; font-weight: 500;
@@ -820,7 +820,13 @@
 .collabix-site .floor-seats button {border:2px solid var(--gold);border-radius:50%;aspect-ratio:1;background:transparent;color:var(--gold);font-size:.75rem;}
 .collabix-site .floor-seats button.selected {background:var(--gold);color:var(--navy);}
 .collabix-site .floor-seats button:disabled {border-color:var(--line);background:#e7e2d8;color:#a9a293;cursor:not-allowed;}
-/* Live-booking additions: error, hold countdown, OTP input, room picker. */
+/* Booking page: clear the fixed navbar now that the hero is gone. */
+.collabix-site .booking-page { padding-top: calc(76px + clamp(20px,4vw,40px)); }
+/* Live-booking additions: combined date+seat step, error, countdown, OTP, rooms. */
+.collabix-site .booking-when {display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media (max-width:520px){.collabix-site .booking-when {grid-template-columns:1fr;}}
+.collabix-site .booking-avail {margin-top:1.6rem;padding-top:1.4rem;border-top:1px solid var(--line);}
+.collabix-site .avail-hint {font-size:.9rem;color:var(--graphite);margin:.6rem 0 0;}
 .collabix-site .booking-error {background:#fbeaea;border:1px solid #e5b3b3;color:#8a2b2b;border-radius:var(--radius);padding:.7rem 1rem;font-size:.86rem;margin:.4rem 0 1rem;}
 .collabix-site .hold-timer {font-size:.9rem;color:var(--graphite);}
 .collabix-site .hold-timer strong {font-family:var(--font-mono);color:var(--gold);font-size:1.05rem;}
