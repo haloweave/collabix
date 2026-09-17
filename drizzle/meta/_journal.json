@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789650575373,
+      "tag": "0000_light_sasquatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789650586363,
+      "tag": "0001_reservation_no_overlap",
+      "breakpoints": true
+    }
+  ]
+}
