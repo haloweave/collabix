@@ -24,7 +24,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     spaces.find((s) => s.key === initialSpace)?.key ?? "hotdesk",
   );
   const [step, setStep] = useState(0);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => localDate()); // default to today (IST)
   const [hour, setHour] = useState(8);
   const [duration, setDuration] = useState(8);
   const [resourceId, setResourceId] = useState<string | null>(null);
@@ -188,7 +188,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
 
   function restart() {
     setStep(0);
-    setDate("");
+    setDate(localDate());
     setResourceId(null);
     setName("");
     setEmail("");
