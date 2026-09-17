@@ -1,0 +1,24 @@
+# Local development database. Mirrors the production target (managed Postgres);
+# the booking engine's concurrency guarantee relies on Postgres-specific
+# features (btree_gist exclusion constraints) that SQLite cannot provide.
+services:
+  db:
+    image: postgres:16
+    container_name: collabix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: collabix
+      POSTGRES_PASSWORD: collabix
+      POSTGRES_DB: collabix
+    ports:
+      - "5432:5432"
+    volumes:
+      - collabix-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collabix -d collabix"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  collabix-db-data:
