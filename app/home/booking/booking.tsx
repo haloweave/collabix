@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { spaces, money } from "@/lib/spaces";
 
 type Slot = { resourceId: string; code: string; available: boolean };
@@ -15,6 +15,9 @@ function localDate() {
 }
 
 const rupees = (minor: number) => money(Math.round(minor / 100));
+
+// Steps: Space(0) · Date & seat(1) · Details(2) · Verify(3) · Done(4)
+const STEPS = ["Space", "Date & seat", "Details", "Verify", "Done"];
 
 export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [key, setKey] = useState(
@@ -34,22 +37,51 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [reservationId, setReservationId] = useState<string | null>(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedCode, setConfirmedCode] = useState<string | null>(null);
 
   const space = spaces.find((s) => s.key === key)!;
-  const steps = ["Space", "Date & time", "Choose", "Details", "Verify", "Done"];
-  const label = steps[step];
+  const label = STEPS[step];
   const selected = slots.find((s) => s.resourceId === resourceId);
 
-  const phoneE164 = phone.replace(/\D/g, "").length === 10
-    ? `+91${phone.replace(/\D/g, "")}`
-    : phone.trim();
+  const windowValid =
+    date !== "" && date >= localDate() && hour + duration <= 20;
 
-  // Live hold countdown.
+  const phoneE164 =
+    phone.replace(/\D/g, "").length === 10
+      ? `+91${phone.replace(/\D/g, "")}`
+      : phone.trim();
+
+  // Live availability: refetch whenever the space or window changes on the
+  // combined step. Selection is cleared by the controls that change the window.
+  useEffect(() => {
+    if (step !== 1 || !windowValid) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingSlots(true);
+      try {
+        const r = await fetch(
+          `/api/availability?plan=${key}&date=${date}&start=${hour}&duration=${duration}`,
+        );
+        const d = await r.json();
+        if (!cancelled) setSlots(r.ok ? d.resources : []);
+      } catch {
+        if (!cancelled) {
+          setSlots([]);
+          setError("Could not load availability. Please try again.");
+        }
+      } finally {
+        if (!cancelled) setLoadingSlots(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, key, date, hour, duration, windowValid]);
+
+  // Live hold countdown on the Verify step.
   const [remaining, setRemaining] = useState(0);
   useEffect(() => {
     if (!holdExpiresAt) return;
@@ -61,42 +93,13 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [holdExpiresAt]);
-  const mmss = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
-
-  const loadSlots = useCallback(async () => {
-    setLoadingSlots(true);
-    setError(null);
-    try {
-      const r = await fetch(
-        `/api/availability?plan=${key}&date=${date}&start=${hour}&duration=${duration}`,
-      );
-      const data = await r.json();
-      setSlots(r.ok ? data.resources : []);
-    } catch {
-      setError("Could not load availability. Please try again.");
-      setSlots([]);
-    } finally {
-      setLoadingSlots(false);
-    }
-  }, [key, date, hour, duration]);
+  const mmss = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(
+    remaining % 60,
+  ).padStart(2, "0")}`;
 
   const canContinue =
     label === "Space" ||
-    (label === "Date & time" &&
-      date !== "" &&
-      date >= localDate() &&
-      hour + duration <= 20) ||
-    (label === "Choose" && selected?.available === true);
-
-  async function next() {
-    setError(null);
-    if (label === "Date & time") {
-      setStep(step + 1);
-      await loadSlots();
-      return;
-    }
-    setStep(step + 1);
-  }
+    (label === "Date & seat" && windowValid && selected?.available === true);
 
   async function submitDetails(e: React.FormEvent) {
     e.preventDefault();
@@ -124,16 +127,13 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
             ? "That spot was just taken. Please pick another."
             : "We couldn't hold that spot. Please check your details.",
         );
-        if (data.error === "seat_unavailable") {
-          setStep(2);
-          await loadSlots();
-        }
+        if (data.error === "seat_unavailable") setStep(1);
         return;
       }
       setReservationId(data.reservationId);
       setHoldExpiresAt(data.holdExpiresAt);
       setQuote(data.quote);
-      setStep(4); // Verify
+      setStep(3); // Verify
       await sendOtp();
     } finally {
       setBusy(false);
@@ -147,7 +147,6 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ phoneNumber: phoneE164 }),
     });
-    setOtpSent(r.ok);
     if (!r.ok) setError("Could not send the code. Check the phone number.");
   }
 
@@ -181,7 +180,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
         return;
       }
       setConfirmedCode(selected?.code ?? null);
-      setStep(5); // Done
+      setStep(4); // Done
     } finally {
       setBusy(false);
     }
@@ -199,16 +198,15 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     setHoldExpiresAt(null);
     setQuote(null);
     setOtp("");
-    setOtpSent(false);
     setError(null);
     setConfirmedCode(null);
   }
 
   return (
-    <section className="pad section-ivory">
+    <section className="pad section-ivory booking-page">
       <div className="wrap">
         <ol className="booking-progress" aria-label="Booking progress">
-          {steps.map((s, i) => (
+          {STEPS.map((s, i) => (
             <li
               key={s}
               aria-current={i === step ? "step" : undefined}
@@ -243,6 +241,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       onClick={() => {
                         setKey(s.key);
                         setResourceId(null);
+                        setSlots([]);
                       }}
                     >
                       <span className="oinfo">
@@ -259,40 +258,42 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               </>
             )}
 
-            {label === "Date & time" && (
+            {label === "Date & seat" && (
               <>
-                <h2>Make time for great work.</h2>
-                <div className="field">
-                  <label htmlFor="booking-date">Date · Bengaluru time</label>
-                  <input
-                    id="booking-date"
-                    type="date"
-                    min={localDate()}
-                    value={date}
-                    onChange={(e) => {
-                      setDate(e.target.value);
-                      setResourceId(null);
-                    }}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="booking-time">Start time</label>
-                  <select
-                    id="booking-time"
-                    value={hour}
-                    onChange={(e) => {
-                      setHour(Number(e.target.value));
-                      setResourceId(null);
-                    }}
-                  >
-                    {Array.from({ length: 13 - duration }, (_, i) => i + 8).map(
-                      (h) => (
-                        <option key={h} value={h}>
-                          {String(h).padStart(2, "0")}:00
-                        </option>
-                      ),
-                    )}
-                  </select>
+                <h2>Pick your time, see live spots.</h2>
+                <div className="booking-when">
+                  <div className="field">
+                    <label htmlFor="booking-date">Date · Bengaluru time</label>
+                    <input
+                      id="booking-date"
+                      type="date"
+                      min={localDate()}
+                      value={date}
+                      onChange={(e) => {
+                        setDate(e.target.value);
+                        setResourceId(null);
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="booking-time">Start time</label>
+                    <select
+                      id="booking-time"
+                      value={hour}
+                      onChange={(e) => {
+                        setHour(Number(e.target.value));
+                        setResourceId(null);
+                      }}
+                    >
+                      {Array.from({ length: 13 - duration }, (_, i) => i + 8).map(
+                        (h) => (
+                          <option key={h} value={h}>
+                            {String(h).padStart(2, "0")}:00
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
                 </div>
                 <span className="filter-label">Duration</span>
                 <div className="dur-toggle">
@@ -311,43 +312,49 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     </button>
                   ))}
                 </div>
-              </>
-            )}
 
-            {label === "Choose" && (
-              <>
-                <h2>{space.desk ? "Find your spot." : "Pick your room."}</h2>
-                <p>
-                  {loadingSlots
-                    ? "Checking live availability…"
-                    : "Grey options are already booked for this window."}
-                </p>
-                <div className={space.desk ? "floor-bank" : "room-choices"}>
-                  {space.desk && <span>Open-plan desks</span>}
-                  <div className={space.desk ? "floor-seats" : "room-grid"}>
-                    {slots.map((s) => (
-                      <button
-                        key={s.resourceId}
-                        disabled={!s.available}
-                        aria-pressed={resourceId === s.resourceId}
-                        aria-label={`${s.code}${s.available ? "" : ", unavailable"}`}
-                        className={resourceId === s.resourceId ? "selected" : ""}
-                        onClick={() =>
-                          setResourceId(
-                            resourceId === s.resourceId ? null : s.resourceId,
-                          )
-                        }
-                      >
-                        {space.desk ? s.code.replace("D-", "") : s.code}
-                      </button>
-                    ))}
-                  </div>
+                <div className="booking-avail">
+                  {!windowValid ? (
+                    <p className="avail-hint">Pick a date to see live availability.</p>
+                  ) : loadingSlots ? (
+                    <p className="avail-hint">Checking live availability…</p>
+                  ) : slots.length === 0 ? (
+                    <p className="avail-hint">
+                      No spots free for this window. Try another time.
+                    </p>
+                  ) : (
+                    <>
+                      <span className="filter-label">
+                        {space.desk ? "Open-plan desks" : "Rooms"} · live
+                      </span>
+                      <div className={space.desk ? "floor-bank" : "room-choices"}>
+                        <div className={space.desk ? "floor-seats" : "room-grid"}>
+                          {slots.map((s) => (
+                            <button
+                              key={s.resourceId}
+                              disabled={!s.available}
+                              aria-pressed={resourceId === s.resourceId}
+                              aria-label={`${s.code}${s.available ? "" : ", unavailable"}`}
+                              className={resourceId === s.resourceId ? "selected" : ""}
+                              onClick={() =>
+                                setResourceId(
+                                  resourceId === s.resourceId ? null : s.resourceId,
+                                )
+                              }
+                            >
+                              {space.desk ? s.code.replace("D-", "") : s.code}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <p aria-live="polite" className="avail-hint">
+                        {selected
+                          ? `Selected: ${selected.code}`
+                          : "Select an available spot to continue."}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <p aria-live="polite">
-                  {selected
-                    ? `Selected: ${selected.code}`
-                    : "Select an available spot to continue."}
-                </p>
               </>
             )}
 
@@ -399,7 +406,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     <button
                       className="btn btn-outline"
                       type="button"
-                      onClick={() => setStep(2)}
+                      onClick={() => setStep(1)}
                     >
                       ← Back
                     </button>
@@ -443,9 +450,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       maxLength={6}
                       className="otp-input"
                       value={otp}
-                      onChange={(e) =>
-                        setOtp(e.target.value.replace(/\D/g, ""))
-                      }
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     />
                   </div>
                   <div className="step-actions">
@@ -497,26 +502,24 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               </div>
             )}
 
-            {label !== "Details" &&
-              label !== "Verify" &&
-              label !== "Done" && (
-                <div className="step-actions">
-                  <button
-                    className="btn btn-outline"
-                    disabled={step === 0}
-                    onClick={() => setStep(step - 1)}
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    className="btn btn-gold"
-                    disabled={!canContinue || loadingSlots}
-                    onClick={next}
-                  >
-                    Continue →
-                  </button>
-                </div>
-              )}
+            {(label === "Space" || label === "Date & seat") && (
+              <div className="step-actions">
+                <button
+                  className="btn btn-outline"
+                  disabled={step === 0}
+                  onClick={() => setStep(step - 1)}
+                >
+                  ← Back
+                </button>
+                <button
+                  className="btn btn-gold"
+                  disabled={!canContinue}
+                  onClick={() => setStep(step + 1)}
+                >
+                  Continue →
+                </button>
+              </div>
+            )}
           </div>
 
           <aside className="summary" aria-label="Booking summary">
