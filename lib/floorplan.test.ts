@@ -5,7 +5,10 @@ import {
   rooms,
   seats,
   renderSeats,
+  autoAssignDesks,
 } from "./floorplan";
+
+const bankOf = new Map(seats().map((s) => [s.code, s.bankId]));
 
 describe("floor geometry", () => {
   test("every seat code is unique", () => {
@@ -50,7 +53,7 @@ describe("renderSeats — availability join", () => {
     const code = anyDeskCode();
     const out = renderSeats(
       [{ resourceId: "r1", code, available: true }],
-      null,
+      [],
     );
     const seat = out.find((s) => s.code === code)!;
     expect(seat.state).toBe("available");
@@ -61,7 +64,7 @@ describe("renderSeats — availability join", () => {
     const code = anyDeskCode();
     const out = renderSeats(
       [{ resourceId: "r1", code, available: false }],
-      null,
+      [],
     );
     expect(out.find((s) => s.code === code)!.state).toBe("unavailable");
   });
@@ -70,7 +73,7 @@ describe("renderSeats — availability join", () => {
     const code = anyDeskCode();
     const out = renderSeats(
       [{ resourceId: "r1", code, available: true }],
-      "r1",
+      ["r1"],
     );
     expect(out.find((s) => s.code === code)!.state).toBe("selected");
   });
@@ -80,7 +83,7 @@ describe("renderSeats — availability join", () => {
     // Only a desk slot is live, so the room falls back to context.
     const out = renderSeats(
       [{ resourceId: "r1", code: anyDeskCode(), available: true }],
-      null,
+      [],
     );
     const room = out.find((s) => s.code === roomCode)!;
     expect(room.state).toBe("context");
@@ -90,9 +93,41 @@ describe("renderSeats — availability join", () => {
   test("unknown codes in the slot list do not throw or appear", () => {
     const out = renderSeats(
       [{ resourceId: "x", code: "NOPE-99", available: true }],
-      null,
+      [],
     );
     expect(out.some((s) => s.code === "NOPE-99")).toBe(false);
     expect(out.length).toBe(seats().length);
+  });
+});
+
+describe("autoAssignDesks — team-clustered auto-selection", () => {
+  const allDeskCodes = () =>
+    seats().filter((s) => s.kind === "desk").map((s) => s.code);
+
+  test("picks n desks from a single bank when one bank can fit them", () => {
+    const pick = autoAssignDesks(allDeskCodes(), 3);
+    expect(pick.length).toBe(3);
+    expect(new Set(pick.map((c) => bankOf.get(c))).size).toBe(1);
+  });
+
+  test("spreads across banks when no single bank can fit n", () => {
+    // One available desk in each of four different banks.
+    const avail = ["D-01", "D-11", "D-21", "D-31"];
+    const pick = autoAssignDesks(avail, 3);
+    expect(pick.length).toBe(3);
+    expect(pick.every((c) => avail.includes(c))).toBe(true);
+    expect(new Set(pick.map((c) => bankOf.get(c))).size).toBe(3);
+  });
+
+  test("returns as many as are available when under-supplied", () => {
+    expect(autoAssignDesks(["D-01", "D-02"], 5)).toEqual(["D-01", "D-02"]);
+  });
+
+  test("never returns a code that is not in the available list", () => {
+    expect(autoAssignDesks(["D-01", "NOPE"], 2)).toEqual(["D-01"]);
+  });
+
+  test("returns nothing for a non-positive count", () => {
+    expect(autoAssignDesks(["D-01"], 0)).toEqual([]);
   });
 });

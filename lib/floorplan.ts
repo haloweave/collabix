@@ -12,6 +12,7 @@ export type Seat = {
   code: string;
   kind: SeatKind;
   zone: string;
+  bankId?: string; // desks only: which deskBank they came from
   label?: string;
   capacity: number;
   x: number;
@@ -102,6 +103,7 @@ export function seats(): Seat[] {
           code: `D-${String(n).padStart(2, "0")}`,
           kind: "desk",
           zone: bank.zone,
+          bankId: bank.id,
           capacity: 1,
           x: bank.anchor.x + c * bank.dx,
           y: bank.anchor.y + r * bank.dy,
@@ -122,16 +124,51 @@ export const seatByCode = new Map(seats().map((s) => [s.code, s]));
 // resources of a different type than the chosen plan — falls back to context.
 export function renderSeats(
   slots: Slot[],
-  selectedResourceId: string | null,
+  selectedResourceIds: string[],
 ): RenderSeat[] {
   const byCode = new Map(slots.map((s) => [s.code, s]));
+  const selected = new Set(selectedResourceIds);
   return seats().map((seat) => {
     const slot = byCode.get(seat.code);
     if (!slot) return { ...seat, resourceId: null, state: "context" };
     let state: SeatState = slot.available ? "available" : "unavailable";
-    if (selectedResourceId && slot.resourceId === selectedResourceId) {
-      state = "selected";
-    }
+    if (selected.has(slot.resourceId)) state = "selected";
     return { ...seat, resourceId: slot.resourceId, state };
   });
+}
+
+// Team-clustered auto-selection: choose up to n available desks, preferring a
+// single bank so a team sits together, spreading across banks only if no one
+// bank can fit them. Preserves the order of `availableCodes`; ignores unknown
+// codes. Rooms are single-select and never auto-assigned.
+export function autoAssignDesks(availableCodes: string[], n: number): string[] {
+  if (n <= 0) return [];
+  const bankByCode = new Map<string, string>();
+  for (const s of seats()) {
+    if (s.kind === "desk" && s.bankId) bankByCode.set(s.code, s.bankId);
+  }
+
+  const byBank = new Map<string, string[]>();
+  for (const code of availableCodes) {
+    const bank = bankByCode.get(code);
+    if (!bank) continue; // skip unknown / non-desk codes
+    const list = byBank.get(bank) ?? [];
+    list.push(code);
+    byBank.set(bank, list);
+  }
+
+  // 1) A single bank that can fit the whole team.
+  for (const codes of byBank.values()) {
+    if (codes.length >= n) return codes.slice(0, n);
+  }
+
+  // 2) Spread: take from the banks with the most availability until n (or dry).
+  const out: string[] = [];
+  for (const codes of [...byBank.values()].sort((a, b) => b.length - a.length)) {
+    for (const code of codes) {
+      if (out.length >= n) return out;
+      out.push(code);
+    }
+  }
+  return out;
 }

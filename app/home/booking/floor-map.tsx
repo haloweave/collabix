@@ -19,7 +19,10 @@ export default function FloorMap({
   onSelect: (resourceId: string) => void;
   priceLabel?: string;
 }) {
-  const seats = renderSeats(slots, selectedResourceId);
+  const seats = renderSeats(
+    slots,
+    selectedResourceId ? [selectedResourceId] : [],
+  );
 
   return (
     <div className="floor-map">
