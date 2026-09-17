@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { spaces, money } from "@/lib/spaces";
+import FloorMap from "./floor-map";
 
 type Slot = { resourceId: string; code: string; available: boolean };
 type Quote = { subtotalMinor: number; taxMinor: number; totalMinor: number };
@@ -325,28 +326,16 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   ) : (
                     <>
                       <span className="filter-label">
-                        {space.desk ? "Open-plan desks" : "Rooms"} · live
+                        Live floor plan · tap a spot
                       </span>
-                      <div className={space.desk ? "floor-bank" : "room-choices"}>
-                        <div className={space.desk ? "floor-seats" : "room-grid"}>
-                          {slots.map((s) => (
-                            <button
-                              key={s.resourceId}
-                              disabled={!s.available}
-                              aria-pressed={resourceId === s.resourceId}
-                              aria-label={`${s.code}${s.available ? "" : ", unavailable"}`}
-                              className={resourceId === s.resourceId ? "selected" : ""}
-                              onClick={() =>
-                                setResourceId(
-                                  resourceId === s.resourceId ? null : s.resourceId,
-                                )
-                              }
-                            >
-                              {space.desk ? s.code.replace("D-", "") : s.code}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <FloorMap
+                        slots={slots}
+                        selectedResourceId={resourceId}
+                        onSelect={(id) =>
+                          setResourceId(resourceId === id ? null : id)
+                        }
+                        priceLabel={`${money(space.rate)}/hr`}
+                      />
                       <p aria-live="polite" className="avail-hint">
                         {selected
                           ? `Selected: ${selected.code}`
