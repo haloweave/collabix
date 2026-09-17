@@ -812,14 +812,60 @@
 .collabix-site .booking-options .opt {text-align:left;width:100%;}
 .collabix-site .booking-options .on,.collabix-site .booking-options .od {display:block;}
 .collabix-site button:disabled {opacity:.45;cursor:not-allowed;}
-.collabix-site .floor-plan {background:var(--navy);padding:18px;border-radius:16px;max-width:380px;margin:1.5rem auto;color:var(--gold);display:grid;gap:12px;}
-.collabix-site .floor-room {padding:24px 10px;border:1px solid #ffffff30;background:#ffffff08;text-align:center;color:#ffffff88;font-size:.8rem;}
-.collabix-site .floor-pair {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.collabix-site .floor-bank {border:1px solid var(--gold);padding:14px 10px;text-align:center;font-size:.8rem;}
-.collabix-site .floor-seats {display:grid;grid-template-columns:repeat(6,1fr);gap:12px 6px;margin-top:16px;}
-.collabix-site .floor-seats button {border:2px solid var(--gold);border-radius:50%;aspect-ratio:1;background:transparent;color:var(--gold);font-size:.75rem;}
-.collabix-site .floor-seats button.selected {background:var(--gold);color:var(--navy);}
-.collabix-site .floor-seats button:disabled {border-color:var(--line);background:#e7e2d8;color:#a9a293;cursor:not-allowed;}
+/* BookMyShow-style interactive floor map (app/home/booking/floor-map.tsx). */
+.collabix-site .floor-map {margin-top:16px;}
+.collabix-site .floor-scroll {overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--ivory-dark);}
+.collabix-site .floor-svg {display:block;width:100%;min-width:560px;height:auto;}
+.collabix-site .fm-shell {fill:#fff;stroke:var(--line);stroke-width:2;}
+/* Context (non-bookable) shapes — orientation only. */
+.collabix-site .fm-ctx rect {fill:rgba(11,31,58,.035);stroke:rgba(11,31,58,.10);stroke-width:1.5;}
+.collabix-site .fm-ctx-label {fill:rgba(11,31,58,.34);font-size:20px;font-weight:500;text-anchor:middle;dominant-baseline:middle;}
+.collabix-site .fm-ctx-entrance rect {fill:rgba(200,155,83,.12);stroke:var(--line-gold);}
+.collabix-site .fm-ctx-entrance .fm-ctx-label {fill:var(--gold);letter-spacing:.06em;}
+/* Seats — shared. */
+.collabix-site .fm-seat {cursor:default;}
+.collabix-site .fm-seat[role="button"] {cursor:pointer;}
+.collabix-site .fm-desk {fill:#fff;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-chair {fill:none;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-desk-num {fill:var(--gold);font-size:22px;font-weight:600;text-anchor:middle;dominant-baseline:middle;}
+.collabix-site .fm-room {fill:#fff;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-room-table {fill:none;stroke:var(--gold);stroke-width:2;}
+.collabix-site .fm-room-door {stroke:#fff;stroke-width:4;}
+.collabix-site .fm-room-label {fill:var(--navy);font-size:20px;font-weight:600;text-anchor:middle;}
+/* Hover / focus affordance for bookable seats. */
+.collabix-site .fm-available[role="button"]:hover .fm-desk,
+.collabix-site .fm-available[role="button"]:hover .fm-room {fill:rgba(200,155,83,.18);}
+.collabix-site .fm-seat:focus-visible {outline:none;}
+.collabix-site .fm-seat:focus-visible .fm-desk,
+.collabix-site .fm-seat:focus-visible .fm-room {stroke:var(--navy);stroke-width:3.5;}
+/* Selected — lights up gold. */
+.collabix-site .fm-selected .fm-desk,
+.collabix-site .fm-selected .fm-room {fill:var(--gold);stroke:var(--gold);}
+.collabix-site .fm-selected .fm-chair,
+.collabix-site .fm-selected .fm-room-table {stroke:var(--navy);}
+.collabix-site .fm-selected .fm-desk-num,
+.collabix-site .fm-selected .fm-room-label {fill:var(--navy);}
+/* Unavailable — muted, non-interactive. */
+.collabix-site .fm-unavailable .fm-desk,
+.collabix-site .fm-unavailable .fm-room {fill:#e7e2d8;stroke:var(--line);}
+.collabix-site .fm-unavailable .fm-chair,
+.collabix-site .fm-unavailable .fm-room-table {stroke:#c9c2b4;}
+.collabix-site .fm-unavailable .fm-desk-num,
+.collabix-site .fm-unavailable .fm-room-label {fill:#a9a293;}
+/* Context seats (wrong type for the chosen plan) — faint. */
+.collabix-site .fm-context .fm-desk,
+.collabix-site .fm-context .fm-room {fill:rgba(11,31,58,.03);stroke:rgba(11,31,58,.12);}
+.collabix-site .fm-context .fm-chair,
+.collabix-site .fm-context .fm-room-table {stroke:rgba(11,31,58,.14);}
+.collabix-site .fm-context .fm-desk-num,
+.collabix-site .fm-context .fm-room-label {fill:rgba(11,31,58,.22);}
+/* Legend. */
+.collabix-site .floor-legend {display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:.8rem;font-size:.8rem;color:var(--graphite);}
+.collabix-site .floor-legend .lg {display:inline-flex;align-items:center;gap:.45rem;}
+.collabix-site .floor-legend .lg::before {content:"";width:14px;height:14px;border-radius:4px;}
+.collabix-site .floor-legend .lg-avail::before {border:2px solid var(--gold);background:#fff;}
+.collabix-site .floor-legend .lg-sel::before {background:var(--gold);}
+.collabix-site .floor-legend .lg-taken::before {background:#e7e2d8;border:1px solid var(--line);}
 /* Booking page: clear the fixed navbar now that the hero is gone. */
 .collabix-site .booking-page { padding-top: calc(76px + clamp(20px,4vw,40px)); }
 /* Live-booking additions: combined date+seat step, error, countdown, OTP, rooms. */
@@ -832,11 +878,6 @@
 .collabix-site .hold-timer strong {font-family:var(--font-mono);color:var(--gold);font-size:1.05rem;}
 .collabix-site .hold-timer.expired {color:#8a2b2b;}
 .collabix-site .otp-input {font-family:var(--font-mono);letter-spacing:.5em;font-size:1.3rem;text-align:center;}
-.collabix-site .room-choices {margin-top:8px;}
-.collabix-site .room-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:12px;margin-top:12px;}
-.collabix-site .room-grid button {border:2px solid var(--gold);border-radius:var(--radius);padding:.9rem .6rem;background:transparent;color:var(--gold);font-size:.85rem;font-weight:600;}
-.collabix-site .room-grid button.selected {background:var(--gold);color:var(--navy);}
-.collabix-site .room-grid button:disabled {border-color:var(--line);background:#e7e2d8;color:#a9a293;cursor:not-allowed;}
 .collabix-site .summary {align-self:start;}
 .collabix-site {--font-sans:var(--font-inter),Arial,sans-serif;--font-mono:var(--font-jetbrains-mono),monospace;}
 .collabix-site .btn-outline {border:1px solid var(--line);background:transparent;color:var(--navy);}
