@@ -15,7 +15,7 @@ const HELD_OR_CONFIRMED = ["held", "confirmed"] as const;
 
 export type HoldInput = {
   planKey: string;
-  resourceId: string;
+  resourceIds: string[];
   date: string;
   start: number;
   duration: number;
@@ -28,8 +28,8 @@ export type HoldInput = {
 export type HoldResult =
   | {
       ok: true;
-      reservationId: string;
       bookingId: string;
+      reservationIds: string[];
       holdExpiresAt: Date;
       quote: Quote;
     }
@@ -122,17 +122,22 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
   const plan = await getPlan(db, input.planKey);
   if (!plan) return { ok: false, error: "unknown_plan" };
 
-  const [resource] = await db
+  const resourceIds = [...new Set(input.resourceIds)];
+  if (resourceIds.length === 0) return { ok: false, error: "no_seats" };
+
+  const resources = await db
     .select()
     .from(schema.resource)
-    .where(eq(schema.resource.id, input.resourceId))
-    .limit(1);
-  if (!resource) return { ok: false, error: "unknown_resource" };
-  if (resource.kind !== plan.appliesToKind) {
+    .where(inArray(schema.resource.id, resourceIds));
+  if (resources.length !== resourceIds.length) {
+    return { ok: false, error: "unknown_resource" };
+  }
+  if (resources.some((r) => r.kind !== plan.appliesToKind)) {
     return { ok: false, error: "plan_kind_mismatch" };
   }
 
-  // Idempotency: an existing reservation for this key wins without re-inserting.
+  // Idempotency: an existing booking for this key wins without re-inserting.
+  // The key is carried by the booking's first reservation.
   if (input.idempotencyKey) {
     const [existing] = await db
       .select()
@@ -140,21 +145,27 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
       .where(eq(schema.reservation.idempotencyKey, input.idempotencyKey))
       .limit(1);
     if (existing) {
+      const rows = await db
+        .select({ id: schema.reservation.id })
+        .from(schema.reservation)
+        .where(eq(schema.reservation.bookingId, existing.bookingId));
       return {
         ok: true,
-        reservationId: existing.id,
         bookingId: existing.bookingId,
+        reservationIds: rows.map((r) => r.id),
         holdExpiresAt: existing.holdExpiresAt ?? new Date(),
         quote: existing.quoteSnapshot as Quote,
       };
     }
   }
 
-  const quote = computeQuote(plan.rateMinor, input.duration);
+  const quote = computeQuote(plan.rateMinor, input.duration, resourceIds.length);
   const { startAt, endAt } = toUtcWindow(input);
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
 
   try {
+    // One booking, N reservations, all-or-nothing: if any seat conflicts, the
+    // exclusion constraint aborts the whole transaction (no partial team hold).
     const result = await db.transaction(async (tx) => {
       const [b] = await tx
         .insert(schema.booking)
@@ -163,21 +174,23 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
           customerEmail: input.customerEmail,
         })
         .returning({ id: schema.booking.id });
-      const [r] = await tx
+      const rows = await tx
         .insert(schema.reservation)
-        .values({
-          bookingId: b.id,
-          resourceId: input.resourceId,
-          ratePlanId: plan.id,
-          startAt,
-          endAt,
-          status: "held",
-          holdExpiresAt,
-          quoteSnapshot: quote,
-          idempotencyKey: input.idempotencyKey ?? null,
-        })
+        .values(
+          resourceIds.map((resourceId, i) => ({
+            bookingId: b.id,
+            resourceId,
+            ratePlanId: plan.id,
+            startAt,
+            endAt,
+            status: "held" as const,
+            holdExpiresAt,
+            quoteSnapshot: quote,
+            idempotencyKey: i === 0 ? input.idempotencyKey ?? null : null,
+          })),
+        )
         .returning({ id: schema.reservation.id });
-      return { bookingId: b.id, reservationId: r.id };
+      return { bookingId: b.id, reservationIds: rows.map((r) => r.id) };
     });
     return { ok: true, ...result, holdExpiresAt, quote };
   } catch (e) {
@@ -188,36 +201,45 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
 
 export type ConfirmResult = { ok: true } | { ok: false; error: string };
 
-export async function confirmReservation(
+// Confirm a whole booking: every held reservation under it becomes confirmed,
+// atomically. If any held reservation has expired, expire the lapsed ones and
+// refuse — a team booking confirms in full or not at all.
+export async function confirmBooking(
   db: Db,
-  input: { reservationId: string; memberId?: string },
+  input: { bookingId: string; memberId?: string },
 ): Promise<ConfirmResult> {
   return db.transaction(async (tx) => {
-    const [r] = await tx
+    const rows = await tx
       .select()
       .from(schema.reservation)
-      .where(eq(schema.reservation.id, input.reservationId))
-      .for("update")
-      .limit(1);
-    if (!r) return { ok: false, error: "not_found" };
-    if (r.status !== "held") return { ok: false, error: "not_held" };
-    if (r.holdExpiresAt && r.holdExpiresAt.getTime() < Date.now()) {
+      .where(eq(schema.reservation.bookingId, input.bookingId))
+      .for("update");
+    if (rows.length === 0) return { ok: false, error: "not_found" };
+
+    const held = rows.filter((r) => r.status === "held");
+    const now = Date.now();
+    const expired = held.filter(
+      (r) => r.holdExpiresAt && r.holdExpiresAt.getTime() < now,
+    );
+    if (expired.length > 0) {
       await tx
         .update(schema.reservation)
         .set({ status: "expired" })
-        .where(eq(schema.reservation.id, r.id));
+        .where(inArray(schema.reservation.id, expired.map((r) => r.id)));
       return { ok: false, error: "hold_expired" };
     }
 
-    await tx
-      .update(schema.reservation)
-      .set({ status: "confirmed" })
-      .where(eq(schema.reservation.id, r.id));
+    if (held.length > 0) {
+      await tx
+        .update(schema.reservation)
+        .set({ status: "confirmed" })
+        .where(inArray(schema.reservation.id, held.map((r) => r.id)));
+    }
     if (input.memberId) {
       await tx
         .update(schema.booking)
         .set({ memberId: input.memberId })
-        .where(eq(schema.booking.id, r.bookingId));
+        .where(eq(schema.booking.id, input.bookingId));
     }
     return { ok: true };
   });
