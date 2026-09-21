@@ -17,6 +17,7 @@ export function MembershipPlanCreate() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [hours, setHours] = useState("");
+  const [overage, setOverage] = useState("");
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
@@ -30,6 +31,7 @@ export function MembershipPlanCreate() {
         name,
         priceMinor: Math.round(Number(price) * 100),
         includedHours: Math.round(Number(hours)),
+        overageRateMinor: Math.round(Number(overage) * 100),
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -39,6 +41,7 @@ export function MembershipPlanCreate() {
       setName("");
       setPrice("");
       setHours("");
+      setOverage("");
       router.refresh();
     });
   }
@@ -56,7 +59,7 @@ export function MembershipPlanCreate() {
         <Input
           type="number"
           placeholder="mo"
-          className="w-24"
+          className="w-20"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
@@ -68,6 +71,16 @@ export function MembershipPlanCreate() {
         value={hours}
         onChange={(e) => setHours(e.target.value)}
       />
+      <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground">₹</span>
+        <Input
+          type="number"
+          placeholder="overage/hr"
+          className="w-24"
+          value={overage}
+          onChange={(e) => setOverage(e.target.value)}
+        />
+      </div>
       <Button type="submit" disabled={pending}>
         {pending ? "Adding…" : "Add plan"}
       </Button>
@@ -79,12 +92,16 @@ export function MembershipPlanEditor({ plan }: { plan: MembershipPlanRow }) {
   const router = useRouter();
   const [price, setPrice] = useState(String(Math.round(plan.priceMinor / 100)));
   const [hours, setHours] = useState(String(plan.includedHours));
+  const [overage, setOverage] = useState(
+    String(Math.round(plan.overageRateMinor / 100)),
+  );
   const [active, setActive] = useState(plan.active);
   const [pending, startTransition] = useTransition();
 
   const dirty =
     Math.round(Number(price) * 100) !== plan.priceMinor ||
     Math.round(Number(hours)) !== plan.includedHours ||
+    Math.round(Number(overage) * 100) !== plan.overageRateMinor ||
     active !== plan.active;
 
   function save() {
@@ -94,6 +111,7 @@ export function MembershipPlanEditor({ plan }: { plan: MembershipPlanRow }) {
           id: plan.id,
           priceMinor: Math.round(Number(price) * 100),
           includedHours: Math.round(Number(hours)),
+          overageRateMinor: Math.round(Number(overage) * 100),
           active,
         });
         toast.success(`${plan.name} updated.`);
@@ -132,6 +150,16 @@ export function MembershipPlanEditor({ plan }: { plan: MembershipPlanRow }) {
           onChange={(e) => setHours(e.target.value)}
         />
         <span className="text-xs text-muted-foreground">hrs</span>
+      </div>
+      <div className="flex items-center gap-1" title="Overage per hour">
+        <span className="text-xs text-muted-foreground">+₹</span>
+        <Input
+          type="number"
+          className="w-20"
+          value={overage}
+          onChange={(e) => setOverage(e.target.value)}
+        />
+        <span className="text-xs text-muted-foreground">/hr</span>
       </div>
       <Button
         type="button"

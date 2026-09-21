@@ -12,6 +12,7 @@ export async function createMembershipPlan(input: {
   name: string;
   priceMinor: number;
   includedHours: number;
+  overageRateMinor: number;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   await requireManager();
   const name = input.name.trim();
@@ -22,6 +23,7 @@ export async function createMembershipPlan(input: {
       name,
       priceMinor: Math.max(0, Math.round(input.priceMinor)),
       includedHours: Math.max(0, Math.round(input.includedHours)),
+      overageRateMinor: Math.max(0, Math.round(input.overageRateMinor)),
     })
     .returning({ id: schema.membershipPlan.id });
   await logAudit({
@@ -38,6 +40,7 @@ export async function updateMembershipPlan(input: {
   id: string;
   priceMinor: number;
   includedHours: number;
+  overageRateMinor: number;
   active: boolean;
 }) {
   await requireManager();
@@ -46,6 +49,7 @@ export async function updateMembershipPlan(input: {
     .set({
       priceMinor: Math.max(0, Math.round(input.priceMinor)),
       includedHours: Math.max(0, Math.round(input.includedHours)),
+      overageRateMinor: Math.max(0, Math.round(input.overageRateMinor)),
       active: input.active,
     })
     .where(eq(schema.membershipPlan.id, input.id));

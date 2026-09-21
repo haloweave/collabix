@@ -609,13 +609,15 @@ export type MembershipPlanRow = {
   name: string;
   priceMinor: number;
   includedHours: number;
+  overageRateMinor: number;
   active: boolean;
   subscribers: number;
 };
 
 export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
   const rows = await sql`
-    SELECT mp.id, mp.name, mp.price_minor, mp.included_hours, mp.active,
+    SELECT mp.id, mp.name, mp.price_minor, mp.included_hours, mp.overage_rate_minor,
+      mp.active,
       (SELECT count(*)::int FROM member_subscription s
         WHERE s.plan_id = mp.id AND s.status = 'active') AS subscribers
     FROM membership_plan mp ORDER BY mp.price_minor`;
@@ -624,6 +626,7 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
     name: r.name as string,
     priceMinor: n(r.price_minor),
     includedHours: n(r.included_hours),
+    overageRateMinor: n(r.overage_rate_minor),
     active: Boolean(r.active),
     subscribers: n(r.subscribers),
   }));
@@ -670,7 +673,8 @@ export type MemberSubscription = {
   planName: string;
   priceMinor: number;
   includedHours: number;
-  hoursUsed: number;
+  overageRateMinor: number;
+  hoursUsed: number; // computed live from bookings in the current period
   periodStart: Date;
   periodEnd: Date;
 };
@@ -680,7 +684,14 @@ export async function getMemberSubscription(
 ): Promise<MemberSubscription | null> {
   const [s] = await sql`
     SELECT s.id, s.plan_id, mp.name AS plan_name, mp.price_minor,
-      mp.included_hours, s.hours_used, s.period_start, s.period_end
+      mp.included_hours, mp.overage_rate_minor, s.period_start, s.period_end,
+      COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (r.end_at - r.start_at)) / 3600)
+        FROM reservation r JOIN booking b ON b.id = r.booking_id
+        WHERE b.member_id = s.member_id AND r.status = 'confirmed'
+          AND (r.quote_snapshot->>'membershipHold') IS DISTINCT FROM 'true'
+          AND r.start_at >= s.period_start AND r.start_at < s.period_end
+      ), 0)::int AS hours_used
     FROM member_subscription s
     JOIN membership_plan mp ON mp.id = s.plan_id
     WHERE s.member_id = ${memberId} AND s.status = 'active'
@@ -692,10 +703,58 @@ export async function getMemberSubscription(
     planName: s.plan_name as string,
     priceMinor: n(s.price_minor),
     includedHours: n(s.included_hours),
+    overageRateMinor: n(s.overage_rate_minor),
     hoursUsed: n(s.hours_used),
     periodStart: new Date(s.period_start as string),
     periodEnd: new Date(s.period_end as string),
   };
+}
+
+export type InvoiceRow = {
+  id: string;
+  memberId: string;
+  memberName: string | null;
+  status: string;
+  periodStart: Date;
+  periodEnd: Date;
+  lineItems: { label: string; amountMinor: number }[];
+  subtotalMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  paidAt: Date | null;
+  createdAt: Date;
+};
+
+function mapInvoice(r: Record<string, unknown>): InvoiceRow {
+  return {
+    id: r.id as string,
+    memberId: r.member_id as string,
+    memberName: (r.member_name as string) ?? null,
+    status: r.status as string,
+    periodStart: new Date(r.period_start as string),
+    periodEnd: new Date(r.period_end as string),
+    lineItems: (r.line_items as { label: string; amountMinor: number }[]) ?? [],
+    subtotalMinor: n(r.subtotal_minor),
+    taxMinor: n(r.tax_minor),
+    totalMinor: n(r.total_minor),
+    paidAt: r.paid_at ? new Date(r.paid_at as string) : null,
+    createdAt: new Date(r.created_at as string),
+  };
+}
+
+export async function listInvoices(): Promise<InvoiceRow[]> {
+  const rows = await sql`
+    SELECT i.*, u.name AS member_name
+    FROM invoice i LEFT JOIN "user" u ON u.id = i.member_id
+    ORDER BY i.created_at DESC LIMIT 200`;
+  return rows.map(mapInvoice);
+}
+
+export async function getMemberInvoices(memberId: string): Promise<InvoiceRow[]> {
+  const rows = await sql`
+    SELECT i.*, NULL AS member_name FROM invoice i
+    WHERE i.member_id = ${memberId} ORDER BY i.created_at DESC`;
+  return rows.map(mapInvoice);
 }
 
 /** Active plans for the assignment dropdown. */
