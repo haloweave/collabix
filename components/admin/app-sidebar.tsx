@@ -12,6 +12,7 @@ import {
   BarChart3,
   ScrollText,
   UserCheck,
+  BadgeCheck,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -45,6 +46,7 @@ const NAV = [
   { title: "Members", href: "/admin/members", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Armchair },
   { title: "Rate plans", href: "/admin/rate-plans", icon: Tag, managerOnly: true },
+  { title: "Memberships", href: "/admin/memberships", icon: BadgeCheck, managerOnly: true },
   { title: "Reports", href: "/admin/reports", icon: BarChart3, managerOnly: true },
   { title: "Audit log", href: "/admin/audit", icon: ScrollText, managerOnly: true },
   { title: "Settings", href: "/admin/settings", icon: Settings, managerOnly: true },

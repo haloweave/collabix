@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getMember } from "@/lib/admin/queries";
+import {
+  getMember,
+  getMemberSubscription,
+  listActivePlans,
+} from "@/lib/admin/queries";
 import { getSessionUser, isManager } from "@/lib/admin/auth";
 import { rupees, istDateTime, istDate } from "@/lib/admin/format";
 import { MemberEditor } from "@/components/admin/member-editor";
+import { MembershipControls } from "@/components/admin/membership-controls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +40,10 @@ export default async function MemberDetailPage({
   if (!member) notFound();
   const viewer = await getSessionUser();
   const canManageRoles = isManager(viewer?.role);
+  const [subscription, activePlans] = await Promise.all([
+    getMemberSubscription(id),
+    listActivePlans(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -91,6 +100,12 @@ export default async function MemberDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <MembershipControls
+        memberId={member.id}
+        subscription={subscription}
+        plans={activePlans}
+      />
 
       <MemberEditor
         id={member.id}
