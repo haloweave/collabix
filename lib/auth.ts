@@ -4,6 +4,7 @@ import { emailOTP } from "better-auth/plugins/email-otp";
 import { phoneNumber } from "better-auth/plugins/phone-number";
 import { db } from "./db/client";
 import * as authSchema from "./db/auth-schema";
+import { sendEmail } from "./email";
 
 // Passwordless auth: email OTP / magic link + phone SMS OTP.
 // Dev transport logs the OTP to the server console. Before launch, wire
@@ -28,8 +29,13 @@ export const auth = betterAuth({
   },
   plugins: [
     emailOTP({
-      async sendVerificationOTP({ email, otp, type }) {
-        console.log(`[email-otp] ${type} code for ${email}: ${otp}`);
+      async sendVerificationOTP({ email, otp }) {
+        // Real email when SMTP is configured; console fallback otherwise.
+        await sendEmail({
+          to: email,
+          subject: `Your Collabix verification code: ${otp}`,
+          text: `Your Collabix verification code is ${otp}.\n\nIt expires shortly. If you didn't request this, you can ignore this email.`,
+        });
       },
     }),
     phoneNumber({
