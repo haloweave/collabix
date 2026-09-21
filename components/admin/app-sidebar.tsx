@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarCheck,
+  CalendarRange,
+  Users,
   Armchair,
   Tag,
   LogOut,
@@ -34,6 +36,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const NAV = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
+  { title: "Calendar", href: "/admin/calendar", icon: CalendarRange },
+  { title: "Members", href: "/admin/members", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Armchair },
   { title: "Rate plans", href: "/admin/rate-plans", icon: Tag },
 ];

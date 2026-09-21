@@ -222,6 +222,75 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
   };
 }
 
+export type MemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+  bookings: number;
+};
+
+export async function listMembers(q = ""): Promise<MemberRow[]> {
+  const term = q.trim();
+  const like = `%${term}%`;
+  const rows = await sql`
+    SELECT u.id, u.name, u.email, u.role, u.created_at,
+      (SELECT count(*)::int FROM booking b
+        WHERE b.member_id = u.id OR b.customer_email = u.email) AS bookings
+    FROM "user" u
+    WHERE (${term} = '' OR u.name ILIKE ${like} OR u.email ILIKE ${like})
+    ORDER BY u.created_at DESC
+    LIMIT 200`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    name: r.name as string,
+    email: r.email as string,
+    role: r.role as string,
+    createdAt: new Date(r.created_at as string),
+    bookings: n(r.bookings),
+  }));
+}
+
+export type MemberDetail = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phoneNumber: string | null;
+  createdAt: Date;
+  bookings: BookingRow[];
+};
+
+export async function getMember(id: string): Promise<MemberDetail | null> {
+  const [u] = await sql`SELECT * FROM "user" WHERE id = ${id}`;
+  if (!u) return null;
+  const rows = await sql`
+    SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at,
+      count(r.id)::int AS seats,
+      min(r.start_at) AS start_at,
+      max(r.end_at) AS end_at,
+      (array_agg(DISTINCT rp.name))[1] AS plan,
+      (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
+      bool_or(r.status = 'confirmed') AS any_confirmed,
+      bool_or(r.status = 'held' AND r.hold_expires_at > now()) AS any_active_hold
+    FROM booking b
+    LEFT JOIN reservation r ON r.booking_id = b.id
+    LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE b.member_id = ${id} OR b.customer_email = ${u.email as string}
+    GROUP BY b.id
+    ORDER BY b.created_at DESC`;
+  return {
+    id: u.id as string,
+    name: u.name as string,
+    email: u.email as string,
+    role: u.role as string,
+    phoneNumber: (u.phone_number as string) ?? null,
+    createdAt: new Date(u.created_at as string),
+    bookings: rows.map(mapBookingRow),
+  };
+}
+
 export type InventoryResource = {
   id: string;
   code: string;
