@@ -1,4 +1,4 @@
-import { requireStaff } from "@/lib/admin/auth";
+import { requireAdminAccess } from "@/lib/admin/auth";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import {
   SidebarInset,
@@ -7,14 +7,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
-// Guarded shell for every operational admin page. requireStaff() redirects
-// anonymous or non-staff visitors before any page renders.
+// Guarded shell for every operational admin page. requireAdminAccess() redirects
+// anonymous/non-staff visitors, and sends the reception role to /staff.
 export default async function DashLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireStaff();
+  const user = await requireAdminAccess();
 
   return (
     <SidebarProvider>
