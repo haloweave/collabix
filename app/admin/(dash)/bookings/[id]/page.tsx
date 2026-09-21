@@ -112,7 +112,32 @@ export default async function BookingDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          {/* Mobile: reservation cards */}
+          <div className="divide-y border-t md:hidden">
+            {booking.reservations.map((r) => (
+              <div key={r.id} className="flex items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {r.code}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {r.plan}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {istDateTime(r.startAt)} → {istDateTime(r.endAt)}
+                  </p>
+                </div>
+                <Badge
+                  variant={RES_VARIANT[r.status] ?? "outline"}
+                  className="shrink-0"
+                >
+                  {r.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Seat</TableHead>

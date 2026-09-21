@@ -161,7 +161,42 @@ export default async function MemberDetailPage({
           <CardTitle>Booking history</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          {/* Mobile: booking-history cards */}
+          <div className="divide-y border-t md:hidden">
+            {member.bookings.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No bookings yet.
+              </p>
+            )}
+            {member.bookings.map((b) => (
+              <Link
+                key={b.id}
+                href={`/admin/bookings/${b.id}`}
+                className="flex items-start justify-between gap-3 py-3 transition-colors active:bg-muted/60"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {b.startAt ? istDateTime(b.startAt) : "—"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {b.plan ?? "—"} · {b.seats} seat{b.seats === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-sm font-medium tabular-nums">
+                    {rupees(b.totalMinor)}
+                  </span>
+                  <BookingStatusBadge
+                    status={b.status}
+                    anyConfirmed={b.anyConfirmed}
+                    anyActiveHold={b.anyActiveHold}
+                  />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>When</TableHead>
