@@ -86,6 +86,21 @@ export const booking = pgTable("booking", {
     .defaultNow(),
 });
 
+// Append-only trail of staff actions in the admin panel. Not tied to a FK on
+// user (actor may be the dev-admin) — we snapshot actor id + email as text.
+export const auditEvent = pgTable("audit_event", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: text("actor_id"),
+  actorEmail: text("actor_email").notNull(),
+  action: text("action").notNull(), // e.g. "booking.cancel", "rate_plan.update"
+  targetType: text("target_type"), // "booking" | "rate_plan" | "resource"
+  targetId: text("target_id"),
+  detail: jsonb("detail"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const reservation = pgTable("reservation", {
   id: uuid("id").primaryKey().defaultRandom(),
   bookingId: uuid("booking_id")

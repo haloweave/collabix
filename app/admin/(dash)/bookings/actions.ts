@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
+import { logAudit } from "@/lib/admin/audit";
 import {
   confirmBooking,
   getAvailability,
@@ -32,6 +33,12 @@ export async function cancelBooking(bookingId: string) {
       .update(schema.booking)
       .set({ status: "cancelled" })
       .where(eq(schema.booking.id, bookingId));
+  });
+
+  await logAudit({
+    action: "booking.cancel",
+    targetType: "booking",
+    targetId: bookingId,
   });
 
   revalidatePath("/admin");
@@ -90,6 +97,19 @@ export async function createWalkIn(input: {
 
   const confirmed = await confirmBooking(db, { bookingId: held.bookingId });
   if (!confirmed.ok) return { ok: false, error: confirmed.error };
+
+  await logAudit({
+    action: "booking.create_walkin",
+    targetType: "booking",
+    targetId: held.bookingId,
+    detail: {
+      planKey: input.planKey,
+      seats,
+      date: input.date,
+      start: input.start,
+      duration: input.duration,
+    },
+  });
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
+import { logAudit } from "@/lib/admin/audit";
 
 // Take a seat offline / bring it back. A disabled resource drops out of
 // availability and can't be held or booked; existing reservations are untouched.
@@ -14,6 +15,12 @@ export async function setResourceEnabled(id: string, enabled: boolean) {
     .update(schema.resource)
     .set({ enabled })
     .where(eq(schema.resource.id, id));
+  await logAudit({
+    action: "resource.enabled",
+    targetType: "resource",
+    targetId: id,
+    detail: { enabled },
+  });
   revalidatePath("/admin/inventory");
   revalidatePath("/admin");
 }
@@ -27,5 +34,11 @@ export async function setResourceCapacity(id: string, capacity: number) {
     .update(schema.resource)
     .set({ capacity: cap })
     .where(eq(schema.resource.id, id));
+  await logAudit({
+    action: "resource.capacity",
+    targetType: "resource",
+    targetId: id,
+    detail: { capacity: cap },
+  });
   revalidatePath("/admin/inventory");
 }

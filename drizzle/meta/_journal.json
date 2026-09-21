@@ -22,6 +22,13 @@
       "when": 1790017415944,
       "tag": "0002_lowly_argent",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790019378798,
+      "tag": "0003_loud_the_initiative",
+      "breakpoints": true
     }
   ]
 }
