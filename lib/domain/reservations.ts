@@ -8,6 +8,7 @@ import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
 import { computeQuote, toUtcWindow, validateWindow, type Quote } from "./booking";
+import { getSettings } from "../settings";
 
 export type Db = PostgresJsDatabase<typeof schema>;
 
@@ -116,8 +117,15 @@ export async function getAvailability(db: Db, input: AvailabilityInput) {
 export async function holdReservation(db: Db, input: HoldInput): Promise<HoldResult> {
   await sweepExpiredHolds(db);
 
-  const window = validateWindow(input, new Date());
+  const settings = await getSettings(db);
+  const window = validateWindow(input, new Date(), {
+    openHour: settings.openHour,
+    closeHour: settings.closeHour,
+  });
   if (!window.ok) return { ok: false, error: window.error };
+  if (settings.closedDates.includes(input.date)) {
+    return { ok: false, error: "closed_date" };
+  }
 
   const plan = await getPlan(db, input.planKey);
   if (!plan) return { ok: false, error: "unknown_plan" };
@@ -159,7 +167,12 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
     }
   }
 
-  const quote = computeQuote(plan.rateMinor, input.duration, resourceIds.length);
+  const quote = computeQuote(
+    plan.rateMinor,
+    input.duration,
+    resourceIds.length,
+    settings.taxPercent / 100,
+  );
   const { startAt, endAt } = toUtcWindow(input);
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
 

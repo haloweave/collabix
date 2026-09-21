@@ -19,17 +19,23 @@ function istDateString(now: Date): string {
   return shifted.toISOString().slice(0, 10);
 }
 
-export function validateWindow(input: WindowInput, now: Date): ValidationResult {
+export function validateWindow(
+  input: WindowInput,
+  now: Date,
+  bounds?: { openHour?: number; closeHour?: number },
+): ValidationResult {
   const { date, start, duration } = input;
+  const openHour = bounds?.openHour ?? OPEN_HOUR;
+  const closeHour = bounds?.closeHour ?? CLOSE_HOUR;
 
   if (!ALLOWED_DURATIONS.includes(duration as (typeof ALLOWED_DURATIONS)[number])) {
     return { ok: false, error: "duration must be one of 1, 2, 4 or 8 hours" };
   }
-  if (!Number.isInteger(start) || start < OPEN_HOUR) {
-    return { ok: false, error: `start must be at or after ${OPEN_HOUR}:00` };
+  if (!Number.isInteger(start) || start < openHour) {
+    return { ok: false, error: `start must be at or after ${openHour}:00` };
   }
-  if (start + duration > CLOSE_HOUR) {
-    return { ok: false, error: `booking must end by ${CLOSE_HOUR}:00` };
+  if (start + duration > closeHour) {
+    return { ok: false, error: `booking must end by ${closeHour}:00` };
   }
   if (date < istDateString(now)) {
     return { ok: false, error: "date is in the past" };
@@ -63,9 +69,10 @@ export function computeQuote(
   rateMinor: number,
   hours: number,
   seats = 1,
+  taxRate = TAX_RATE,
 ): Quote {
   const subtotalMinor = rateMinor * hours * seats;
-  const taxMinor = Math.round(subtotalMinor * TAX_RATE);
+  const taxMinor = Math.round(subtotalMinor * taxRate);
   return {
     rateMinor,
     hours,

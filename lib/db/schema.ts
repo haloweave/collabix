@@ -74,6 +74,17 @@ export const ratePlan = pgTable("rate_plan", {
   active: boolean("active").notNull().default(true),
 });
 
+// Single-row venue settings (id is pinned to 1). Governs tax, bookable hours
+// and closure dates used by the booking engine.
+export const settings = pgTable("settings", {
+  id: integer("id").primaryKey().default(1),
+  taxPercent: integer("tax_percent").notNull().default(18),
+  openHour: integer("open_hour").notNull().default(8),
+  closeHour: integer("close_hour").notNull().default(20),
+  timezone: text("timezone").notNull().default("Asia/Kolkata"),
+  closedDates: jsonb("closed_dates").notNull().default([]), // ['YYYY-MM-DD', …]
+});
+
 export const booking = pgTable("booking", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Set once the auth vertical is wired in; inline capture until then.
