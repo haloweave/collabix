@@ -86,6 +86,25 @@ export const booking = pgTable("booking", {
     .defaultNow(),
 });
 
+// Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
+// member); staff record who they are and who they're here to see.
+export const visitor = pgTable("visitor", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  company: text("company"),
+  host: text("host"), // member/team they're visiting
+  purpose: text("purpose"),
+  phone: text("phone"),
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
+  createdBy: text("created_by"), // actor email
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Append-only trail of staff actions in the admin panel. Not tied to a FK on
 // user (actor may be the dev-admin) — we snapshot actor id + email as text.
 export const auditEvent = pgTable("audit_event", {
@@ -117,6 +136,9 @@ export const reservation = pgTable("reservation", {
   // `period` (tstzrange, generated) is added by the hand-written SQL migration.
   status: reservationStatus("status").notNull().default("held"),
   holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+  // Reception attendance stamps (front-desk check-in / check-out).
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+  checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
   quoteSnapshot: jsonb("quote_snapshot").notNull(),
   idempotencyKey: text("idempotency_key").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })

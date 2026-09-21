@@ -18,9 +18,11 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   // Access role. `member` is the default for every customer that signs up via
-  // the booking flow; staff/manager/owner unlock the /admin panel. Kept in sync
-  // with Better Auth via `user.additionalFields` in lib/auth.ts.
+  // the booking flow; reception/staff/manager/owner unlock the /admin panel.
+  // Kept in sync with Better Auth via `user.additionalFields` in lib/auth.ts.
   role: text("role").notNull().default("member"),
+  // Free-text CRM notes kept by staff. Not exposed to Better Auth.
+  notes: text("notes"),
   // phoneNumber plugin:
   phoneNumber: text("phone_number").unique(),
   phoneNumberVerified: boolean("phone_number_verified").default(false),
