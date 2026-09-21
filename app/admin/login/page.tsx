@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
-import { getSessionUser, STAFF_ROLES } from "@/lib/admin/auth";
+import {
+  getSessionUser,
+  isAdminAuthDisabled,
+  STAFF_ROLES,
+} from "@/lib/admin/auth";
 import { LoginForm } from "@/components/admin/login-form";
 
 // Public (unguarded) sign-in page. If a staff account is already signed in we
@@ -10,6 +14,8 @@ export default async function AdminLoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  // Auth is disabled for now — the panel is open, so skip the login screen.
+  if (isAdminAuthDisabled()) redirect("/admin");
   const user = await getSessionUser();
   if (user && (STAFF_ROLES as readonly string[]).includes(user.role)) {
     redirect("/admin");
