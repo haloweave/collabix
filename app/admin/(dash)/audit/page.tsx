@@ -33,7 +33,51 @@ export default async function AuditPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border">
+      {/* Mobile: audit event cards */}
+      <div className="divide-y overflow-hidden rounded-lg border md:hidden">
+        {events.length === 0 && (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            No activity recorded yet.
+          </p>
+        )}
+        {events.map((e) => {
+          const href = targetHref(e.targetType, e.targetId);
+          return (
+            <div key={e.id} className="space-y-1.5 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Badge variant="outline" className="font-mono text-xs">
+                  {e.action}
+                </Badge>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {istDateTime(e.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm">
+                {e.actorEmail}
+                {e.targetType && (
+                  <>
+                    {" · "}
+                    {href ? (
+                      <Link href={href} className="underline-offset-2 hover:underline">
+                        {e.targetType}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">{e.targetType}</span>
+                    )}
+                  </>
+                )}
+              </p>
+              {e.detail ? (
+                <p className="truncate font-mono text-xs text-muted-foreground">
+                  {JSON.stringify(e.detail)}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden rounded-lg border md:block">
         <Table>
           <TableHeader>
             <TableRow>
