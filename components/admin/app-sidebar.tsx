@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarCheck,
+  Armchair,
   Tag,
   LogOut,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const NAV = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
+  { title: "Inventory", href: "/admin/inventory", icon: Armchair },
   { title: "Rate plans", href: "/admin/rate-plans", icon: Tag },
 ];
 
