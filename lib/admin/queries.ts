@@ -93,6 +93,55 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
   };
 }
 
+export type DaySeriesPoint = {
+  day: string; // YYYY-MM-DD (IST)
+  label: string; // e.g. "22 Sep"
+  bookings: number;
+  revenueMinor: number;
+};
+
+/** Confirmed bookings + revenue per IST day for the last `days` days (filled). */
+export async function getDailySeries(days = 14): Promise<DaySeriesPoint[]> {
+  const rows = await sql`
+    SELECT day, count(*)::int AS bookings, COALESCE(SUM(total), 0)::bigint AS revenue
+    FROM (
+      SELECT DISTINCT ON (r.booking_id)
+        to_char((r.start_at AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS day,
+        (r.quote_snapshot->>'totalMinor')::bigint AS total
+      FROM reservation r JOIN booking b ON b.id = r.booking_id
+      WHERE r.status = 'confirmed' AND b.status = 'active'
+        AND (r.quote_snapshot->>'membershipHold') IS DISTINCT FROM 'true'
+        AND (r.start_at AT TIME ZONE 'Asia/Kolkata')::date
+            > (now() AT TIME ZONE 'Asia/Kolkata')::date - ${days}::int
+      ORDER BY r.booking_id
+    ) t
+    GROUP BY day`;
+
+  const byDay = new Map<string, { bookings: number; revenue: number }>();
+  for (const r of rows as Record<string, unknown>[]) {
+    byDay.set(r.day as string, {
+      bookings: n(r.bookings),
+      revenue: n(r.revenue),
+    });
+  }
+
+  // Fill a continuous series ending today (IST).
+  const out: DaySeriesPoint[] = [];
+  const nowIstMs = Date.now() + 330 * 60_000;
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(nowIstMs - i * 86_400_000);
+    const day = d.toISOString().slice(0, 10);
+    const hit = byDay.get(day);
+    out.push({
+      day,
+      label: `${d.getUTCDate()} ${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })}`,
+      bookings: hit?.bookings ?? 0,
+      revenueMinor: hit?.revenue ?? 0,
+    });
+  }
+  return out;
+}
+
 export type BookingRow = {
   id: string;
   customerName: string;

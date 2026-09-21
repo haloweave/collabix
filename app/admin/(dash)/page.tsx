@@ -6,9 +6,14 @@ import {
   IndianRupee,
   TrendingUp,
 } from "lucide-react";
-import { getDashboardStats, getUpcomingBookings } from "@/lib/admin/queries";
+import {
+  getDashboardStats,
+  getUpcomingBookings,
+  getDailySeries,
+} from "@/lib/admin/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { StatCard } from "@/components/admin/stat-card";
+import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import {
   Card,
   CardContent,
@@ -21,9 +26,10 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, upcoming] = await Promise.all([
+  const [stats, upcoming, series] = await Promise.all([
     getDashboardStats(),
     getUpcomingBookings(),
+    getDailySeries(),
   ]);
 
   return (
@@ -76,6 +82,8 @@ export default async function DashboardPage() {
           icon={IndianRupee}
         />
       </div>
+
+      <DashboardCharts data={series} />
 
       <Card>
         <CardHeader>
