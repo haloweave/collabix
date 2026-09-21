@@ -37,6 +37,7 @@ export function WalkInForm({ today }: { today: string }) {
   const [seats, setSeats] = useState("1");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [coupon, setCoupon] = useState("");
   const [pending, startTransition] = useTransition();
 
   function submit(e: React.FormEvent) {
@@ -54,6 +55,7 @@ export function WalkInForm({ today }: { today: string }) {
         seats: Number(seats),
         customerName: name,
         customerEmail: email,
+        couponCode: coupon,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -152,6 +154,15 @@ export function WalkInForm({ today }: { today: string }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+
+          <label className="grid gap-1.5 text-sm">
+            <span className="text-muted-foreground">Coupon code (optional)</span>
+            <Input
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value)}
+              placeholder="e.g. WELCOME10"
             />
           </label>
 

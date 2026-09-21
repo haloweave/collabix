@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
+import { getActiveCoupon, couponDiscount } from "@/lib/admin/queries";
 import {
   confirmBooking,
   getAvailability,
@@ -61,6 +62,7 @@ export async function createWalkIn(input: {
   seats: number;
   customerName: string;
   customerEmail: string;
+  couponCode?: string;
 }): Promise<WalkInResult> {
   await requireStaff();
 
@@ -97,6 +99,26 @@ export async function createWalkIn(input: {
 
   const confirmed = await confirmBooking(db, { bookingId: held.bookingId });
   if (!confirmed.ok) return { ok: false, error: confirmed.error };
+
+  // Apply a discount coupon by rewriting the (identical) quote snapshot on every
+  // reservation of the booking.
+  if (input.couponCode?.trim()) {
+    const coupon = await getActiveCoupon(input.couponCode);
+    if (coupon) {
+      const discountMinor = couponDiscount(coupon, held.quote.totalMinor);
+      await db
+        .update(schema.reservation)
+        .set({
+          quoteSnapshot: {
+            ...held.quote,
+            couponCode: coupon.code,
+            discountMinor,
+            totalMinor: held.quote.totalMinor - discountMinor,
+          },
+        })
+        .where(eq(schema.reservation.bookingId, held.bookingId));
+    }
+  }
 
   await logAudit({
     action: "booking.create_walkin",

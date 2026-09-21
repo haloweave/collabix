@@ -848,6 +848,79 @@ export async function getMemberHolds(memberId: string): Promise<HoldRow[]> {
   }));
 }
 
+/** Per-code hourly rate (paise), for extended-booking price suggestions. Rooms
+ * are split by code prefix: M* = meeting, else cabin. */
+export async function getResourceRates(): Promise<Record<string, number>> {
+  const rows = await sql`
+    SELECT res.code,
+      CASE
+        WHEN res.kind = 'desk' THEN (SELECT rate_minor FROM rate_plan WHERE key = 'hotdesk')
+        WHEN res.code LIKE 'M%' THEN (SELECT rate_minor FROM rate_plan WHERE key = 'meeting')
+        ELSE (SELECT rate_minor FROM rate_plan WHERE key = 'cabin')
+      END AS rate_minor
+    FROM resource res WHERE res.enabled = true`;
+  const out: Record<string, number> = {};
+  for (const r of rows as Record<string, unknown>[]) {
+    out[r.code as string] = n(r.rate_minor);
+  }
+  return out;
+}
+
+export type CouponRow = {
+  id: string;
+  code: string;
+  kind: "percent" | "flat";
+  value: number;
+  active: boolean;
+  expiresAt: Date | null;
+};
+
+export async function listCoupons(): Promise<CouponRow[]> {
+  const rows = await sql`
+    SELECT id, code, kind, value, active, expires_at
+    FROM coupon ORDER BY created_at DESC`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    code: r.code as string,
+    kind: r.kind as "percent" | "flat",
+    value: n(r.value),
+    active: Boolean(r.active),
+    expiresAt: r.expires_at ? new Date(r.expires_at as string) : null,
+  }));
+}
+
+/** An active, unexpired coupon by code (case-insensitive), or null. */
+export async function getActiveCoupon(code: string): Promise<CouponRow | null> {
+  const c = code.trim().toUpperCase();
+  if (!c) return null;
+  const [r] = await sql`
+    SELECT id, code, kind, value, active, expires_at FROM coupon
+    WHERE upper(code) = ${c} AND active = true
+      AND (expires_at IS NULL OR expires_at > now())
+    LIMIT 1`;
+  if (!r) return null;
+  return {
+    id: r.id as string,
+    code: r.code as string,
+    kind: r.kind as "percent" | "flat",
+    value: n(r.value),
+    active: Boolean(r.active),
+    expiresAt: r.expires_at ? new Date(r.expires_at as string) : null,
+  };
+}
+
+/** Discount (in paise) a coupon applies to a total, clamped to the total. */
+export function couponDiscount(
+  coupon: { kind: "percent" | "flat"; value: number },
+  totalMinor: number,
+): number {
+  const raw =
+    coupon.kind === "percent"
+      ? Math.round((totalMinor * coupon.value) / 100)
+      : coupon.value;
+  return Math.max(0, Math.min(raw, totalMinor));
+}
+
 export type AuditRow = {
   id: string;
   actorEmail: string;

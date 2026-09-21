@@ -130,6 +130,19 @@ export const invoice = pgTable("invoice", {
     .defaultNow(),
 });
 
+// Staff discount codes, applied to a booking total at checkout.
+export const coupon = pgTable("coupon", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  kind: text("kind").notNull(), // 'percent' | 'flat'
+  value: integer("value").notNull(), // percent (0-100) or flat paise
+  active: boolean("active").notNull().default(true),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Single-row venue settings (id is pinned to 1). Governs tax, bookable hours
 // and closure dates used by the booking engine.
 export const settings = pgTable("settings", {
