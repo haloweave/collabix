@@ -7,7 +7,11 @@ import type { Quote } from "@/lib/domain/booking";
 // already covers every seat, so revenue is summed per-booking (DISTINCT ON /
 // array_agg[1]) — never per reservation, which would multiply by seat count.
 
-/** IST day/month bounds for `now`, expressed as UTC instants. */
+/**
+ * IST day/month bounds for `now`, as UTC-instant ISO strings. postgres-js in
+ * this setup rejects raw Date params, so we pass ISO text and cast to
+ * timestamptz at the call site.
+ */
 function istBounds(now: Date) {
   const shifted = new Date(now.getTime() + 330 * 60_000);
   const y = shifted.getUTCFullYear();
@@ -17,7 +21,12 @@ function istBounds(now: Date) {
   const dayEnd = new Date(dayStart.getTime() + 24 * 3_600_000);
   const monthStart = new Date(Date.UTC(y, m, 1) - 330 * 60_000);
   const monthEnd = new Date(Date.UTC(y, m + 1, 1) - 330 * 60_000);
-  return { dayStart, dayEnd, monthStart, monthEnd };
+  return {
+    dayStart: dayStart.toISOString(),
+    dayEnd: dayEnd.toISOString(),
+    monthStart: monthStart.toISOString(),
+    monthEnd: monthEnd.toISOString(),
+  };
 }
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -45,25 +54,26 @@ export async function getDashboardStats(now = new Date()): Promise<DashboardStat
   ] = await Promise.all([
     sql`SELECT count(*)::int AS n FROM resource WHERE enabled = true`,
     sql`SELECT count(DISTINCT r.resource_id)::int AS n FROM reservation r
-        WHERE r.status = 'confirmed' AND r.start_at < ${dayEnd} AND r.end_at > ${dayStart}`,
+        WHERE r.status = 'confirmed'
+          AND r.start_at < ${dayEnd}::timestamptz AND r.end_at > ${dayStart}::timestamptz`,
     sql`SELECT count(*)::int AS n FROM reservation
         WHERE status = 'held' AND hold_expires_at > now()`,
     sql`SELECT count(DISTINCT r.booking_id)::int AS n FROM reservation r
         JOIN booking b ON b.id = r.booking_id
         WHERE r.status = 'confirmed' AND b.status = 'active'
-          AND r.start_at >= ${dayStart} AND r.start_at < ${dayEnd}`,
+          AND r.start_at >= ${dayStart}::timestamptz AND r.start_at < ${dayEnd}::timestamptz`,
     sql`SELECT COALESCE(SUM(t.total), 0)::bigint AS total FROM (
           SELECT DISTINCT ON (r.booking_id) (r.quote_snapshot->>'totalMinor')::bigint AS total
           FROM reservation r JOIN booking b ON b.id = r.booking_id
           WHERE r.status = 'confirmed' AND b.status = 'active'
-            AND r.start_at >= ${dayStart} AND r.start_at < ${dayEnd}
+            AND r.start_at >= ${dayStart}::timestamptz AND r.start_at < ${dayEnd}::timestamptz
           ORDER BY r.booking_id
         ) t`,
     sql`SELECT COALESCE(SUM(t.total), 0)::bigint AS total FROM (
           SELECT DISTINCT ON (r.booking_id) (r.quote_snapshot->>'totalMinor')::bigint AS total
           FROM reservation r JOIN booking b ON b.id = r.booking_id
           WHERE r.status = 'confirmed' AND b.status = 'active'
-            AND r.start_at >= ${monthStart} AND r.start_at < ${monthEnd}
+            AND r.start_at >= ${monthStart}::timestamptz AND r.start_at < ${monthEnd}::timestamptz
           ORDER BY r.booking_id
         ) t`,
   ]);
@@ -135,14 +145,14 @@ export async function listBookings(opts: {
     LEFT JOIN reservation r ON r.booking_id = b.id
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
     WHERE (${q} = '' OR b.customer_name ILIKE ${like} OR b.customer_email ILIKE ${like})
-      AND (${status} = 'all' OR b.status = ${status})
+      AND (${status} = 'all' OR b.status::text = ${status})
     GROUP BY b.id
     ORDER BY b.created_at DESC
     LIMIT 200`;
   return rows.map(mapBookingRow);
 }
 
-export async function getUpcomingBookings(now = new Date()): Promise<BookingRow[]> {
+export async function getUpcomingBookings(): Promise<BookingRow[]> {
   const rows = await sql`
     SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at,
       count(r.id)::int AS seats,
@@ -155,7 +165,7 @@ export async function getUpcomingBookings(now = new Date()): Promise<BookingRow[
     FROM booking b
     JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
-    WHERE b.status = 'active' AND r.start_at >= ${now}
+    WHERE b.status = 'active' AND r.start_at >= now()
     GROUP BY b.id
     ORDER BY min(r.start_at) ASC
     LIMIT 8`;
