@@ -810,13 +810,17 @@
 .collabix-site .booking-panel p {margin-bottom:1.5rem;}
 .collabix-site button:disabled {opacity:.45;cursor:not-allowed;}
 /* Consolidated Book step: space pills + seat stepper + auto-select toggle. */
-.collabix-site .space-pills {display:flex;flex-wrap:wrap;gap:.6rem;margin:.4rem 0 1.4rem;}
-.collabix-site .space-pills .pill {display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;padding:.6rem .9rem;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--navy);}
-.collabix-site .space-pills .pill .pn {font-weight:600;font-size:.9rem;}
-.collabix-site .space-pills .pill .pp {font-size:.78rem;color:var(--graphite);}
+/* Connected segmented control — reads unmistakably as "choose one". */
+.collabix-site .space-pills {display:flex;flex-wrap:wrap;margin:.4rem 0 1.4rem;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.collabix-site .space-pills .pill {flex:1 1 150px;display:flex;flex-direction:column;align-items:flex-start;gap:.12rem;padding:.7rem 1rem;border:0;border-right:1px solid var(--line);border-radius:0;background:transparent;color:var(--navy);text-align:left;transition:background .2s var(--ease),color .2s var(--ease);}
+.collabix-site .space-pills .pill:last-child {border-right:0;}
+.collabix-site .space-pills .pill .pn {font-weight:600;font-size:.92rem;}
+.collabix-site .space-pills .pill .pd {font-size:.72rem;color:var(--graphite);line-height:1.35;}
+.collabix-site .space-pills .pill .pp {font-size:.78rem;color:var(--graphite);margin-top:.1rem;}
 .collabix-site .space-pills .pill .per {color:var(--graphite);}
-.collabix-site .space-pills .pill:hover:not(.sel) {border-color:var(--gold);}
-.collabix-site .space-pills .pill.sel {border-color:var(--gold);background:var(--ivory);box-shadow:inset 0 0 0 1px var(--gold);}
+.collabix-site .space-pills .pill:hover:not(.sel) {background:var(--ivory);}
+.collabix-site .space-pills .pill.sel {background:var(--navy);color:var(--ivory);}
+.collabix-site .space-pills .pill.sel .pn,.collabix-site .space-pills .pill.sel .pd,.collabix-site .space-pills .pill.sel .pp,.collabix-site .space-pills .pill.sel .per {color:var(--ivory);}
 .collabix-site .seats-control {display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin:1.4rem 0 .2rem;}
 .collabix-site .seats-count {display:flex;flex-direction:column;gap:.4rem;}
 .collabix-site .stepper {display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;width:max-content;}

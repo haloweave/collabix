@@ -342,8 +342,9 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       onClick={() => pickSpace(s.key)}
                     >
                       <span className="pn">{s.name}</span>
+                      <span className="pd">{s.blurb}</span>
                       <span className="pp">
-                        {money(rates?.[s.key] ?? s.rate)}
+                        from {money(rates?.[s.key] ?? s.rate)}
                         <span className="per">/hr</span>
                       </span>
                     </button>
