@@ -421,6 +421,31 @@ export async function getDaySchedule(dateStr: string): Promise<ScheduleRow[]> {
   return order;
 }
 
+export type AuditRow = {
+  id: string;
+  actorEmail: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  detail: unknown;
+  createdAt: Date;
+};
+
+export async function listAuditEvents(): Promise<AuditRow[]> {
+  const rows = await sql`
+    SELECT id, actor_email, action, target_type, target_id, detail, created_at
+    FROM audit_event ORDER BY created_at DESC LIMIT 200`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    actorEmail: r.actor_email as string,
+    action: r.action as string,
+    targetType: (r.target_type as string) ?? null,
+    targetId: (r.target_id as string) ?? null,
+    detail: r.detail ?? null,
+    createdAt: new Date(r.created_at as string),
+  }));
+}
+
 export type RatePlanRow = {
   id: string;
   key: string;

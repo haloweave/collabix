@@ -9,6 +9,8 @@ import {
   Users,
   Armchair,
   Tag,
+  BarChart3,
+  ScrollText,
   LogOut,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
@@ -40,6 +42,8 @@ const NAV = [
   { title: "Members", href: "/admin/members", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Armchair },
   { title: "Rate plans", href: "/admin/rate-plans", icon: Tag },
+  { title: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { title: "Audit log", href: "/admin/audit", icon: ScrollText },
 ];
 
 function initials(name: string) {
