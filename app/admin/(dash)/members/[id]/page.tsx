@@ -4,12 +4,14 @@ import { ArrowLeft } from "lucide-react";
 import {
   getMember,
   getMemberSubscription,
+  getMemberHolds,
   listActivePlans,
 } from "@/lib/admin/queries";
 import { getSessionUser, isManager } from "@/lib/admin/auth";
 import { rupees, istDateTime, istDate } from "@/lib/admin/format";
 import { MemberEditor } from "@/components/admin/member-editor";
 import { MembershipControls } from "@/components/admin/membership-controls";
+import { LongTermHoldCard } from "@/components/admin/long-term-hold-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,9 +42,10 @@ export default async function MemberDetailPage({
   if (!member) notFound();
   const viewer = await getSessionUser();
   const canManageRoles = isManager(viewer?.role);
-  const [subscription, activePlans] = await Promise.all([
+  const [subscription, activePlans, holds] = await Promise.all([
     getMemberSubscription(id),
     listActivePlans(),
+    getMemberHolds(id),
   ]);
 
   return (
@@ -106,6 +109,8 @@ export default async function MemberDetailPage({
         subscription={subscription}
         plans={activePlans}
       />
+
+      <LongTermHoldCard memberId={member.id} holds={holds} />
 
       <MemberEditor
         id={member.id}

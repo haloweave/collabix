@@ -713,6 +713,33 @@ export async function listActivePlans(): Promise<
   }));
 }
 
+export type HoldRow = {
+  bookingId: string;
+  startAt: Date;
+  endAt: Date;
+  codes: string[];
+};
+
+/** A member's active long-term holds (membershipHold reservations, not expired). */
+export async function getMemberHolds(memberId: string): Promise<HoldRow[]> {
+  const rows = await sql`
+    SELECT b.id AS booking_id, min(r.start_at) AS start_at, max(r.end_at) AS end_at,
+      array_agg(res.code ORDER BY res.code) AS codes
+    FROM booking b
+    JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
+    JOIN resource res ON res.id = r.resource_id
+    WHERE b.member_id = ${memberId} AND b.status = 'active'
+      AND r.quote_snapshot->>'membershipHold' = 'true' AND r.end_at > now()
+    GROUP BY b.id
+    ORDER BY min(r.start_at)`;
+  return rows.map((r: Record<string, unknown>) => ({
+    bookingId: r.booking_id as string,
+    startAt: new Date(r.start_at as string),
+    endAt: new Date(r.end_at as string),
+    codes: (r.codes as string[]) ?? [],
+  }));
+}
+
 export type AuditRow = {
   id: string;
   actorEmail: string;

@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
-import { requireManager, requireStaff } from "@/lib/admin/auth";
+import * as authSchema from "@/lib/db/auth-schema";
+import { requireStaff, requireManager } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 
 export async function createMembershipPlan(input: {
@@ -87,6 +88,98 @@ export async function assignSubscription(memberId: string, planId: string) {
   });
   revalidatePath(`/admin/members/${memberId}`);
   revalidatePath("/admin/memberships");
+}
+
+// Create a long-term hold: reserve specific seats/rooms for a member across a
+// date range. Written as a normal (confirmed) booking with a long window, so it
+// blocks those resources on the public booking page via the same exclusion
+// constraint. Priced as ₹0 here (covered by the membership fee) and flagged
+// membershipHold so it's distinguishable from hourly bookings.
+export async function createLongTermHold(input: {
+  memberId: string;
+  resourceCodes: string[];
+  startDate: string;
+  endDate: string;
+}): Promise<{ ok: true; bookingId: string } | { ok: false; error: string }> {
+  await requireStaff();
+
+  const codes = [
+    ...new Set(input.resourceCodes.map((c) => c.trim().toUpperCase()).filter(Boolean)),
+  ];
+  if (!codes.length) return { ok: false, error: "Enter at least one seat/room code." };
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRe.test(input.startDate) || !dateRe.test(input.endDate))
+    return { ok: false, error: "Use YYYY-MM-DD dates." };
+  if (input.endDate < input.startDate)
+    return { ok: false, error: "End date is before start date." };
+
+  const [sy, sm, sd] = input.startDate.split("-").map(Number);
+  const [ey, em, ed] = input.endDate.split("-").map(Number);
+  const startAt = new Date(Date.UTC(sy, sm - 1, sd) - 330 * 60_000);
+  const endAt = new Date(Date.UTC(ey, em - 1, ed + 1) - 330 * 60_000); // inclusive end day
+
+  const resources = await db
+    .select()
+    .from(schema.resource)
+    .where(inArray(schema.resource.code, codes));
+  if (resources.length !== codes.length)
+    return { ok: false, error: "One or more codes were not found." };
+
+  const [member] = await db
+    .select()
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, input.memberId));
+  if (!member) return { ok: false, error: "Member not found." };
+
+  const plans = await db.select().from(schema.ratePlan);
+  const planByKind = new Map(plans.map((p) => [p.appliesToKind, p.id]));
+  if (resources.some((r) => !planByKind.has(r.kind)))
+    return { ok: false, error: "No rate plan for a resource kind." };
+
+  try {
+    const bookingId = await db.transaction(async (tx) => {
+      const [b] = await tx
+        .insert(schema.booking)
+        .values({
+          memberId: input.memberId,
+          customerName: member.name,
+          customerEmail: member.email,
+        })
+        .returning({ id: schema.booking.id });
+      await tx.insert(schema.reservation).values(
+        resources.map((r) => ({
+          bookingId: b.id,
+          resourceId: r.id,
+          ratePlanId: planByKind.get(r.kind)!,
+          startAt,
+          endAt,
+          status: "confirmed" as const,
+          quoteSnapshot: {
+            membershipHold: true,
+            startDate: input.startDate,
+            endDate: input.endDate,
+          },
+        })),
+      );
+      return b.id;
+    });
+
+    await logAudit({
+      action: "hold.create",
+      targetType: "member",
+      targetId: input.memberId,
+      detail: { codes, startDate: input.startDate, endDate: input.endDate },
+    });
+    revalidatePath(`/admin/members/${input.memberId}`);
+    return { ok: true, bookingId };
+  } catch (e) {
+    const code =
+      (e as { code?: string; cause?: { code?: string } })?.code ??
+      (e as { cause?: { code?: string } })?.cause?.code;
+    if (code === "23P01")
+      return { ok: false, error: "A seat/room is already booked in that range." };
+    throw e;
+  }
 }
 
 export async function cancelSubscription(id: string, memberId: string) {
