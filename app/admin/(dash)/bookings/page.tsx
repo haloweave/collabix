@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { listBookings } from "@/lib/admin/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { BookingsFilter } from "@/components/admin/bookings-filter";
 import { BookingStatusBadge } from "@/components/admin/booking-status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -27,12 +29,20 @@ export default async function BookingsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Bookings</h1>
-        <p className="text-sm text-muted-foreground">
-          {bookings.length} booking{bookings.length === 1 ? "" : "s"}
-          {q ? ` matching “${q}”` : ""}.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Bookings</h1>
+          <p className="text-sm text-muted-foreground">
+            {bookings.length} booking{bookings.length === 1 ? "" : "s"}
+            {q ? ` matching “${q}”` : ""}.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/bookings/new">
+            <Plus className="size-4" />
+            New booking
+          </Link>
+        </Button>
       </div>
 
       <BookingsFilter defaultQ={q} defaultStatus={status} />
