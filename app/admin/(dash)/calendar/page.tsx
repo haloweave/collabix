@@ -84,7 +84,7 @@ export default async function CalendarPage({
           <div className="min-w-[640px]">
             {/* Hour ruler */}
             <div className="mb-2 flex">
-              <div className="w-14 shrink-0" />
+              <div className="sticky left-0 z-10 w-14 shrink-0 bg-card" />
               <div className="relative flex-1">
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   {HOURS.map((h) => (
@@ -97,7 +97,7 @@ export default async function CalendarPage({
             <div className="space-y-1">
               {rows.map((row) => (
                 <div key={row.resourceId} className="flex items-center">
-                  <div className="w-14 shrink-0 text-xs font-medium">
+                  <div className="sticky left-0 z-10 w-14 shrink-0 bg-card pr-1 text-xs font-medium">
                     {row.code}
                   </div>
                   <div className="relative h-7 flex-1 rounded bg-muted/60">
