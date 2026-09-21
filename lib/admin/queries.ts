@@ -1,0 +1,238 @@
+import "server-only";
+import { sql } from "@/lib/db/client";
+import type { Quote } from "@/lib/domain/booking";
+
+// All admin reads live here as parameterised SQL. Money is integer paise; a
+// booking's `quote_snapshot.totalMinor` is identical across its reservations and
+// already covers every seat, so revenue is summed per-booking (DISTINCT ON /
+// array_agg[1]) — never per reservation, which would multiply by seat count.
+
+/** IST day/month bounds for `now`, expressed as UTC instants. */
+function istBounds(now: Date) {
+  const shifted = new Date(now.getTime() + 330 * 60_000);
+  const y = shifted.getUTCFullYear();
+  const m = shifted.getUTCMonth();
+  const d = shifted.getUTCDate();
+  const dayStart = new Date(Date.UTC(y, m, d) - 330 * 60_000);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 3_600_000);
+  const monthStart = new Date(Date.UTC(y, m, 1) - 330 * 60_000);
+  const monthEnd = new Date(Date.UTC(y, m + 1, 1) - 330 * 60_000);
+  return { dayStart, dayEnd, monthStart, monthEnd };
+}
+
+const n = (v: unknown) => Number(v ?? 0);
+
+export type DashboardStats = {
+  totalResources: number;
+  seatsBookedToday: number;
+  occupancyPct: number;
+  activeHolds: number;
+  bookingsToday: number;
+  revenueTodayMinor: number;
+  revenueMonthMinor: number;
+};
+
+export async function getDashboardStats(now = new Date()): Promise<DashboardStats> {
+  const { dayStart, dayEnd, monthStart, monthEnd } = istBounds(now);
+
+  const [
+    totalRes,
+    seatsToday,
+    holds,
+    bookingsToday,
+    revToday,
+    revMonth,
+  ] = await Promise.all([
+    sql`SELECT count(*)::int AS n FROM resource WHERE enabled = true`,
+    sql`SELECT count(DISTINCT r.resource_id)::int AS n FROM reservation r
+        WHERE r.status = 'confirmed' AND r.start_at < ${dayEnd} AND r.end_at > ${dayStart}`,
+    sql`SELECT count(*)::int AS n FROM reservation
+        WHERE status = 'held' AND hold_expires_at > now()`,
+    sql`SELECT count(DISTINCT r.booking_id)::int AS n FROM reservation r
+        JOIN booking b ON b.id = r.booking_id
+        WHERE r.status = 'confirmed' AND b.status = 'active'
+          AND r.start_at >= ${dayStart} AND r.start_at < ${dayEnd}`,
+    sql`SELECT COALESCE(SUM(t.total), 0)::bigint AS total FROM (
+          SELECT DISTINCT ON (r.booking_id) (r.quote_snapshot->>'totalMinor')::bigint AS total
+          FROM reservation r JOIN booking b ON b.id = r.booking_id
+          WHERE r.status = 'confirmed' AND b.status = 'active'
+            AND r.start_at >= ${dayStart} AND r.start_at < ${dayEnd}
+          ORDER BY r.booking_id
+        ) t`,
+    sql`SELECT COALESCE(SUM(t.total), 0)::bigint AS total FROM (
+          SELECT DISTINCT ON (r.booking_id) (r.quote_snapshot->>'totalMinor')::bigint AS total
+          FROM reservation r JOIN booking b ON b.id = r.booking_id
+          WHERE r.status = 'confirmed' AND b.status = 'active'
+            AND r.start_at >= ${monthStart} AND r.start_at < ${monthEnd}
+          ORDER BY r.booking_id
+        ) t`,
+  ]);
+
+  const totalResources = n(totalRes[0]?.n);
+  const seatsBookedToday = n(seatsToday[0]?.n);
+  return {
+    totalResources,
+    seatsBookedToday,
+    occupancyPct: totalResources
+      ? Math.round((seatsBookedToday / totalResources) * 100)
+      : 0,
+    activeHolds: n(holds[0]?.n),
+    bookingsToday: n(bookingsToday[0]?.n),
+    revenueTodayMinor: n(revToday[0]?.total),
+    revenueMonthMinor: n(revMonth[0]?.total),
+  };
+}
+
+export type BookingRow = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  status: "active" | "cancelled";
+  createdAt: Date;
+  seats: number;
+  startAt: Date | null;
+  endAt: Date | null;
+  plan: string | null;
+  totalMinor: number;
+  anyConfirmed: boolean;
+  anyActiveHold: boolean;
+};
+
+function mapBookingRow(r: Record<string, unknown>): BookingRow {
+  return {
+    id: r.id as string,
+    customerName: r.customer_name as string,
+    customerEmail: r.customer_email as string,
+    status: r.status as "active" | "cancelled",
+    createdAt: new Date(r.created_at as string),
+    seats: n(r.seats),
+    startAt: r.start_at ? new Date(r.start_at as string) : null,
+    endAt: r.end_at ? new Date(r.end_at as string) : null,
+    plan: (r.plan as string) ?? null,
+    totalMinor: n(r.total_minor),
+    anyConfirmed: Boolean(r.any_confirmed),
+    anyActiveHold: Boolean(r.any_active_hold),
+  };
+}
+
+export async function listBookings(opts: {
+  q?: string;
+  status?: "all" | "active" | "cancelled";
+}): Promise<BookingRow[]> {
+  const q = (opts.q ?? "").trim();
+  const like = `%${q}%`;
+  const status = opts.status ?? "all";
+  const rows = await sql`
+    SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at,
+      count(r.id)::int AS seats,
+      min(r.start_at) AS start_at,
+      max(r.end_at) AS end_at,
+      (array_agg(DISTINCT rp.name))[1] AS plan,
+      (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
+      bool_or(r.status = 'confirmed') AS any_confirmed,
+      bool_or(r.status = 'held' AND r.hold_expires_at > now()) AS any_active_hold
+    FROM booking b
+    LEFT JOIN reservation r ON r.booking_id = b.id
+    LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE (${q} = '' OR b.customer_name ILIKE ${like} OR b.customer_email ILIKE ${like})
+      AND (${status} = 'all' OR b.status = ${status})
+    GROUP BY b.id
+    ORDER BY b.created_at DESC
+    LIMIT 200`;
+  return rows.map(mapBookingRow);
+}
+
+export async function getUpcomingBookings(now = new Date()): Promise<BookingRow[]> {
+  const rows = await sql`
+    SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at,
+      count(r.id)::int AS seats,
+      min(r.start_at) AS start_at,
+      max(r.end_at) AS end_at,
+      (array_agg(DISTINCT rp.name))[1] AS plan,
+      (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
+      true AS any_confirmed,
+      false AS any_active_hold
+    FROM booking b
+    JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
+    LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE b.status = 'active' AND r.start_at >= ${now}
+    GROUP BY b.id
+    ORDER BY min(r.start_at) ASC
+    LIMIT 8`;
+  return rows.map(mapBookingRow);
+}
+
+export type BookingDetail = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  memberId: string | null;
+  status: "active" | "cancelled";
+  createdAt: Date;
+  reservations: {
+    id: string;
+    code: string;
+    plan: string;
+    status: "held" | "confirmed" | "expired" | "cancelled";
+    startAt: Date;
+    endAt: Date;
+    holdExpiresAt: Date | null;
+    quote: Quote;
+  }[];
+};
+
+export async function getBooking(id: string): Promise<BookingDetail | null> {
+  const [b] = await sql`SELECT * FROM booking WHERE id = ${id}`;
+  if (!b) return null;
+  const res = await sql`
+    SELECT r.id, r.status, r.start_at, r.end_at, r.hold_expires_at,
+           r.quote_snapshot, res.code, rp.name AS plan
+    FROM reservation r
+    JOIN resource res ON res.id = r.resource_id
+    JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE r.booking_id = ${id}
+    ORDER BY res.code`;
+  return {
+    id: b.id as string,
+    customerName: b.customer_name as string,
+    customerEmail: b.customer_email as string,
+    memberId: (b.member_id as string) ?? null,
+    status: b.status as "active" | "cancelled",
+    createdAt: new Date(b.created_at as string),
+    reservations: res.map((r: Record<string, unknown>) => ({
+      id: r.id as string,
+      code: r.code as string,
+      plan: r.plan as string,
+      status: r.status as "held" | "confirmed" | "expired" | "cancelled",
+      startAt: new Date(r.start_at as string),
+      endAt: new Date(r.end_at as string),
+      holdExpiresAt: r.hold_expires_at ? new Date(r.hold_expires_at as string) : null,
+      quote: r.quote_snapshot as Quote,
+    })),
+  };
+}
+
+export type RatePlanRow = {
+  id: string;
+  key: string;
+  name: string;
+  appliesToKind: "desk" | "room";
+  rateMinor: number;
+  currency: string;
+  active: boolean;
+};
+
+export async function listRatePlans(): Promise<RatePlanRow[]> {
+  const rows = await sql`
+    SELECT id, key, name, applies_to_kind, rate_minor, currency, active
+    FROM rate_plan ORDER BY rate_minor ASC`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    key: r.key as string,
+    name: r.name as string,
+    appliesToKind: r.applies_to_kind as "desk" | "room",
+    rateMinor: n(r.rate_minor),
+    currency: r.currency as string,
+    active: Boolean(r.active),
+  }));
+}
