@@ -46,8 +46,25 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedCodes, setConfirmedCodes] = useState<string[] | null>(null);
+  // Live hourly rates (whole rupees) keyed by plan key, lazy-loaded from the DB
+  // after the page renders so the first paint isn't blocked on a query. Until it
+  // resolves we show the static indicative rate from lib/spaces.ts.
+  const [rates, setRates] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/rates")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active && data) setRates(data as Record<string, number>);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const space = spaces.find((s) => s.key === key)!;
+  const spaceRate = rates?.[key] ?? space.rate;
   const isDesk = space.desk;
   const label = STEPS[step];
 
@@ -326,7 +343,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     >
                       <span className="pn">{s.name}</span>
                       <span className="pp">
-                        {money(s.rate)}
+                        {money(rates?.[s.key] ?? s.rate)}
                         <span className="per">/hr</span>
                       </span>
                     </button>
@@ -448,7 +465,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                         slots={slots}
                         selectedResourceIds={selectedIds}
                         onSelect={selectSeat}
-                        priceLabel={`${money(space.rate)}/hr`}
+                        priceLabel={`${money(spaceRate)}/hr`}
                       />
                       <p aria-live="polite" className="avail-hint">
                         {selectedCodes.length
@@ -644,13 +661,13 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   "Subtotal",
                   quote
                     ? rupees(quote.subtotalMinor)
-                    : money(space.rate * duration * priceSeats),
+                    : money(spaceRate * duration * priceSeats),
                 ],
                 [
                   "Tax (18%)",
                   quote
                     ? rupees(quote.taxMinor)
-                    : money(Math.round(space.rate * duration * priceSeats * 0.18)),
+                    : money(Math.round(spaceRate * duration * priceSeats * 0.18)),
                 ],
               ].map(([k, v]) => (
                 <div className="s-line" key={k}>
@@ -665,8 +682,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                 {quote
                   ? rupees(quote.totalMinor)
                   : money(
-                      space.rate * duration * priceSeats +
-                        Math.round(space.rate * duration * priceSeats * 0.18),
+                      spaceRate * duration * priceSeats +
+                        Math.round(spaceRate * duration * priceSeats * 0.18),
                     )}
               </span>
             </div>
