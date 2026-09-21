@@ -44,7 +44,45 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      <div className="rounded-lg border">
+      {/* Mobile: invoice cards */}
+      <div className="space-y-3 md:hidden">
+        {invoices.length === 0 && (
+          <p className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+            No invoices yet.
+          </p>
+        )}
+        {invoices.map((i) => (
+          <div key={i.id} className="rounded-lg border p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  href={`/admin/members/${i.memberId}`}
+                  className="font-medium hover:underline"
+                >
+                  {i.memberName ?? "—"}
+                </Link>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {istDate(i.periodStart)} – {istDate(i.periodEnd)}
+                </p>
+              </div>
+              <Badge
+                variant={STATUS_VARIANT[i.status] ?? "outline"}
+                className="shrink-0 capitalize"
+              >
+                {i.status}
+              </Badge>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3">
+              <span className="font-medium tabular-nums">
+                {rupees(i.totalMinor)}
+              </span>
+              <InvoiceActions id={i.id} status={i.status} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden rounded-lg border md:block">
         <Table>
           <TableHeader>
             <TableRow>
