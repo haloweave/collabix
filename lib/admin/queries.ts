@@ -356,6 +356,83 @@ export async function listInventory(): Promise<InventoryFloor[]> {
   return floors;
 }
 
+export type HereTodayRow = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  seats: number;
+  startAt: Date;
+  endAt: Date;
+  plan: string | null;
+  checkedIn: boolean;
+  checkedOut: boolean;
+  checkedInAt: Date | null;
+};
+
+/** Today's confirmed bookings for the reception check-in board. */
+export async function getHereToday(now = new Date()): Promise<HereTodayRow[]> {
+  const { dayStart, dayEnd } = istBounds(now);
+  const rows = await sql`
+    SELECT b.id, b.customer_name, b.customer_email,
+      count(r.id)::int AS seats,
+      min(r.start_at) AS start_at,
+      max(r.end_at) AS end_at,
+      (array_agg(DISTINCT rp.name))[1] AS plan,
+      bool_and(r.checked_in_at IS NOT NULL) AS checked_in,
+      bool_and(r.checked_out_at IS NOT NULL) AS checked_out,
+      min(r.checked_in_at) AS checked_in_at
+    FROM booking b
+    JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
+    LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE b.status = 'active'
+      AND r.start_at < ${dayEnd}::timestamptz AND r.end_at > ${dayStart}::timestamptz
+    GROUP BY b.id
+    ORDER BY min(r.start_at)`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    customerName: r.customer_name as string,
+    customerEmail: r.customer_email as string,
+    seats: n(r.seats),
+    startAt: new Date(r.start_at as string),
+    endAt: new Date(r.end_at as string),
+    plan: (r.plan as string) ?? null,
+    checkedIn: Boolean(r.checked_in),
+    checkedOut: Boolean(r.checked_out),
+    checkedInAt: r.checked_in_at ? new Date(r.checked_in_at as string) : null,
+  }));
+}
+
+export type VisitorRow = {
+  id: string;
+  name: string;
+  company: string | null;
+  host: string | null;
+  purpose: string | null;
+  phone: string | null;
+  checkedInAt: Date;
+  checkedOutAt: Date | null;
+};
+
+/** Visitors signed in today, most recent first. */
+export async function getTodayVisitors(now = new Date()): Promise<VisitorRow[]> {
+  const { dayStart, dayEnd } = istBounds(now);
+  const rows = await sql`
+    SELECT id, name, company, host, purpose, phone, checked_in_at, checked_out_at
+    FROM visitor
+    WHERE checked_in_at >= ${dayStart}::timestamptz AND checked_in_at < ${dayEnd}::timestamptz
+    ORDER BY checked_in_at DESC`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    name: r.name as string,
+    company: (r.company as string) ?? null,
+    host: (r.host as string) ?? null,
+    purpose: (r.purpose as string) ?? null,
+    phone: (r.phone as string) ?? null,
+    checkedInAt: new Date(r.checked_in_at as string),
+    checkedOutAt: r.checked_out_at ? new Date(r.checked_out_at as string) : null,
+  }));
+}
+
 export type ScheduleBlock = {
   reservationId: string;
   bookingId: string;
