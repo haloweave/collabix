@@ -1,15 +1,12 @@
 import { getBookingsInRange } from "@/lib/admin/queries";
-import {
-  getSessionUser,
-  isAdminAuthDisabled,
-  STAFF_ROLES,
-} from "@/lib/admin/auth";
+import { getSessionUser, isAdminAuthDisabled, isManager } from "@/lib/admin/auth";
 
 // Route handlers aren't covered by the (dash) layout guard, so authorise here.
+// Reports are manager/owner-only, matching the reports page guard.
 async function authorised() {
   if (isAdminAuthDisabled()) return true;
   const u = await getSessionUser();
-  return !!u && (STAFF_ROLES as readonly string[]).includes(u.role);
+  return !!u && isManager(u.role);
 }
 
 const isDate = (s: string | null): s is string =>

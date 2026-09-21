@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireManager } from "@/lib/admin/auth";
 import { listAuditEvents } from "@/lib/admin/queries";
 import { istDateTime } from "@/lib/admin/format";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ function targetHref(type: string | null, id: string | null) {
 }
 
 export default async function AuditPage() {
+  await requireManager();
   const events = await listAuditEvents();
 
   return (

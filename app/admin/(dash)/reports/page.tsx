@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { requireManager } from "@/lib/admin/auth";
 import { getReportSummary } from "@/lib/admin/queries";
 import { rupees } from "@/lib/admin/format";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  await requireManager();
   const sp = await searchParams;
   const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   const from = isDate(sp.from) ? sp.from! : `${today.slice(0, 7)}-01`;

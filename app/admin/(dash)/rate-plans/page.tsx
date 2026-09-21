@@ -1,3 +1,4 @@
+import { requireManager } from "@/lib/admin/auth";
 import { listRatePlans } from "@/lib/admin/queries";
 import { RatePlanEditor } from "@/components/admin/rate-plan-editor";
 import {
@@ -12,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 export const dynamic = "force-dynamic";
 
 export default async function RatePlansPage() {
+  await requireManager();
   const plans = await listRatePlans();
 
   return (

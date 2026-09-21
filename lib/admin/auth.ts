@@ -3,10 +3,14 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
 // Roles that unlock the /admin panel. `member` (the booking-flow default) is
-// intentionally excluded.
-export const STAFF_ROLES = ["staff", "manager", "owner"] as const;
+// intentionally excluded. `reception` is the limited front-desk role.
+export const STAFF_ROLES = ["reception", "staff", "manager", "owner"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 export type Role = "member" | StaffRole;
+
+// Config/finance roles: the only ones allowed on rate plans, reports, audit and
+// the forthcoming settings/membership/billing pages. Reception/staff are bounced.
+export const MANAGER_ROLES = ["manager", "owner"] as const;
 
 export type SessionUser = {
   id: string;
@@ -17,6 +21,10 @@ export type SessionUser = {
 
 function isStaff(role: string | undefined): role is StaffRole {
   return !!role && (STAFF_ROLES as readonly string[]).includes(role);
+}
+
+export function isManager(role: string | undefined): boolean {
+  return !!role && (MANAGER_ROLES as readonly string[]).includes(role);
 }
 
 /**
@@ -60,5 +68,21 @@ export async function requireStaff(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/admin/login");
   if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  return user;
+}
+
+/**
+ * Guard for config/finance pages. Anonymous → sign-in; operational-only roles
+ * (reception/staff) are bounced to the dashboard rather than shown the page.
+ */
+export async function requireManager(): Promise<SessionUser> {
+  if (isAdminAuthDisabled()) {
+    const user = await getSessionUser();
+    return user && isManager(user.role) ? user : DEV_ADMIN;
+  }
+  const user = await getSessionUser();
+  if (!user) redirect("/admin/login");
+  if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  if (!isManager(user.role)) redirect("/admin");
   return user;
 }

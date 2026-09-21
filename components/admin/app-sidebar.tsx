@@ -11,6 +11,7 @@ import {
   Tag,
   BarChart3,
   ScrollText,
+  UserCheck,
   LogOut,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
@@ -37,13 +38,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const NAV = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+  { title: "Reception", href: "/admin/reception", icon: UserCheck },
   { title: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
   { title: "Calendar", href: "/admin/calendar", icon: CalendarRange },
   { title: "Members", href: "/admin/members", icon: Users },
   { title: "Inventory", href: "/admin/inventory", icon: Armchair },
-  { title: "Rate plans", href: "/admin/rate-plans", icon: Tag },
-  { title: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { title: "Audit log", href: "/admin/audit", icon: ScrollText },
+  { title: "Rate plans", href: "/admin/rate-plans", icon: Tag, managerOnly: true },
+  { title: "Reports", href: "/admin/reports", icon: BarChart3, managerOnly: true },
+  { title: "Audit log", href: "/admin/audit", icon: ScrollText, managerOnly: true },
 ];
 
 function initials(name: string) {
@@ -63,6 +65,7 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isManager = user.role === "manager" || user.role === "owner";
 
   async function signOut() {
     await authClient.signOut();
@@ -88,7 +91,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarMenu>
-            {NAV.map((item) => {
+            {NAV.filter((item) => !item.managerOnly || isManager).map((item) => {
               const active = item.exact
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(item.href + "/");
