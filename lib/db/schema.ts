@@ -74,6 +74,42 @@ export const ratePlan = pgTable("rate_plan", {
   active: boolean("active").notNull().default(true),
 });
 
+// Recurring membership plans: a monthly fee that includes an hours allowance.
+// Booking hours draw down the allowance; overage bills at the normal rate.
+export const membershipPlan = pgTable("membership_plan", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  priceMinor: integer("price_minor").notNull(), // monthly fee, paise
+  includedHours: integer("included_hours").notNull().default(0),
+  currency: text("currency").notNull().default("INR"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// A member's active plan. memberId is a user.id (no cross-schema FK, matching
+// booking.memberId). hoursUsed accrues within the current period.
+export const memberSubscription = pgTable("member_subscription", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: text("member_id").notNull(),
+  planId: uuid("plan_id")
+    .notNull()
+    .references(() => membershipPlan.id),
+  status: text("status").notNull().default("active"), // active | cancelled
+  startedAt: timestamp("started_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  periodStart: timestamp("period_start", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+  hoursUsed: integer("hours_used").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Single-row venue settings (id is pinned to 1). Governs tax, bookable hours
 // and closure dates used by the booking engine.
 export const settings = pgTable("settings", {

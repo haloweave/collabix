@@ -604,6 +604,115 @@ export async function getBookingsInRange(
   }));
 }
 
+export type MembershipPlanRow = {
+  id: string;
+  name: string;
+  priceMinor: number;
+  includedHours: number;
+  active: boolean;
+  subscribers: number;
+};
+
+export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
+  const rows = await sql`
+    SELECT mp.id, mp.name, mp.price_minor, mp.included_hours, mp.active,
+      (SELECT count(*)::int FROM member_subscription s
+        WHERE s.plan_id = mp.id AND s.status = 'active') AS subscribers
+    FROM membership_plan mp ORDER BY mp.price_minor`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    name: r.name as string,
+    priceMinor: n(r.price_minor),
+    includedHours: n(r.included_hours),
+    active: Boolean(r.active),
+    subscribers: n(r.subscribers),
+  }));
+}
+
+export type SubscriptionRow = {
+  id: string;
+  memberId: string;
+  memberName: string | null;
+  memberEmail: string | null;
+  planName: string;
+  includedHours: number;
+  hoursUsed: number;
+  priceMinor: number;
+  periodEnd: Date;
+};
+
+export async function listSubscriptions(): Promise<SubscriptionRow[]> {
+  const rows = await sql`
+    SELECT s.id, s.member_id, u.name AS member_name, u.email AS member_email,
+      mp.name AS plan_name, mp.included_hours, s.hours_used, mp.price_minor,
+      s.period_end
+    FROM member_subscription s
+    JOIN membership_plan mp ON mp.id = s.plan_id
+    LEFT JOIN "user" u ON u.id = s.member_id
+    WHERE s.status = 'active'
+    ORDER BY s.created_at DESC`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    memberId: r.member_id as string,
+    memberName: (r.member_name as string) ?? null,
+    memberEmail: (r.member_email as string) ?? null,
+    planName: r.plan_name as string,
+    includedHours: n(r.included_hours),
+    hoursUsed: n(r.hours_used),
+    priceMinor: n(r.price_minor),
+    periodEnd: new Date(r.period_end as string),
+  }));
+}
+
+export type MemberSubscription = {
+  id: string;
+  planId: string;
+  planName: string;
+  priceMinor: number;
+  includedHours: number;
+  hoursUsed: number;
+  periodStart: Date;
+  periodEnd: Date;
+};
+
+export async function getMemberSubscription(
+  memberId: string,
+): Promise<MemberSubscription | null> {
+  const [s] = await sql`
+    SELECT s.id, s.plan_id, mp.name AS plan_name, mp.price_minor,
+      mp.included_hours, s.hours_used, s.period_start, s.period_end
+    FROM member_subscription s
+    JOIN membership_plan mp ON mp.id = s.plan_id
+    WHERE s.member_id = ${memberId} AND s.status = 'active'
+    ORDER BY s.created_at DESC LIMIT 1`;
+  if (!s) return null;
+  return {
+    id: s.id as string,
+    planId: s.plan_id as string,
+    planName: s.plan_name as string,
+    priceMinor: n(s.price_minor),
+    includedHours: n(s.included_hours),
+    hoursUsed: n(s.hours_used),
+    periodStart: new Date(s.period_start as string),
+    periodEnd: new Date(s.period_end as string),
+  };
+}
+
+/** Active plans for the assignment dropdown. */
+export async function listActivePlans(): Promise<
+  { id: string; name: string; priceMinor: number; includedHours: number }[]
+> {
+  const rows = await sql`
+    SELECT id, name, price_minor, included_hours FROM membership_plan
+    WHERE active = true ORDER BY price_minor`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    name: r.name as string,
+    priceMinor: n(r.price_minor),
+    includedHours: n(r.included_hours),
+  }));
+}
+
 export type AuditRow = {
   id: string;
   actorEmail: string;

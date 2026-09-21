@@ -43,6 +43,13 @@
       "when": 1790021833248,
       "tag": "0005_slimy_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790022082596,
+      "tag": "0006_complete_randall",
+      "breakpoints": true
     }
   ]
 }
