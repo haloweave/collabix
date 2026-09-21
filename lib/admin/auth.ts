@@ -45,12 +45,18 @@ const DEV_ADMIN: SessionUser = {
   role: "owner",
 };
 
-/** The current session user (or null), with the custom `role` field. */
+/** The current session user (or null), with the custom `role` field. A failed
+ * session read (e.g. a stale/invalid cookie) is treated as "not signed in"
+ * rather than crashing the page. */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return null;
-  const u = session.user as { id: string; name: string; email: string; role?: string };
-  return { id: u.id, name: u.name, email: u.email, role: (u.role as Role) ?? "member" };
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) return null;
+    const u = session.user as { id: string; name: string; email: string; role?: string };
+    return { id: u.id, name: u.name, email: u.email, role: (u.role as Role) ?? "member" };
+  } catch {
+    return null;
+  }
 }
 
 /**
