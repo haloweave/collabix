@@ -14,14 +14,16 @@ export function StatCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-4 pb-1.5 sm:p-6 sm:pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
           {title}
         </CardTitle>
-        <Icon className="size-4 text-muted-foreground" />
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{value}</div>
+      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+        <div className="text-xl font-semibold tracking-tight tabular-nums sm:text-2xl">
+          {value}
+        </div>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
