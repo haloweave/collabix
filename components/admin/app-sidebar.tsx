@@ -12,6 +12,7 @@ import {
   BarChart3,
   ScrollText,
   UserCheck,
+  Settings,
   LogOut,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
@@ -46,6 +47,7 @@ const NAV = [
   { title: "Rate plans", href: "/admin/rate-plans", icon: Tag, managerOnly: true },
   { title: "Reports", href: "/admin/reports", icon: BarChart3, managerOnly: true },
   { title: "Audit log", href: "/admin/audit", icon: ScrollText, managerOnly: true },
+  { title: "Settings", href: "/admin/settings", icon: Settings, managerOnly: true },
 ];
 
 function initials(name: string) {
