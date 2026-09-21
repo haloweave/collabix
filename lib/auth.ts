@@ -13,6 +13,19 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
+  user: {
+    additionalFields: {
+      // Surfaced on the session user so route guards can gate /admin. `input:
+      // false` stops clients from granting themselves a role at sign-up; roles
+      // are assigned by staff or the owner-seed script only.
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "member",
+        input: false,
+      },
+    },
+  },
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
