@@ -563,7 +563,9 @@
    ============================================================ */
 @media (max-width: 940px) {
   .collabix-site .booking-layout { grid-template-columns: 1fr; }
-  .collabix-site .summary { position: relative; top: 0; order: -1; }
+  /* Lead with the actual controls on mobile; the summary follows as a
+     running-total reference rather than dominating the first screen. */
+  .collabix-site .summary { position: relative; top: 0; order: 0; }
   .collabix-site .footer-top { grid-template-columns: 1fr 1fr; }
   .collabix-site .amen-grid { grid-template-columns: repeat(2,1fr); }
 }
