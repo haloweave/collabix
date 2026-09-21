@@ -356,6 +356,71 @@ export async function listInventory(): Promise<InventoryFloor[]> {
   return floors;
 }
 
+export type ScheduleBlock = {
+  reservationId: string;
+  bookingId: string;
+  status: "held" | "confirmed";
+  customerName: string;
+  startHour: number; // IST hour-of-day (may be fractional), clamp at render
+  endHour: number;
+};
+export type ScheduleRow = {
+  resourceId: string;
+  code: string;
+  kind: "desk" | "room";
+  blocks: ScheduleBlock[];
+};
+
+/** Per-resource timeline of held/confirmed reservations for one IST day. */
+export async function getDaySchedule(dateStr: string): Promise<ScheduleRow[]> {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dayStartMs = Date.UTC(y, m - 1, d) - 330 * 60_000;
+  const dayStart = new Date(dayStartMs).toISOString();
+  const dayEnd = new Date(dayStartMs + 24 * 3_600_000).toISOString();
+
+  const rows = await sql`
+    SELECT r.id AS resource_id, r.code, r.kind,
+      res.id AS reservation_id, res.status, res.start_at, res.end_at,
+      b.id AS booking_id, b.customer_name
+    FROM resource r
+    LEFT JOIN reservation res ON res.resource_id = r.id
+      AND res.status IN ('held', 'confirmed')
+      AND res.start_at < ${dayEnd}::timestamptz AND res.end_at > ${dayStart}::timestamptz
+    LEFT JOIN booking b ON b.id = res.booking_id
+    WHERE r.enabled = true
+    ORDER BY r.code, res.start_at`;
+
+  const byResource = new Map<string, ScheduleRow>();
+  const order: ScheduleRow[] = [];
+  for (const r of rows as Record<string, unknown>[]) {
+    const rid = r.resource_id as string;
+    let row = byResource.get(rid);
+    if (!row) {
+      row = {
+        resourceId: rid,
+        code: r.code as string,
+        kind: r.kind as "desk" | "room",
+        blocks: [],
+      };
+      byResource.set(rid, row);
+      order.push(row);
+    }
+    if (r.reservation_id) {
+      const startMs = new Date(r.start_at as string).getTime();
+      const endMs = new Date(r.end_at as string).getTime();
+      row.blocks.push({
+        reservationId: r.reservation_id as string,
+        bookingId: r.booking_id as string,
+        status: r.status as "held" | "confirmed",
+        customerName: (r.customer_name as string) ?? "",
+        startHour: (startMs - dayStartMs) / 3_600_000,
+        endHour: (endMs - dayStartMs) / 3_600_000,
+      });
+    }
+  }
+  return order;
+}
+
 export type RatePlanRow = {
   id: string;
   key: string;
