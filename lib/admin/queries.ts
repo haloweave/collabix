@@ -222,6 +222,71 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
   };
 }
 
+export type InventoryResource = {
+  id: string;
+  code: string;
+  kind: "desk" | "room";
+  capacity: number;
+  enabled: boolean;
+};
+export type InventoryZone = {
+  id: string;
+  name: string;
+  kind: string;
+  resources: InventoryResource[];
+};
+export type InventoryFloor = {
+  id: string;
+  name: string;
+  zones: InventoryZone[];
+};
+
+/** Full inventory grouped floor → zone → resource, ordered for display. */
+export async function listInventory(): Promise<InventoryFloor[]> {
+  const rows = await sql`
+    SELECT f.id AS floor_id, f.name AS floor_name,
+           z.id AS zone_id, z.name AS zone_name, z.kind AS zone_kind,
+           r.id AS resource_id, r.code, r.kind, r.capacity, r.enabled
+    FROM floor f
+    JOIN zone z ON z.floor_id = f.id
+    JOIN resource r ON r.zone_id = z.id
+    ORDER BY f.name, z.name, r.code`;
+
+  const floors: InventoryFloor[] = [];
+  const floorById = new Map<string, InventoryFloor>();
+  const zoneById = new Map<string, InventoryZone>();
+
+  for (const r of rows as Record<string, unknown>[]) {
+    const floorId = r.floor_id as string;
+    let floor = floorById.get(floorId);
+    if (!floor) {
+      floor = { id: floorId, name: r.floor_name as string, zones: [] };
+      floorById.set(floorId, floor);
+      floors.push(floor);
+    }
+    const zoneId = r.zone_id as string;
+    let zone = zoneById.get(zoneId);
+    if (!zone) {
+      zone = {
+        id: zoneId,
+        name: r.zone_name as string,
+        kind: r.zone_kind as string,
+        resources: [],
+      };
+      zoneById.set(zoneId, zone);
+      floor.zones.push(zone);
+    }
+    zone.resources.push({
+      id: r.resource_id as string,
+      code: r.code as string,
+      kind: r.kind as "desk" | "room",
+      capacity: n(r.capacity),
+      enabled: Boolean(r.enabled),
+    });
+  }
+  return floors;
+}
+
 export type RatePlanRow = {
   id: string;
   key: string;
