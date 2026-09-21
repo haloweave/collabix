@@ -57,7 +57,38 @@ export default async function MembersPage({
         </Button>
       </form>
 
-      <div className="rounded-lg border">
+      {/* Mobile: card rows */}
+      <div className="divide-y overflow-hidden rounded-lg border md:hidden">
+        {members.length === 0 && (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            No members found.
+          </p>
+        )}
+        {members.map((m) => (
+          <Link
+            key={m.id}
+            href={`/admin/members/${m.id}`}
+            className="flex items-center justify-between gap-3 p-4 transition-colors active:bg-muted/60 hover:bg-muted/50"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium">{m.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {m.bookings} booking{m.bookings === 1 ? "" : "s"} · joined{" "}
+                {istDate(m.createdAt)}
+              </p>
+            </div>
+            <Badge
+              variant={m.role === "member" ? "outline" : "default"}
+              className="shrink-0 capitalize"
+            >
+              {m.role}
+            </Badge>
+          </Link>
+        ))}
+      </div>
+
+      <div className="hidden rounded-lg border md:block">
         <Table>
           <TableHeader>
             <TableRow>
