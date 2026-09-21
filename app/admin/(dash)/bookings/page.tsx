@@ -47,7 +47,44 @@ export default async function BookingsPage({
 
       <BookingsFilter defaultQ={q} defaultStatus={status} />
 
-      <div className="rounded-lg border">
+      {/* Mobile: tappable card rows (tables overflow on narrow screens). */}
+      <div className="divide-y overflow-hidden rounded-lg border md:hidden">
+        {bookings.length === 0 && (
+          <p className="p-8 text-center text-sm text-muted-foreground">
+            No bookings found.
+          </p>
+        )}
+        {bookings.map((b) => (
+          <Link
+            key={b.id}
+            href={`/admin/bookings/${b.id}`}
+            className="flex items-start justify-between gap-3 p-4 transition-colors active:bg-muted/60 hover:bg-muted/50"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium">{b.customerName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {b.customerEmail}
+              </p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {b.startAt ? istDateTime(b.startAt) : "—"} · {b.plan ?? "—"} ·{" "}
+                {b.seats} seat{b.seats === 1 ? "" : "s"}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <span className="text-sm font-medium tabular-nums">
+                {rupees(b.totalMinor)}
+              </span>
+              <BookingStatusBadge
+                status={b.status}
+                anyConfirmed={b.anyConfirmed}
+                anyActiveHold={b.anyActiveHold}
+              />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="hidden rounded-lg border md:block">
         <Table>
           <TableHeader>
             <TableRow>
