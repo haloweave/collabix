@@ -67,7 +67,35 @@ export default async function MembershipsPage() {
           <CardDescription>{subs.length} active.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          {/* Mobile: subscription cards */}
+          <div className="divide-y border-t md:hidden">
+            {subs.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No active subscriptions.
+              </p>
+            )}
+            {subs.map((s) => (
+              <div key={s.id} className="flex items-start justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/members/${s.memberId}`}
+                    className="font-medium hover:underline"
+                  >
+                    {s.memberName ?? s.memberEmail ?? "—"}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {s.planName} · {rupees(s.priceMinor)}/mo · renews{" "}
+                    {istDate(s.periodEnd)}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm tabular-nums">
+                  {s.hoursUsed}/{s.includedHours}h
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Member</TableHead>
