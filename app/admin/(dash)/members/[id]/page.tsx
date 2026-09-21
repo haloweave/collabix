@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getMember } from "@/lib/admin/queries";
+import { getSessionUser, isManager } from "@/lib/admin/auth";
 import { rupees, istDateTime, istDate } from "@/lib/admin/format";
+import { MemberEditor } from "@/components/admin/member-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +33,8 @@ export default async function MemberDetailPage({
   const { id } = await params;
   const member = await getMember(id);
   if (!member) notFound();
+  const viewer = await getSessionUser();
+  const canManageRoles = isManager(viewer?.role);
 
   return (
     <div className="space-y-6">
@@ -87,6 +91,13 @@ export default async function MemberDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <MemberEditor
+        id={member.id}
+        notes={member.notes ?? ""}
+        role={member.role}
+        canManageRoles={canManageRoles}
+      />
 
       <Card>
         <CardHeader>

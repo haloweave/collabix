@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { listMembers } from "@/lib/admin/queries";
 import { istDate } from "@/lib/admin/format";
 import { Input } from "@/components/ui/input";
@@ -26,12 +26,20 @@ export default async function MembersPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
-        <p className="text-sm text-muted-foreground">
-          {members.length} account{members.length === 1 ? "" : "s"}
-          {q ? ` matching “${q}”` : ""}.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
+          <p className="text-sm text-muted-foreground">
+            {members.length} account{members.length === 1 ? "" : "s"}
+            {q ? ` matching “${q}”` : ""}.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/members/new">
+            <Plus className="size-4" />
+            Add member
+          </Link>
+        </Button>
       </div>
 
       <form className="flex items-center gap-2" action="/admin/members">

@@ -258,6 +258,7 @@ export type MemberDetail = {
   email: string;
   role: string;
   phoneNumber: string | null;
+  notes: string | null;
   createdAt: Date;
   bookings: BookingRow[];
 };
@@ -286,6 +287,7 @@ export async function getMember(id: string): Promise<MemberDetail | null> {
     email: u.email as string,
     role: u.role as string,
     phoneNumber: (u.phone_number as string) ?? null,
+    notes: (u.notes as string) ?? null,
     createdAt: new Date(u.created_at as string),
     bookings: rows.map(mapBookingRow),
   };
