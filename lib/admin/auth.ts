@@ -72,6 +72,22 @@ export async function requireStaff(): Promise<SessionUser> {
 }
 
 /**
+ * Guard for the /admin panel. The limited `reception` role is sent to its own
+ * /staff console; staff/manager/owner get the full panel.
+ */
+export async function requireAdminAccess(): Promise<SessionUser> {
+  if (isAdminAuthDisabled()) {
+    const user = await getSessionUser();
+    return user && isStaff(user.role) ? user : DEV_ADMIN;
+  }
+  const user = await getSessionUser();
+  if (!user) redirect("/admin/login");
+  if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  if (user.role === "reception") redirect("/staff");
+  return user;
+}
+
+/**
  * Guard for config/finance pages. Anonymous → sign-in; operational-only roles
  * (reception/staff) are bounced to the dashboard rather than shown the page.
  */
