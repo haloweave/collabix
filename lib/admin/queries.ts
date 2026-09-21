@@ -421,6 +421,110 @@ export async function getDaySchedule(dateStr: string): Promise<ScheduleRow[]> {
   return order;
 }
 
+/** [from 00:00 IST, day-after-to 00:00 IST) as UTC-instant ISO strings. */
+function istRangeIso(fromStr: string, toStr: string) {
+  const [fy, fm, fd] = fromStr.split("-").map(Number);
+  const [ty, tm, td] = toStr.split("-").map(Number);
+  const fromMs = Date.UTC(fy, fm - 1, fd) - 330 * 60_000;
+  const toEndMs = Date.UTC(ty, tm - 1, td + 1) - 330 * 60_000;
+  return {
+    from: new Date(fromMs).toISOString(),
+    toEnd: new Date(toEndMs).toISOString(),
+  };
+}
+
+export type ReportSummary = {
+  from: string;
+  to: string;
+  totalRevenueMinor: number;
+  totalBookings: number;
+  totalSeats: number;
+  byPlan: { plan: string; bookings: number; revenueMinor: number }[];
+};
+
+export async function getReportSummary(
+  fromStr: string,
+  toStr: string,
+): Promise<ReportSummary> {
+  const { from, toEnd } = istRangeIso(fromStr, toStr);
+
+  const [byPlanRows, seatsRows] = await Promise.all([
+    sql`SELECT plan, count(*)::int AS bookings, COALESCE(SUM(total), 0)::bigint AS revenue
+        FROM (
+          SELECT DISTINCT ON (r.booking_id) rp.name AS plan,
+                 (r.quote_snapshot->>'totalMinor')::bigint AS total
+          FROM reservation r
+          JOIN booking b ON b.id = r.booking_id
+          JOIN rate_plan rp ON rp.id = r.rate_plan_id
+          WHERE r.status = 'confirmed' AND b.status = 'active'
+            AND r.start_at >= ${from}::timestamptz AND r.start_at < ${toEnd}::timestamptz
+          ORDER BY r.booking_id
+        ) t
+        GROUP BY plan ORDER BY revenue DESC`,
+    sql`SELECT count(*)::int AS n FROM reservation r
+        JOIN booking b ON b.id = r.booking_id
+        WHERE r.status = 'confirmed' AND b.status = 'active'
+          AND r.start_at >= ${from}::timestamptz AND r.start_at < ${toEnd}::timestamptz`,
+  ]);
+
+  const byPlan = byPlanRows.map((r: Record<string, unknown>) => ({
+    plan: r.plan as string,
+    bookings: n(r.bookings),
+    revenueMinor: n(r.revenue),
+  }));
+
+  return {
+    from: fromStr,
+    to: toStr,
+    totalRevenueMinor: byPlan.reduce((s, p) => s + p.revenueMinor, 0),
+    totalBookings: byPlan.reduce((s, p) => s + p.bookings, 0),
+    totalSeats: n(seatsRows[0]?.n),
+    byPlan,
+  };
+}
+
+export type ExportRow = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  plan: string | null;
+  seats: number;
+  startAt: Date | null;
+  endAt: Date | null;
+  totalMinor: number;
+};
+
+export async function getBookingsInRange(
+  fromStr: string,
+  toStr: string,
+): Promise<ExportRow[]> {
+  const { from, toEnd } = istRangeIso(fromStr, toStr);
+  const rows = await sql`
+    SELECT b.id, b.customer_name, b.customer_email,
+      count(r.id)::int AS seats,
+      min(r.start_at) AS start_at,
+      max(r.end_at) AS end_at,
+      (array_agg(DISTINCT rp.name))[1] AS plan,
+      (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor
+    FROM booking b
+    JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
+    LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    WHERE b.status = 'active'
+      AND r.start_at >= ${from}::timestamptz AND r.start_at < ${toEnd}::timestamptz
+    GROUP BY b.id
+    ORDER BY min(r.start_at)`;
+  return rows.map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    customerName: r.customer_name as string,
+    customerEmail: r.customer_email as string,
+    plan: (r.plan as string) ?? null,
+    seats: n(r.seats),
+    startAt: r.start_at ? new Date(r.start_at as string) : null,
+    endAt: r.end_at ? new Date(r.end_at as string) : null,
+    totalMinor: n(r.total_minor),
+  }));
+}
+
 export type AuditRow = {
   id: string;
   actorEmail: string;
