@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireManager } from "@/lib/admin/auth";
 import { listInvoices } from "@/lib/admin/queries";
 import { rupees, istDate } from "@/lib/admin/format";
 import { paymentsEnabled } from "@/lib/payments";
+import { TableSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -24,26 +26,58 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "dest
 };
 
 export default async function BillingPage() {
+  // Guard stays above the boundary so redirects remain real HTTP redirects.
   await requireManager();
-  const invoices = await listInvoices();
-  const outstanding = invoices
-    .filter((i) => i.status !== "paid" && i.status !== "void")
-    .reduce((s, i) => s + i.totalMinor, 0);
+  const invoicesPromise = listInvoices();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
         <p className="text-sm text-muted-foreground">
-          {rupees(outstanding)} outstanding across {invoices.length} invoice
-          {invoices.length === 1 ? "" : "s"}.{" "}
-          {paymentsEnabled()
-            ? "Razorpay is configured."
-            : "Manual mode — mark invoices paid by hand."}{" "}
-          Generate statements from a member&apos;s profile.
+          <Suspense fallback={<TextSkeleton className="w-72" />}>
+            <BillingSummary dataPromise={invoicesPromise} />
+          </Suspense>
         </p>
       </div>
 
+      <Suspense fallback={<TableSkeleton rows={6} cols={5} />}>
+        <BillingRows dataPromise={invoicesPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function BillingSummary({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listInvoices>;
+}) {
+  const invoices = await dataPromise;
+  const outstanding = invoices
+    .filter((i) => i.status !== "paid" && i.status !== "void")
+    .reduce((s, i) => s + i.totalMinor, 0);
+  return (
+    <>
+      {rupees(outstanding)} outstanding across {invoices.length} invoice
+      {invoices.length === 1 ? "" : "s"}.{" "}
+      {paymentsEnabled()
+        ? "Razorpay is configured."
+        : "Manual mode — mark invoices paid by hand."}{" "}
+      Generate statements from a member&apos;s profile.
+    </>
+  );
+}
+
+async function BillingRows({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listInvoices>;
+}) {
+  const invoices = await dataPromise;
+
+  return (
+    <>
       {/* Mobile: invoice cards */}
       <div className="space-y-3 md:hidden">
         {invoices.length === 0 && (
@@ -133,6 +167,6 @@ export default async function BillingPage() {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </>
   );
 }
