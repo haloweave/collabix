@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireManager } from "@/lib/admin/auth";
 import { listAuditEvents } from "@/lib/admin/queries";
 import { istDateTime } from "@/lib/admin/format";
+import { TableSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -21,18 +23,47 @@ function targetHref(type: string | null, id: string | null) {
 }
 
 export default async function AuditPage() {
+  // Keep the manager guard above the Suspense boundary so an unauthorized
+  // visitor gets a real HTTP redirect, not a client-side one mid-stream.
   await requireManager();
-  const events = await listAuditEvents();
+  const eventsPromise = listAuditEvents();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
         <p className="text-sm text-muted-foreground">
-          Every staff action, most recent first (last {events.length}).
+          <Suspense fallback={<TextSkeleton className="w-64" />}>
+            <AuditSummary dataPromise={eventsPromise} />
+          </Suspense>
         </p>
       </div>
 
+      <Suspense fallback={<TableSkeleton rows={8} cols={5} />}>
+        <AuditRows dataPromise={eventsPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function AuditSummary({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listAuditEvents>;
+}) {
+  const events = await dataPromise;
+  return <>Every staff action, most recent first (last {events.length}).</>;
+}
+
+async function AuditRows({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listAuditEvents>;
+}) {
+  const events = await dataPromise;
+
+  return (
+    <>
       {/* Mobile: audit event cards */}
       <div className="divide-y overflow-hidden rounded-lg border md:hidden">
         {events.length === 0 && (
@@ -134,6 +165,6 @@ export default async function AuditPage() {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </>
   );
 }

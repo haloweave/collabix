@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { listInventory } from "@/lib/admin/queries";
 import { InventoryRow } from "@/components/admin/inventory-row";
+import { CardSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import {
   Card,
   CardContent,
@@ -12,20 +14,61 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
-  const floors = await listInventory();
-  const all = floors.flatMap((f) => f.zones.flatMap((z) => z.resources));
-  const online = all.filter((r) => r.enabled).length;
+  // Start loading without awaiting so the heading paints first; the summary
+  // count and the floor cards stream in from the shared promise.
+  const inventoryPromise = listInventory();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Inventory</h1>
         <p className="text-sm text-muted-foreground">
-          {online} of {all.length} seats online. Take a seat offline to remove
-          it from availability without deleting it.
+          <Suspense fallback={<TextSkeleton className="w-56" />}>
+            <InventorySummary dataPromise={inventoryPromise} />
+          </Suspense>
         </p>
       </div>
 
+      <Suspense
+        fallback={
+          <>
+            <CardSkeleton lines={4} />
+            <CardSkeleton lines={4} />
+          </>
+        }
+      >
+        <InventoryFloors dataPromise={inventoryPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function InventorySummary({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listInventory>;
+}) {
+  const floors = await dataPromise;
+  const all = floors.flatMap((f) => f.zones.flatMap((z) => z.resources));
+  const online = all.filter((r) => r.enabled).length;
+  return (
+    <>
+      {online} of {all.length} seats online. Take a seat offline to remove it
+      from availability without deleting it.
+    </>
+  );
+}
+
+async function InventoryFloors({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listInventory>;
+}) {
+  const floors = await dataPromise;
+  const all = floors.flatMap((f) => f.zones.flatMap((z) => z.resources));
+
+  return (
+    <>
       {floors.map((floor) => (
         <div key={floor.id} className="space-y-4">
           <h2 className="text-sm font-semibold text-muted-foreground">
@@ -62,6 +105,6 @@ export default async function InventoryPage() {
           No inventory found. Run the seed script to create it.
         </p>
       )}
-    </div>
+    </>
   );
 }
