@@ -8,6 +8,10 @@ if (!connectionString) {
 }
 
 // Single shared connection pool. postgres-js is safe to reuse across requests.
-export const sql = postgres(connectionString);
+// `prepare: false` is required for Supabase's transaction-mode pooler (port
+// 6543, used on serverless/Vercel), which does not support prepared statements.
+// It is harmless on a direct/session connection, so we set it unconditionally.
+// TLS for hosted Postgres is negotiated from the URL (append `?sslmode=require`).
+export const sql = postgres(connectionString, { prepare: false });
 export const db = drizzle(sql, { schema });
 export type Db = typeof db;
