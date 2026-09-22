@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -15,6 +16,7 @@ import { MembershipControls } from "@/components/admin/membership-controls";
 import { LongTermHoldCard } from "@/components/admin/long-term-hold-card";
 import { GenerateStatementButton } from "@/components/admin/generate-statement-button";
 import { InvoiceActions } from "@/components/admin/invoice-actions";
+import { CardSkeleton } from "@/components/admin/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,16 +43,13 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // Load the member record (and resolve 404) before any Suspense boundary so a
+  // missing member still yields a real HTTP 404. The heavier membership /
+  // holds / invoices data streams in below.
   const member = await getMember(id);
   if (!member) notFound();
   const viewer = await getSessionUser();
   const canManageRoles = isManager(viewer?.role);
-  const [subscription, activePlans, holds, invoices] = await Promise.all([
-    getMemberSubscription(id),
-    listActivePlans(),
-    getMemberHolds(id),
-    canManageRoles ? getMemberInvoices(id) : Promise.resolve([]),
-  ]);
 
   return (
     <div className="space-y-6">
@@ -108,46 +107,17 @@ export default async function MemberDetailPage({
         </Card>
       </div>
 
-      <MembershipControls
-        memberId={member.id}
-        subscription={subscription}
-        plans={activePlans}
-      />
-
-      <LongTermHoldCard memberId={member.id} holds={holds} />
-
-      {canManageRoles && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Invoices</CardTitle>
-            <GenerateStatementButton memberId={member.id} />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {invoices.length === 0 && (
-              <p className="text-sm text-muted-foreground">No invoices yet.</p>
-            )}
-            {invoices.map((inv) => (
-              <div
-                key={inv.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    {rupees(inv.totalMinor)}{" "}
-                    <span className="font-normal capitalize text-muted-foreground">
-                      · {inv.status}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {istDate(inv.periodStart)} – {istDate(inv.periodEnd)}
-                  </p>
-                </div>
-                <InvoiceActions id={inv.id} status={inv.status} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <CardSkeleton lines={2} />
+            <CardSkeleton lines={2} />
+            {canManageRoles && <CardSkeleton lines={3} />}
+          </div>
+        }
+      >
+        <MemberMembership memberId={member.id} canManageRoles={canManageRoles} />
+      </Suspense>
 
       <MemberEditor
         id={member.id}
@@ -243,5 +213,65 @@ export default async function MemberDetailPage({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+async function MemberMembership({
+  memberId,
+  canManageRoles,
+}: {
+  memberId: string;
+  canManageRoles: boolean;
+}) {
+  const [subscription, activePlans, holds, invoices] = await Promise.all([
+    getMemberSubscription(memberId),
+    listActivePlans(),
+    getMemberHolds(memberId),
+    canManageRoles ? getMemberInvoices(memberId) : Promise.resolve([]),
+  ]);
+
+  return (
+    <>
+      <MembershipControls
+        memberId={memberId}
+        subscription={subscription}
+        plans={activePlans}
+      />
+
+      <LongTermHoldCard memberId={memberId} holds={holds} />
+
+      {canManageRoles && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Invoices</CardTitle>
+            <GenerateStatementButton memberId={memberId} />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {invoices.length === 0 && (
+              <p className="text-sm text-muted-foreground">No invoices yet.</p>
+            )}
+            {invoices.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">
+                    {rupees(inv.totalMinor)}{" "}
+                    <span className="font-normal capitalize text-muted-foreground">
+                      · {inv.status}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {istDate(inv.periodStart)} – {istDate(inv.periodEnd)}
+                  </p>
+                </div>
+                <InvoiceActions id={inv.id} status={inv.status} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 }
