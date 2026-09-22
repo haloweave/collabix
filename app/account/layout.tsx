@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "../home/home.css";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
@@ -6,17 +7,18 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Guardless outer shell so /account/login renders on the same neutral surface
-// without the member guard. Access control lives in the (portal) layout.
+// Customer-facing shell — uses the Collabix brand styling (home.css), not the
+// admin surface. The brand `body` (navy) shows through; pages provide their own
+// `.collabix-site` wrapper (login) or the AccountShell (portal).
 export default function AccountLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="admin-scope min-h-screen">
+    <>
       {children}
       <Toaster />
-    </div>
+    </>
   );
 }

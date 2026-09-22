@@ -140,3 +140,12 @@ body {
 .admin-scope * {
   border-color: hsl(var(--border));
 }
+
+/* Customer portal content: keep the brand section background (ivory) but let
+   shadcn components inside read the neutral text/border tokens. */
+.portal-scope {
+  color: hsl(var(--foreground));
+}
+.portal-scope * {
+  border-color: hsl(var(--border));
+}

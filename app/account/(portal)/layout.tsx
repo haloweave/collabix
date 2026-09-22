@@ -1,5 +1,5 @@
 import { requireMember } from "@/lib/account/auth";
-import { PortalNav } from "@/components/account/portal-nav";
+import { AccountShell } from "@/components/account/account-shell";
 
 export default async function PortalLayout({
   children,
@@ -7,10 +7,5 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const member = await requireMember();
-  return (
-    <>
-      <PortalNav name={member.name} />
-      <main className="mx-auto max-w-3xl p-4 md:p-6">{children}</main>
-    </>
-  );
+  return <AccountShell name={member.name}>{children}</AccountShell>;
 }
