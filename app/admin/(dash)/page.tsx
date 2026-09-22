@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   Armchair,
@@ -15,6 +16,11 @@ import { rupees, istDateTime } from "@/lib/admin/format";
 import { StatCard } from "@/components/admin/stat-card";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import {
+  ChartSkeleton,
+  StatGridSkeleton,
+  StatCardSkeleton,
+} from "@/components/admin/skeletons";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -22,16 +28,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const [stats, upcoming, series] = await Promise.all([
-    getDashboardStats(),
-    getUpcomingBookings(),
-    getDailySeries(),
-  ]);
-
+export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -41,6 +42,46 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardBody />
+      </Suspense>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <StatGridSkeleton count={4} />
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+      </div>
+      <ChartSkeleton />
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="mt-1.5 h-3 w-64" />
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+async function DashboardBody() {
+  const [stats, upcoming, series] = await Promise.all([
+    getDashboardStats(),
+    getUpcomingBookings(),
+    getDailySeries(),
+  ]);
+
+  return (
+    <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           title="Occupancy today"
