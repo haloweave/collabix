@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SiteShell from "./site-shell";
+import SiteShell from "@/components/site/site-shell";
 import "./home.css";
 export const metadata: Metadata = {
  title: "Collabix · Work Lounge",
