@@ -908,3 +908,8 @@
 .collabix-site .account-hero {padding-top:calc(76px + 20px);padding-bottom:22px;}
 .collabix-site .account-hero h1 {font-size:clamp(1.5rem,4.5vw,2.1rem);margin:.3rem 0 0;}
 .collabix-site .account-hero .lead {font-size:.92rem;}
+/* Sticky footer: keep the footer pinned to the bottom on short pages (e.g. the
+   account portal) instead of floating mid-screen. */
+.collabix-site {display:flex;flex-direction:column;}
+.collabix-site #main-content {flex:1 0 auto;}
+.collabix-site .site-footer {flex-shrink:0;}
