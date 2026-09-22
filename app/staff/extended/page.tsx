@@ -1,18 +1,13 @@
+import { Suspense } from "react";
 import { getResourceRates } from "@/lib/admin/queries";
 import { getSettings } from "@/lib/settings";
 import { db } from "@/lib/db/client";
 import { ExtendedBookingForm } from "@/components/admin/extended-booking-form";
+import { CardSkeleton } from "@/components/admin/skeletons";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffExtendedPage() {
-  const [rateByCode, settings] = await Promise.all([
-    getResourceRates(),
-    getSettings(db),
-  ]);
-  const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
-  const hoursPerDay = Math.max(1, settings.closeHour - settings.openHour);
-
+export default function StaffExtendedPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -23,11 +18,26 @@ export default async function StaffExtendedPage() {
           resource shows as taken on the public booking page for the whole range.
         </p>
       </div>
-      <ExtendedBookingForm
-        today={today}
-        hoursPerDay={hoursPerDay}
-        rateByCode={rateByCode}
-      />
+      <Suspense fallback={<CardSkeleton lines={5} />}>
+        <ExtendedBody />
+      </Suspense>
     </div>
+  );
+}
+
+async function ExtendedBody() {
+  const [rateByCode, settings] = await Promise.all([
+    getResourceRates(),
+    getSettings(db),
+  ]);
+  const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
+  const hoursPerDay = Math.max(1, settings.closeHour - settings.openHour);
+
+  return (
+    <ExtendedBookingForm
+      today={today}
+      hoursPerDay={hoursPerDay}
+      rateByCode={rateByCode}
+    />
   );
 }

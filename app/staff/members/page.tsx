@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { listMembers } from "@/lib/admin/queries";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MemberForm } from "@/components/admin/member-form";
+import { TableSkeleton } from "@/components/admin/skeletons";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ export default async function StaffMembersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const members = await listMembers(q);
+  const membersPromise = listMembers(q);
 
   return (
     <div className="space-y-6">
@@ -63,44 +65,58 @@ export default async function StaffMembersPage({
             </Button>
           </form>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="text-center">Bookings</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                    No members found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {members.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>
-                    <Link href={`/admin/members/${m.id}`} className="block">
-                      <span className="font-medium">{m.name}</span>
-                      <span className="block text-xs text-muted-foreground">{m.email}</span>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={m.role === "member" ? "outline" : "default"} className="capitalize">
-                      {m.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-sm">{m.bookings}</TableCell>
-                  <TableCell className="text-sm">{istDate(m.createdAt)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Suspense fallback={<TableSkeleton rows={5} cols={4} />}>
+            <StaffMembersTable dataPromise={membersPromise} />
+          </Suspense>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+async function StaffMembersTable({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listMembers>;
+}) {
+  const members = await dataPromise;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Member</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead className="text-center">Bookings</TableHead>
+          <TableHead>Joined</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {members.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+              No members found.
+            </TableCell>
+          </TableRow>
+        )}
+        {members.map((m) => (
+          <TableRow key={m.id}>
+            <TableCell>
+              <Link href={`/admin/members/${m.id}`} className="block">
+                <span className="font-medium">{m.name}</span>
+                <span className="block text-xs text-muted-foreground">{m.email}</span>
+              </Link>
+            </TableCell>
+            <TableCell>
+              <Badge variant={m.role === "member" ? "outline" : "default"} className="capitalize">
+                {m.role}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-center text-sm">{m.bookings}</TableCell>
+            <TableCell className="text-sm">{istDate(m.createdAt)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

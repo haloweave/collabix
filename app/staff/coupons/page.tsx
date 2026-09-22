@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { listCoupons } from "@/lib/admin/queries";
 import { istDate } from "@/lib/admin/format";
 import {
@@ -20,12 +21,11 @@ import {
   CouponRowActions,
   CouponBadge,
 } from "@/components/admin/coupon-manager";
+import { TableSkeleton } from "@/components/admin/skeletons";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffCouponsPage() {
-  const coupons = await listCoupons();
-
+export default function StaffCouponsPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -46,41 +46,51 @@ export default async function StaffCouponsPage() {
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
+      <Suspense fallback={<TableSkeleton rows={5} cols={4} />}>
+        <CouponsTable />
+      </Suspense>
+    </div>
+  );
+}
+
+async function CouponsTable() {
+  const coupons = await listCoupons();
+
+  return (
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Code</TableHead>
+            <TableHead>Discount</TableHead>
+            <TableHead>Expires</TableHead>
+            <TableHead className="text-right">Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {coupons.length === 0 && (
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Discount</TableHead>
-              <TableHead>Expires</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                No coupons yet.
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {coupons.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  No coupons yet.
-                </TableCell>
-              </TableRow>
-            )}
-            {coupons.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-mono font-medium">{c.code}</TableCell>
-                <TableCell>
-                  <CouponBadge coupon={c} />
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {c.expiresAt ? istDate(c.expiresAt) : "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <CouponRowActions coupon={c} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+          )}
+          {coupons.map((c) => (
+            <TableRow key={c.id}>
+              <TableCell className="font-mono font-medium">{c.code}</TableCell>
+              <TableCell>
+                <CouponBadge coupon={c} />
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {c.expiresAt ? istDate(c.expiresAt) : "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <CouponRowActions coupon={c} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
