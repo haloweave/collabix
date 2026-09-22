@@ -903,3 +903,8 @@
 .collabix-site .btn-outline:hover:not(:disabled) {border-color:var(--gold);background:var(--ivory);}
 .collabix-site .proposal-context {position:relative;z-index:1;padding:90px var(--gutter) 12px;background:var(--ivory);font-size:.8rem;}
 .collabix-site .proposal-context + .page-hero {padding-top:48px;}
+/* Compact hero for the authenticated account portal — a utility screen, not a
+   marketing splash — so the page isn't dominated by an oversized navy block. */
+.collabix-site .account-hero {padding-top:calc(76px + 20px);padding-bottom:22px;}
+.collabix-site .account-hero h1 {font-size:clamp(1.5rem,4.5vw,2.1rem);margin:.3rem 0 0;}
+.collabix-site .account-hero .lead {font-size:.92rem;}
