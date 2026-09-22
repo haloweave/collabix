@@ -29,6 +29,7 @@ export async function createCoupon(input: {
   }
   await logAudit({ action: "coupon.create", targetType: "coupon", detail: { code } });
   revalidatePath("/staff/coupons");
+  revalidatePath("/admin/coupons");
   return { ok: true };
 }
 
@@ -37,6 +38,7 @@ export async function toggleCoupon(id: string, active: boolean) {
   await db.update(schema.coupon).set({ active }).where(eq(schema.coupon.id, id));
   await logAudit({ action: "coupon.toggle", targetType: "coupon", targetId: id, detail: { active } });
   revalidatePath("/staff/coupons");
+  revalidatePath("/admin/coupons");
 }
 
 // ── Extended-period booking ─────────────────────────────────────────────────
