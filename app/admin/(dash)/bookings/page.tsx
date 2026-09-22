@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { listBookings } from "@/lib/admin/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { BookingsFilter } from "@/components/admin/bookings-filter";
 import { BookingStatusBadge } from "@/components/admin/booking-status-badge";
+import { TableSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -25,7 +27,10 @@ export default async function BookingsPage({
   const q = sp.q ?? "";
   const status =
     sp.status === "active" || sp.status === "cancelled" ? sp.status : "all";
-  const bookings = await listBookings({ q, status });
+  // Start the query but don't await it — the header, filter and action button
+  // render instantly while the rows stream in. The same promise feeds the count
+  // and the table, so the query still runs once.
+  const bookingsPromise = listBookings({ q, status });
 
   return (
     <div className="space-y-6">
@@ -33,8 +38,9 @@ export default async function BookingsPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Bookings</h1>
           <p className="text-sm text-muted-foreground">
-            {bookings.length} booking{bookings.length === 1 ? "" : "s"}
-            {q ? ` matching “${q}”` : ""}.
+            <Suspense fallback={<TextSkeleton className="w-48" />}>
+              <BookingsSummary dataPromise={bookingsPromise} q={q} />
+            </Suspense>
           </p>
         </div>
         <Button asChild>
@@ -47,6 +53,38 @@ export default async function BookingsPage({
 
       <BookingsFilter defaultQ={q} defaultStatus={status} />
 
+      <Suspense fallback={<TableSkeleton rows={6} cols={6} />}>
+        <BookingsRows dataPromise={bookingsPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function BookingsSummary({
+  dataPromise,
+  q,
+}: {
+  dataPromise: ReturnType<typeof listBookings>;
+  q: string;
+}) {
+  const bookings = await dataPromise;
+  return (
+    <>
+      {bookings.length} booking{bookings.length === 1 ? "" : "s"}
+      {q ? ` matching “${q}”` : ""}.
+    </>
+  );
+}
+
+async function BookingsRows({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listBookings>;
+}) {
+  const bookings = await dataPromise;
+
+  return (
+    <>
       {/* Mobile: tappable card rows (tables overflow on narrow screens). */}
       <div className="divide-y overflow-hidden rounded-lg border md:hidden">
         {bookings.length === 0 && (
@@ -155,6 +193,6 @@ export default async function BookingsPage({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </>
   );
 }

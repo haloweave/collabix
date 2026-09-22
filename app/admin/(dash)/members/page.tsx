@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Search, Plus } from "lucide-react";
 import { listMembers } from "@/lib/admin/queries";
 import { istDate } from "@/lib/admin/format";
+import { TableSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,9 @@ export default async function MembersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const members = await listMembers(q);
+  // Kick off the lookup without awaiting so the header and search box paint
+  // immediately; the count and rows stream in from the shared promise.
+  const membersPromise = listMembers(q);
 
   return (
     <div className="space-y-6">
@@ -30,8 +34,9 @@ export default async function MembersPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Members</h1>
           <p className="text-sm text-muted-foreground">
-            {members.length} account{members.length === 1 ? "" : "s"}
-            {q ? ` matching “${q}”` : ""}.
+            <Suspense fallback={<TextSkeleton className="w-40" />}>
+              <MembersSummary dataPromise={membersPromise} q={q} />
+            </Suspense>
           </p>
         </div>
         <Button asChild>
@@ -57,6 +62,38 @@ export default async function MembersPage({
         </Button>
       </form>
 
+      <Suspense fallback={<TableSkeleton rows={6} cols={4} />}>
+        <MembersRows dataPromise={membersPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function MembersSummary({
+  dataPromise,
+  q,
+}: {
+  dataPromise: ReturnType<typeof listMembers>;
+  q: string;
+}) {
+  const members = await dataPromise;
+  return (
+    <>
+      {members.length} account{members.length === 1 ? "" : "s"}
+      {q ? ` matching “${q}”` : ""}.
+    </>
+  );
+}
+
+async function MembersRows({
+  dataPromise,
+}: {
+  dataPromise: ReturnType<typeof listMembers>;
+}) {
+  const members = await dataPromise;
+
+  return (
+    <>
       {/* Mobile: card rows */}
       <div className="divide-y overflow-hidden rounded-lg border md:hidden">
         {members.length === 0 && (
@@ -144,6 +181,6 @@ export default async function MembersPage({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </>
   );
 }
