@@ -3,7 +3,6 @@ import { requireMember } from "@/lib/account/auth";
 import { getMyBookings } from "@/lib/account/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -50,9 +49,9 @@ export default async function MyBookingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">My bookings</h1>
-        <Button asChild>
-          <Link href="/home/booking">Book again</Link>
-        </Button>
+        <Link href="/home/booking" className="btn btn-gold">
+          Book again <span className="arw">→</span>
+        </Link>
       </div>
 
       <Card>
