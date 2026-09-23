@@ -9,6 +9,13 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // The site used to live under /home while / showed a coming-soon page.
+  async redirects() {
+    return [
+      { source: "/home", destination: "/", permanent: true },
+      { source: "/home/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;
