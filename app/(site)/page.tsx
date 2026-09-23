@@ -144,11 +144,11 @@ export default function Page() { return <>
         </div>
         <div className="cell">
           <div className="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="14" rx="1.5"></rect><path d="M3 9h18M8 22h8"></path></svg></div>
-          <h4>Meeting Rooms</h4><p>Bookable boardrooms with AV.</p>
+          <h4>Meeting Rooms</h4><p>A 4-seater and a boardroom with VC.</p>
         </div>
         <div className="cell">
           <div className="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5L12 21l-4.9 2.6a.01.01 0 010 0l.9-5.4-4-3.9 5.5-.8z" transform="scale(.9) translate(1.3 -0.2)"></path></svg></div>
-          <h4>Community</h4><p>Curated events &amp; a serious network.</p>
+          <h4>Business Services</h4><p>Virtual office, GST, Udyam &amp; incorporation help.</p>
         </div>
       </div>
       <div className="reveal d2" style={{"marginTop": "2rem"}}>
