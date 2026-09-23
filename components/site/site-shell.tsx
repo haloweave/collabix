@@ -12,7 +12,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  <Link className="logo" href="/" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></Link>
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
- {path!=="/booking" && <a className="btn btn-gold" href="/booking">Book a Space →</a>}
+ <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
  {authed
    ? <a className="btn btn-ghost-light" href="/account" onClick={()=>setOpen(false)}>Account</a>
    : <a className="btn btn-ghost-light" href="/account/login" onClick={()=>setOpen(false)}>Login</a>}</nav>
@@ -39,6 +39,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
           <h5>Visit</h5>
           <Link href="/#location">261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout<br />Bengaluru 560043</Link><br />
           <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a><br />
+          <a href="tel:+919632771444">+91 96327 71444</a><br />
 
         </div>
       </div>}
