@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-export default function SiteShell({children, minimal=false, authed=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
+export default function SiteShell({children, minimal=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
  const path=usePathname();
  const links=[["/#spaces","Spaces"],["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
@@ -13,9 +13,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
  <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
- {authed
-   ? <a className="btn btn-ghost-light" href="/account" onClick={()=>setOpen(false)}>Account</a>
-   : <a className="btn btn-ghost-light" href="/account/login" onClick={()=>setOpen(false)}>Login</a>}</nav>
+ {/* Login / Account link hidden for now — `authed` is still passed in for when it returns. */}</nav>
  <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button>
  </div></header>
  <main id="main-content">{children}</main>
