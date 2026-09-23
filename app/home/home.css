@@ -913,3 +913,12 @@
 .collabix-site {display:flex;flex-direction:column;}
 .collabix-site #main-content {flex:1 0 auto;}
 .collabix-site .site-footer {flex-shrink:0;}
+/* Blurry price placeholder — shown until live DB rates load, so no stale
+   hardcoded price is ever displayed. Uses currentColor so it adapts to any
+   surface (ivory pill, selected navy pill, navy summary). */
+.collabix-site .rate-skel {
+  display:inline-block; width:3.2em; height:.78em; vertical-align:middle;
+  border-radius:5px; background:currentColor; opacity:.2; filter:blur(.5px);
+  animation:rate-pulse 1.1s ease-in-out infinite;
+}
+@keyframes rate-pulse {0%,100%{opacity:.12} 50%{opacity:.28}}

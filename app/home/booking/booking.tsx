@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { spaces, money } from "@/lib/spaces";
 import { autoAssignDesks } from "@/lib/floorplan";
 import FloorMap from "./floor-map";
@@ -64,9 +64,15 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   }, []);
 
   const space = spaces.find((s) => s.key === key)!;
-  const spaceRate = rates?.[key] ?? space.rate;
+  // Advertised prices come only from the live DB rates (/api/rates); until they
+  // load, spaceRate is null and the UI shows a blurry placeholder rather than a
+  // stale hardcoded number.
+  const spaceRate = rates?.[key] ?? null;
   const isDesk = space.desk;
   const label = STEPS[step];
+
+  // Blurry skeleton shown in place of a price while rates load.
+  const rateSkel = <span className="rate-skel" aria-hidden="true" />;
 
   const availableCount = slots.filter((s) => s.available).length;
   const codeById = new Map(slots.map((s) => [s.resourceId, s.code]));
@@ -344,7 +350,12 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       <span className="pn">{s.name}</span>
                       <span className="pd">{s.blurb}</span>
                       <span className="pp">
-                        from {money(rates?.[s.key] ?? s.rate)}
+                        from{" "}
+                        {rates && rates[s.key] != null ? (
+                          money(rates[s.key])
+                        ) : (
+                          <span className="rate-skel" aria-hidden="true" />
+                        )}
                         <span className="per">/hr</span>
                       </span>
                     </button>
@@ -466,7 +477,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                         slots={slots}
                         selectedResourceIds={selectedIds}
                         onSelect={selectSeat}
-                        priceLabel={`${money(spaceRate)}/hr`}
+                        priceLabel={spaceRate != null ? `${money(spaceRate)}/hr` : undefined}
                       />
                       <p aria-live="polite" className="avail-hint">
                         {selectedCodes.length
@@ -653,7 +664,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               <h3>Booking summary</h3>
             </div>
             <div className="s-body">
-              {[
+              {([
                 ["Space", space.name],
                 ["Date", date || "Choose a date"],
                 ["Time", `${hour}:00–${hour + duration}:00 IST`],
@@ -662,15 +673,19 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   "Subtotal",
                   quote
                     ? rupees(quote.subtotalMinor)
-                    : money(spaceRate * duration * priceSeats),
+                    : spaceRate != null
+                      ? money(spaceRate * duration * priceSeats)
+                      : rateSkel,
                 ],
                 [
                   "Tax (18%)",
                   quote
                     ? rupees(quote.taxMinor)
-                    : money(Math.round(spaceRate * duration * priceSeats * 0.18)),
+                    : spaceRate != null
+                      ? money(Math.round(spaceRate * duration * priceSeats * 0.18))
+                      : rateSkel,
                 ],
-              ].map(([k, v]) => (
+              ] as [string, ReactNode][]).map(([k, v]) => (
                 <div className="s-line" key={k}>
                   <span className="sk">{k}</span>
                   <span className="sv">{v}</span>
@@ -682,10 +697,12 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               <span className="tv">
                 {quote
                   ? rupees(quote.totalMinor)
-                  : money(
-                      spaceRate * duration * priceSeats +
-                        Math.round(spaceRate * duration * priceSeats * 0.18),
-                    )}
+                  : spaceRate != null
+                    ? money(
+                        spaceRate * duration * priceSeats +
+                          Math.round(spaceRate * duration * priceSeats * 0.18),
+                      )
+                    : rateSkel}
               </span>
             </div>
             <p className="summary-note">
