@@ -35,7 +35,7 @@ export default function SiteShell({children, minimal=false}: {children: React.Re
         </div>
         <div>
           <h5>Visit</h5>
-          <Link href="/#location">261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout<br />Bengaluru 560043</Link><br />
+          <a href="https://maps.app.goo.gl/arjxnvUYfqe5oUKX7" target="_blank" rel="noopener noreferrer">261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout<br />Bengaluru 560043</a><br />
           <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a><br />
           <a href="tel:+919632771444">+91 96327 71444</a><br />
 
