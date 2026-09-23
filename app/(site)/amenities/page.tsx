@@ -74,6 +74,9 @@ export default function Page() { return <>
         <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 11a12 12 0 0116 0M7 14.5a7 7 0 0110 0"></path><circle cx="12" cy="18.5" r="1.3" fill="currentColor" stroke="none"></circle></svg></span>
           <div><h4>1 Gbps Enterprise Wi-Fi</h4><p>Redundant fibre with wired connections at every desk.</p></div></div>
 
+        <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg></span>
+          <div><h4>24 · 7 Generator Backup</h4><p>Full generator power backup around the clock — no downtime when the grid drops.</p></div></div>
+
         <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"></path></svg></span>
           <div><h4>Warm 2700K Lighting</h4><p>Light tuned to warm white, Ra&gt;90 — never cool, never clinical.</p></div></div>
 

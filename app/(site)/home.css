@@ -940,3 +940,5 @@
 .collabix-site .tf-notes ul { margin:0 0 1rem; padding-left:1.1rem; color:var(--graphite); font-size:.88rem; line-height:1.7; }
 .collabix-site .tf-notes p { font-size:.92rem; color:var(--ink); margin:0; }
 .collabix-site .tf-notes a { color:var(--navy); font-weight:600; }
+/* An odd feature count leaves a blank grid cell; let the last one span the row. */
+@media (min-width: 821px) { .collabix-site .feat-list .feat:last-child:nth-child(odd) { grid-column: 1 / -1; } }
