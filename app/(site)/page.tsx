@@ -21,9 +21,10 @@ export default function Page() { return <>
           <a className="btn btn-ghost-light" href="#spaces">Explore spaces</a>
         </div>
         <div className="hero-meta reveal d4">
-          <div className="item"><div className="k">120</div><div className="l">Desks &amp; seats</div></div>
+          <div className="item"><div className="k">28</div><div className="l">Shared desks</div></div>
           <div className="item"><div className="k">04</div><div className="l">Private cabins</div></div>
-          <div className="item"><div className="k">24·7</div><div className="l">Member access</div></div>
+          <div className="item"><div className="k">02</div><div className="l">Meeting rooms</div></div>
+          <div className="item"><div className="k">24·7</div><div className="l">Access · Mon–Sat</div></div>
         </div>
       </div>
     </div>
