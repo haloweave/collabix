@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-export default function SiteShell({children, minimal=false}: {children: React.ReactNode; minimal?: boolean}) {
+export default function SiteShell({children, minimal=false, authed=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
  const path=usePathname();
  const links=[["/home#spaces","Spaces"],["/home/amenities","Amenities"],["/home/pricing","Pricing"],["/home#location","Location"]];
@@ -11,7 +11,10 @@ export default function SiteShell({children, minimal=false}: {children: React.Re
  <a className="logo" href="/home" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></a>
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
- {path!=="/home/booking" && <a className="btn btn-gold" href="/home/booking">Book a Space →</a>}</nav>
+ {path!=="/home/booking" && <a className="btn btn-gold" href="/home/booking">Book a Space →</a>}
+ {authed
+   ? <a className="btn btn-ghost-light" href="/account" onClick={()=>setOpen(false)}>Account</a>
+   : <a className="btn btn-ghost-light" href="/account/login" onClick={()=>setOpen(false)}>Login</a>}</nav>
  <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button>
  </div></header>
  <main id="main-content">{children}</main>

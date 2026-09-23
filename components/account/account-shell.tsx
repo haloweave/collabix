@@ -23,7 +23,7 @@ export function AccountShell({
   const [pending, startTransition] = useTransition();
 
   return (
-    <SiteShell minimal>
+    <SiteShell minimal authed>
       <section className="page-hero account-hero">
         <div className="glow" />
         <div className="wrap">
