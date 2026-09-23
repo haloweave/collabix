@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-export const metadata: Metadata = {title: "Collabix \u00b7 Development proposal"};
+export const metadata: Metadata = {title: "Collabix \u00b7 Development proposal", robots: {index: false, follow: false}};
 export default function Page() { return <>
 <p className="proposal-context">Archived development proposal · figures and service fees are indicative, not current provider quotes.</p>
 

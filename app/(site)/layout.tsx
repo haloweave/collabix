@@ -6,8 +6,7 @@ import "./home.css";
 export const metadata: Metadata = {
  title: "Collabix · Work Lounge",
  description: "Explore hot desks, dedicated desks, private cabins and meeting rooms at Collabix, Banaswadi, Bengaluru.",
- robots: { index: false, follow: false },
- openGraph: { title: "Collabix · Work Lounge", description: "Explore the Collabix Work Lounge preview." },
+ openGraph: { title: "Collabix · Work Lounge", description: "A premium managed work lounge in Banaswadi, Bengaluru. Where serious work happens." },
 };
 export default async function Layout({children}: {children: React.ReactNode}) {
  // Auth-aware header: swap the Login CTA for an Account link when a member
