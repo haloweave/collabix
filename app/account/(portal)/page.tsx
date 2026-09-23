@@ -49,7 +49,7 @@ export default async function MyBookingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">My bookings</h1>
-        <Link href="/home/booking" className="btn btn-gold">
+        <Link href="/booking" className="btn btn-gold">
           Book again <span className="arw">→</span>
         </Link>
       </div>

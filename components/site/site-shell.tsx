@@ -1,17 +1,18 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 export default function SiteShell({children, minimal=false, authed=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
  const path=usePathname();
- const links=[["/home#spaces","Spaces"],["/home/amenities","Amenities"],["/home/pricing","Pricing"],["/home#location","Location"]];
+ const links=[["/#spaces","Spaces"],["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
  return <div className="collabix-site">
  <header className="site-header solid"><div className="wrap bar">
- <a className="logo" href="/home" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></a>
+ <Link className="logo" href="/" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></Link>
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
- {path!=="/home/booking" && <a className="btn btn-gold" href="/home/booking">Book a Space →</a>}
+ {path!=="/booking" && <a className="btn btn-gold" href="/booking">Book a Space →</a>}
  {authed
    ? <a className="btn btn-ghost-light" href="/account" onClick={()=>setOpen(false)}>Account</a>
    : <a className="btn btn-ghost-light" href="/account/login" onClick={()=>setOpen(false)}>Login</a>}</nav>
@@ -28,15 +29,15 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
         </div>
         <div>
           <h5>Explore</h5>
-          <a href="/home#spaces">Spaces</a><br />
-          <a href="/home/amenities">Amenities</a><br />
-          <a href="/home/pricing">Pricing</a><br />
-          <a href="/home#location">Location</a><br />
-          <a href="/home/booking">Book a Space</a>
+          <Link href="/#spaces">Spaces</Link><br />
+          <a href="/amenities">Amenities</a><br />
+          <a href="/pricing">Pricing</a><br />
+          <Link href="/#location">Location</Link><br />
+          <a href="/booking">Book a Space</a>
         </div>
         <div>
           <h5>Visit</h5>
-          <a href="/home#location">261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout<br />Bengaluru 560043</a><br />
+          <Link href="/#location">261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout<br />Bengaluru 560043</Link><br />
           <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a><br />
 
         </div>
@@ -46,6 +47,6 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
       </div>
     </div>
   </footer>
- <nav className="tabbar" aria-label="Quick navigation">{[["/home","Home"],["/home#spaces","Spaces"],["/home/booking","Book"],["/home/pricing","Pricing"],["/home/amenities","Amenities"]].map(([href,label])=><a key={href} href={href} className={`tab ${path===href?"active":""}`} aria-current={path===href?"page":undefined}>{label}</a>)}</nav>
+ <nav className="tabbar" aria-label="Quick navigation">{[["/","Home"],["/#spaces","Spaces"],["/booking","Book"],["/pricing","Pricing"],["/amenities","Amenities"]].map(([href,label])=><a key={href} href={href} className={`tab ${path===href?"active":""}`} aria-current={path===href?"page":undefined}>{label}</a>)}</nav>
  </div>;
 }

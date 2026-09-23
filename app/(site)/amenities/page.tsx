@@ -106,7 +106,7 @@ export default function Page() { return <>
           <span className="eyebrow">Opening hours</span>
           <h2 className="section-title" style={{"margin": "1rem 0 1rem"}}>Open when you are.</h2>
           <p className="lead">Members hold their own keycard for round-the-clock access. Reception, café and tours run to the hours below.</p>
-          <div style={{"marginTop": "1.8rem"}}><a className="btn btn-navy" href="/home/booking">Book a Space <span className="arw">→</span></a></div>
+          <div style={{"marginTop": "1.8rem"}}><a className="btn btn-navy" href="/booking">Book a Space <span className="arw">→</span></a></div>
         </div>
         <div className="hours-card grid-texture reveal d1">
           <div className="grid-texture"></div>

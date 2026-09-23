@@ -17,7 +17,7 @@ export default function Page() { return <>
         <h1 className="display reveal d1">Where serious<br />work <em>happens.</em></h1>
         <p className="lead hero-sub reveal d2">A premium managed work lounge built for growth-stage founders, enterprise teams and senior professionals. Restrained. Purposeful. Ready when you are.</p>
         <div className="hero-cta reveal d3">
-          <a className="btn btn-gold" href="/home/booking">Book a Space <span className="arw">→</span></a>
+          <a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a>
           <a className="btn btn-ghost-light" href="#spaces">Explore spaces</a>
         </div>
         <div className="hero-meta reveal d4">
@@ -40,7 +40,7 @@ export default function Page() { return <>
       </div>
       <div className="spaces">
 
-        <a className="space-card reveal" href="/home/booking?space=hotdesk">
+        <a className="space-card reveal" href="/booking?space=hotdesk">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/openoffice.jpg" alt="Open-plan hot desk area" /></div>
           <div className="body">
             <span className="kicker">Flexible · 1 person</span>
@@ -51,7 +51,7 @@ export default function Page() { return <>
           </div>
         </a>
 
-        <a className="space-card reveal d1" href="/home/booking?space=dedicated">
+        <a className="space-card reveal d1" href="/booking?space=dedicated">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/desk.jpg" alt="Dedicated desk with storage" /></div>
           <div className="body">
             <span className="kicker">Reserved · 1 person</span>
@@ -62,7 +62,7 @@ export default function Page() { return <>
           </div>
         </a>
 
-        <a className="space-card reveal" href="/home/booking?space=cabin">
+        <a className="space-card reveal" href="/booking?space=cabin">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/cabin.jpg" alt="Private cabin for teams" /></div>
           <div className="body">
             <span className="kicker">Private · up to 4</span>
@@ -73,7 +73,7 @@ export default function Page() { return <>
           </div>
         </a>
 
-        <a className="space-card reveal d1" href="/home/booking?space=meeting">
+        <a className="space-card reveal d1" href="/booking?space=meeting">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="Boardroom meeting room" /></div>
           <div className="body">
             <span className="kicker">Boardroom · up to 8</span>
@@ -146,7 +146,7 @@ export default function Page() { return <>
         </div>
       </div>
       <div className="reveal d2" style={{"marginTop": "2rem"}}>
-        <a className="link-arw" href="/home/amenities">See all amenities <span className="arw">→</span></a>
+        <a className="link-arw" href="/amenities">See all amenities <span className="arw">→</span></a>
       </div>
     </div>
   </section>
@@ -157,7 +157,7 @@ export default function Page() { return <>
     <div className="wrap">
       <div className="inner reveal">
         <h2>Reserve your space at <span className="gold-line">Collabix</span> — it takes about a minute.</h2>
-        <a className="btn btn-gold" href="/home/booking">Book a Space <span className="arw">→</span></a>
+        <a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a>
       </div>
     </div>
   </section>
@@ -172,7 +172,7 @@ export default function Page() { return <>
           <div className="addr-row"><span className="lab">Address</span><span className="val">Collabix Work Lounge, 261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout,<br />Bengaluru, Karnataka 560043</span></div>
           <div className="addr-row"><span className="lab">Hours</span><span className="val">Members 24 · 7 &nbsp;·&nbsp; Reception Mon–Sat, 8:00–20:00</span></div>
           <div className="addr-row"><span className="lab">Enquiries</span><span className="val">connect@collabix.co.in</span></div>
-          <div style={{"marginTop": "1.8rem"}}><a className="btn btn-navy" href="/home/booking">Book a tour &amp; space <span className="arw">→</span></a></div>
+          <div style={{"marginTop": "1.8rem"}}><a className="btn btn-navy" href="/booking">Book a tour &amp; space <span className="arw">→</span></a></div>
         </div>
         <div className="map reveal d1">
           <iframe title="Collabix location map — Banaswadi, Bengaluru" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Banaswadi%2C%20Bengaluru&t=&z=14&ie=UTF8&iwloc=&output=embed"></iframe>

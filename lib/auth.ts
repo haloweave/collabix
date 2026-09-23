@@ -9,7 +9,7 @@ import { sendEmail } from "./email";
 // Passwordless auth: email OTP / magic link + phone SMS OTP.
 // Dev transport logs the OTP to the server console. Before launch, wire
 // sendVerificationOTP to transactional email (in the proposal) and sendOTP to
-// an SMS provider (NOT in the proposal — an added cost; see /home/proposal).
+// an SMS provider (NOT in the proposal — an added cost; see /proposal).
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,

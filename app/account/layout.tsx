@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "../home/home.css";
+import "../(site)/home.css";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {

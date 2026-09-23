@@ -831,7 +831,7 @@
 .collabix-site .stepper .stepper-val {min-width:48px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums;}
 .collabix-site .auto-toggle {display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--graphite);cursor:pointer;}
 .collabix-site .auto-toggle input {width:16px;height:16px;accent-color:var(--gold);}
-/* BookMyShow-style interactive floor map (app/home/booking/floor-map.tsx). */
+/* BookMyShow-style interactive floor map (app/(site)/booking/floor-map.tsx). */
 .collabix-site .floor-map {margin-top:16px;}
 .collabix-site .floor-scroll {overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--ivory-dark);}
 .collabix-site .floor-svg {display:block;width:100%;min-width:560px;height:auto;}

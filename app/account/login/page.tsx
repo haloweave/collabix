@@ -17,7 +17,7 @@ export default async function AccountLoginPage() {
         <div className="login-aside__grid" />
 
         <div className="login-aside__brand login-reveal">
-          <Link href="/home" className="login-aside__logo" aria-label="Collabix home">
+          <Link href="/" className="login-aside__logo" aria-label="Collabix home">
             <Image
               width={3088}
               height={852}
@@ -26,7 +26,7 @@ export default async function AccountLoginPage() {
               alt="Collabix — Work Lounge"
             />
           </Link>
-          <Link href="/home" className="login-aside__back">
+          <Link href="/" className="login-aside__back">
             ← Back to site
           </Link>
         </div>
@@ -71,7 +71,7 @@ export default async function AccountLoginPage() {
 
           <p className="login-hint">Demo — any number works, no OTP needed.</p>
           <p className="login-legal">
-            New to Collabix? <Link href="/home/booking">Book a space</Link> — your
+            New to Collabix? <Link href="/booking">Book a space</Link> — your
             account is created automatically at checkout.
           </p>
         </div>

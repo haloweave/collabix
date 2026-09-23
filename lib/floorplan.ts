@@ -1,6 +1,6 @@
 // Single source of truth for the Collabix floor: geometry read (by eye, stylized)
 // from the architectural plan `Collabix - R.pdf`. Pure data + pure derivations —
-// no React, no DB — so both the SVG seat map (app/home/booking/floor-map.tsx)
+// no React, no DB — so both the SVG seat map (app/(site)/booking/floor-map.tsx)
 // and the inventory seed (lib/db/seed.ts) build from the same source and cannot
 // drift apart. Coordinates are plan-relative units (≈ plan millimetres ÷ 10) in
 // a top-left origin; see FLOOR for the viewBox. Bank counts are the one thing

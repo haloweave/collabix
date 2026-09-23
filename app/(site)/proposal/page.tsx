@@ -184,7 +184,7 @@ export default function Page() { return <>
     <div className="wrap">
       <div className="inner reveal">
         <h2>Questions on any line? Let&#39;s <span className="gold-line">walk through it</span>.</h2>
-        <a className="btn btn-gold" href="/home/booking">Start a conversation <span className="arw">→</span></a>
+        <a className="btn btn-gold" href="/booking">Start a conversation <span className="arw">→</span></a>
       </div>
     </div>
   </section>
