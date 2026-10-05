@@ -23,5 +23,5 @@ export async function POST(req: Request) {
     const status = result.error === "not_found" ? 404 : 409;
     return NextResponse.json({ error: result.error }, { status });
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ticketToken: result.ticketToken });
 }
