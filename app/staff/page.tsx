@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus, TrendingUp, CalendarCheck, IndianRupee, UserCheck } from "lucide-react";
+import { Plus, TrendingUp, CalendarCheck, IndianRupee, UserCheck, ScanLine } from "lucide-react";
 import {
   getDashboardStats,
   getHereToday,
@@ -42,6 +42,13 @@ export default function StaffHome() {
       >
         <StaffHomeBody />
       </Suspense>
+
+      <Link
+        href="/staff/scan"
+        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg md:hidden"
+      >
+        <ScanLine className="size-5" /> Scan
+      </Link>
     </div>
   );
 }

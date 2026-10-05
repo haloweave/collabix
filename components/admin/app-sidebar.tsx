@@ -17,6 +17,7 @@ import {
   Receipt,
   Settings,
   LogOut,
+  ScanLine,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -43,6 +44,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const NAV = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Reception", href: "/admin/reception", icon: UserCheck },
+  { title: "Scan ticket", href: "/admin/scan", icon: ScanLine },
   { title: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
   { title: "Calendar", href: "/admin/calendar", icon: CalendarRange },
   { title: "Members", href: "/admin/members", icon: Users },

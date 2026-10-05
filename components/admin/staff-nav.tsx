@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const TABS = [
+  { title: "Scan", href: "/staff/scan" },
   { title: "Front desk", href: "/staff", exact: true },
   { title: "Book", href: "/staff/book" },
   { title: "Extended", href: "/staff/extended" },
