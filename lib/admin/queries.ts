@@ -429,9 +429,9 @@ export async function getHereToday(now = new Date()): Promise<HereTodayRow[]> {
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
       (array_agg(DISTINCT rp.name))[1] AS plan,
-      bool_and(r.checked_in_at IS NOT NULL) AS checked_in,
-      bool_and(r.checked_out_at IS NOT NULL) AS checked_out,
-      min(r.checked_in_at) AS checked_in_at
+      bool_and(coalesce(r.checked_in_at >= ${dayStart}::timestamptz, false)) AS checked_in,
+      bool_and(coalesce(r.checked_out_at >= ${dayStart}::timestamptz, false)) AS checked_out,
+      max(r.checked_in_at) FILTER (WHERE r.checked_in_at >= ${dayStart}::timestamptz) AS checked_in_at
     FROM booking b
     JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id

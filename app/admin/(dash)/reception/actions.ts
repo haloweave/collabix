@@ -6,46 +6,40 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { getSessionUser, requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
+import { stampCheckIn, stampCheckOut } from "@/lib/domain/checkin";
 
-// Stamp check-in on every not-yet-checked-in confirmed reservation of a booking.
+export type CheckInMethod = "scan" | "code" | "manual" | "override";
+
+function revalidateFrontDesk() {
+  revalidatePath("/admin/reception");
+  revalidatePath("/staff");
+}
+
+// Manual front-desk check-in (reception board button). Day-aware: a multi-day
+// booking can be checked in again on each day of its range.
 export async function checkInBooking(bookingId: string) {
   await requireStaff();
-  await db
-    .update(schema.reservation)
-    .set({ checkedInAt: sql`now()` })
-    .where(
-      and(
-        eq(schema.reservation.bookingId, bookingId),
-        eq(schema.reservation.status, "confirmed"),
-        isNull(schema.reservation.checkedInAt),
-      ),
-    );
-  await logAudit({
-    action: "booking.check_in",
-    targetType: "booking",
-    targetId: bookingId,
-  });
-  revalidatePath("/admin/reception");
+  if (await stampCheckIn(db, bookingId)) {
+    await logAudit({
+      action: "booking.check_in",
+      targetType: "booking",
+      targetId: bookingId,
+      detail: { method: "manual" satisfies CheckInMethod },
+    });
+  }
+  revalidateFrontDesk();
 }
 
 export async function checkOutBooking(bookingId: string) {
   await requireStaff();
-  await db
-    .update(schema.reservation)
-    .set({ checkedOutAt: sql`now()` })
-    .where(
-      and(
-        eq(schema.reservation.bookingId, bookingId),
-        eq(schema.reservation.status, "confirmed"),
-        isNull(schema.reservation.checkedOutAt),
-      ),
-    );
-  await logAudit({
-    action: "booking.check_out",
-    targetType: "booking",
-    targetId: bookingId,
-  });
-  revalidatePath("/admin/reception");
+  if (await stampCheckOut(db, bookingId)) {
+    await logAudit({
+      action: "booking.check_out",
+      targetType: "booking",
+      targetId: bookingId,
+    });
+  }
+  revalidateFrontDesk();
 }
 
 export type VisitorInput = {
