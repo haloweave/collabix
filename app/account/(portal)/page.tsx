@@ -34,6 +34,11 @@ export default async function MyBookingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {b.ticketToken && b.status === "active" && b.confirmed && (
+            <Link href={`/t/${b.ticketToken}`} className="text-sm font-medium underline underline-offset-4">
+              Ticket
+            </Link>
+          )}
           {b.status === "cancelled" ? (
             <Badge variant="destructive">Cancelled</Badge>
           ) : (

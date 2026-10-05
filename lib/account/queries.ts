@@ -13,6 +13,7 @@ export type MyBooking = {
   totalMinor: number;
   confirmed: boolean;
   cancellable: boolean;
+  ticketToken: string | null;
 };
 
 /** A customer's bookings (by linked member id or captured email), newest first. */
@@ -21,7 +22,7 @@ export async function getMyBookings(
   email: string,
 ): Promise<MyBooking[]> {
   const rows = await sql`
-    SELECT b.id, b.status,
+    SELECT b.id, b.status, b.ticket_token,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
@@ -49,6 +50,7 @@ export async function getMyBookings(
       totalMinor: n(r.total_minor),
       confirmed,
       cancellable: status === "active" && confirmed && upcoming,
+      ticketToken: (r.ticket_token as string) ?? null,
     };
   });
 }
