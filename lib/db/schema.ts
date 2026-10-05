@@ -161,6 +161,10 @@ export const booking = pgTable("booking", {
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
   status: bookingStatus("status").notNull().default("active"),
+  // E-ticket (see lib/domain/ticket.ts): opaque QR token + short backup code,
+  // issued when the booking is confirmed. Null while only held.
+  ticketToken: text("ticket_token").unique(),
+  ticketCode: text("ticket_code").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

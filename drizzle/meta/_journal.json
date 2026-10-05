@@ -64,6 +64,20 @@
       "when": 1790025809168,
       "tag": "0008_white_venus",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791199551027,
+      "tag": "0009_booking_ticket",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791199552245,
+      "tag": "0010_booking_ticket_backfill",
+      "breakpoints": true
     }
   ]
 }
