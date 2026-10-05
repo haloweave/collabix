@@ -228,6 +228,8 @@ export type BookingDetail = {
   memberId: string | null;
   status: "active" | "cancelled";
   createdAt: Date;
+  ticketToken: string | null;
+  ticketCode: string | null;
   reservations: {
     id: string;
     code: string;
@@ -258,6 +260,8 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     memberId: (b.member_id as string) ?? null,
     status: b.status as "active" | "cancelled",
     createdAt: new Date(b.created_at as string),
+    ticketToken: (b.ticket_token as string) ?? null,
+    ticketCode: (b.ticket_code as string) ?? null,
     reservations: res.map((r: Record<string, unknown>) => ({
       id: r.id as string,
       code: r.code as string,

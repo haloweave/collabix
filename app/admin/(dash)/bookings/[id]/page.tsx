@@ -58,6 +58,14 @@ export default async function BookingDetailPage({
             </h1>
             <p className="text-sm text-muted-foreground">
               {booking.customerEmail} · booked {istDate(booking.createdAt)}
+              {booking.ticketToken && (
+                <>
+                  {" · ticket "}
+                  <Link href={`/t/${booking.ticketToken}?view=guest`} target="_blank" className="font-mono underline underline-offset-4">
+                    {booking.ticketCode}
+                  </Link>
+                </>
+              )}
             </p>
           </div>
         </div>
