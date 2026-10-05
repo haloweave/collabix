@@ -19,7 +19,7 @@ export type SessionUser = {
   role: Role;
 };
 
-function isStaff(role: string | undefined): role is StaffRole {
+export function isStaff(role: string | undefined): role is StaffRole {
   return !!role && (STAFF_ROLES as readonly string[]).includes(role);
 }
 
