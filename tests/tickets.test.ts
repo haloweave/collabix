@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
 import { confirmBooking, issueTicket } from "../lib/domain/reservations";
 import { getTicketView } from "../lib/domain/ticket-view";
+import { ticketIcs } from "../lib/domain/ticket-ics";
 import { bookConfirmed, insertMultiDay, setupSeededDb } from "./helpers/tickets";
 
 const ctx = setupSeededDb();
@@ -99,3 +100,15 @@ describe("getTicketView", () => {
     expect((await getTicketView(ctx.db, { token }))!.totalMinor).toBeNull();
   });
 });
+
+describe("public ticket surfaces never expose the booking id", () => {
+  test("the .ics calendar file identifies the event by ticket token, not booking id", async () => {
+    const { bookingId, token } = await bookConfirmed(ctx.db);
+    const view = (await getTicketView(ctx.db, { token }))!;
+    const ics = ticketIcs(view, `https://collabix.co.in/t/${token}`);
+    expect(ics).toContain("BEGIN:VCALENDAR");
+    expect(ics).toContain(`UID:${token}@collabix.co.in`);
+    expect(ics).not.toContain(bookingId);
+  });
+});
+
