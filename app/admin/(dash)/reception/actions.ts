@@ -7,6 +7,7 @@ import * as schema from "@/lib/db/schema";
 import { getSessionUser, requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { stampCheckIn, stampCheckOut } from "@/lib/domain/checkin";
+import { scanTicketCore, type ScanOutcome } from "@/lib/domain/scan";
 
 export type CheckInMethod = "scan" | "code" | "manual" | "override";
 
@@ -40,6 +41,26 @@ export async function checkOutBooking(bookingId: string) {
     });
   }
   revalidateFrontDesk();
+}
+
+// Staff scan of a guest's e-ticket (QR URL, token, or typed backup code). A
+// valid ticket is checked in as part of the scan.
+export async function scanTicket(
+  raw: string,
+  opts?: { override?: boolean },
+): Promise<ScanOutcome> {
+  await requireStaff();
+  const out = await scanTicketCore(db, raw, { override: opts?.override });
+  if (out.kind === "ticket" && out.justCheckedIn) {
+    await logAudit({
+      action: "booking.check_in",
+      targetType: "booking",
+      targetId: out.view.bookingId,
+      detail: { method: out.method },
+    });
+    revalidateFrontDesk();
+  }
+  return out;
 }
 
 export type VisitorInput = {
