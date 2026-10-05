@@ -46,6 +46,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedCodes, setConfirmedCodes] = useState<string[] | null>(null);
+  const [ticketToken, setTicketToken] = useState<string | null>(null);
   // Live hourly rates (whole rupees) keyed by plan key, lazy-loaded from the DB
   // after the page renders so the first paint isn't blocked on a query. Until it
   // resolves we show the static indicative rate from lib/spaces.ts.
@@ -277,6 +278,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
         return;
       }
       setConfirmedCodes(selectedCodes);
+      setTicketToken(data.ticketToken ?? null);
       setStep(3); // Done
     } finally {
       setBusy(false);
@@ -299,6 +301,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     setOtp("");
     setError(null);
     setConfirmedCodes(null);
+    setTicketToken(null);
   }
 
   const spotSummary = isDesk
@@ -632,6 +635,24 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   <p>{email}</p>
                   {quote && <p>Total paid on arrival: {rupees(quote.totalMinor)}</p>}
                 </div>
+                {ticketToken && (
+                  <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- server-rendered SVG QR */}
+                    <img
+                      src={`/t/${ticketToken}/qr.svg`}
+                      alt="Your booking QR code"
+                      width={200}
+                      height={200}
+                      style={{ margin: "0 auto", background: "#fff", padding: 8, borderRadius: 12 }}
+                    />
+                    <p style={{ fontSize: ".85rem", marginTop: ".5rem" }}>
+                      Show this QR at reception to check in. We&#39;ve emailed it to you too.
+                    </p>
+                    <a className="btn btn-gold" href={`/t/${ticketToken}`} style={{ marginTop: ".75rem" }}>
+                      View ticket <span className="arw">→</span>
+                    </a>
+                  </div>
+                )}
                 <button
                   className="btn btn-outline"
                   onClick={restart}
