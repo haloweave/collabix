@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
 import { confirmBooking, issueTicket } from "../lib/domain/reservations";
+import { getTicketView } from "../lib/domain/ticket-view";
 import { bookConfirmed, insertMultiDay, setupSeededDb } from "./helpers/tickets";
 
 const ctx = setupSeededDb();
@@ -57,3 +58,44 @@ describe("backfill migration", () => {
   });
 });
 
+describe("getTicketView", () => {
+  test("finds a booking by token, code and id with aggregated details", async () => {
+    const { bookingId, token, code } = await bookConfirmed(ctx.db, { seats: 2 });
+    for (const key of [{ token }, { code }, { bookingId }]) {
+      const v = await getTicketView(ctx.db, key);
+      expect(v).not.toBeNull();
+      expect(v!.bookingId).toBe(bookingId);
+      expect(v!.token).toBe(token);
+      expect(v!.code).toBe(code);
+      expect(v!.status).toBe("active");
+      expect(v!.confirmed).toBe(true);
+      expect(v!.seats).toBe(2);
+      expect(v!.resourceCodes).toHaveLength(2);
+      expect([...v!.resourceCodes].sort()).toEqual(v!.resourceCodes);
+      expect(v!.plan).toBeTruthy();
+      expect(v!.totalMinor).toBe(2 * 2 * 12000 + Math.round(2 * 2 * 12000 * 0.18));
+      expect(v!.startAt).toBeInstanceOf(Date);
+      expect(v!.checkedInAt).toBeNull();
+    }
+  });
+
+  test("unknown token or code returns null", async () => {
+    expect(await getTicketView(ctx.db, { token: "AAAAAAAAAAAAAAAAAAAAAA" })).toBeNull();
+    expect(await getTicketView(ctx.db, { code: "CBX-2222" })).toBeNull();
+  });
+
+  test("a cancelled booking still resolves, as cancelled", async () => {
+    const { bookingId, token } = await bookConfirmed(ctx.db);
+    await ctx.db.update(schema.reservation).set({ status: "cancelled" }).where(eq(schema.reservation.bookingId, bookingId));
+    await ctx.db.update(schema.booking).set({ status: "cancelled" }).where(eq(schema.booking.id, bookingId));
+    const v = await getTicketView(ctx.db, { token });
+    expect(v!.status).toBe("cancelled");
+    expect(v!.confirmed).toBe(false);
+  });
+
+  test("membership-style holds have no amount", async () => {
+    const { token } = await insertMultiDay(ctx.db, "2026-12-10", "2026-12-12");
+    await ctx.db.update(schema.reservation).set({ quoteSnapshot: { membershipHold: true } });
+    expect((await getTicketView(ctx.db, { token }))!.totalMinor).toBeNull();
+  });
+});
