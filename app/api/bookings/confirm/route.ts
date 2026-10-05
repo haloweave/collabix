@@ -25,13 +25,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status });
   }
   // Email the ticket after responding, so SMTP latency never slows checkout
-  // and an email failure never fails the booking.
-  after(async () => {
-    try {
-      await sendTicketEmail(parsed.data.bookingId);
-    } catch (e) {
-      console.error("[ticket-email] send failed", e);
-    }
-  });
+  // and an email failure never fails the booking. Only on the confirmation
+  // itself — a repeat call must not re-send it.
+  if (result.newlyConfirmed) {
+    after(async () => {
+      try {
+        await sendTicketEmail(parsed.data.bookingId);
+      } catch (e) {
+        console.error("[ticket-email] send failed", e);
+      }
+    });
+  }
   return NextResponse.json({ ok: true, ticketToken: result.ticketToken });
 }

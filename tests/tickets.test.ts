@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
-import { confirmBooking, issueTicket } from "../lib/domain/reservations";
+import { confirmBooking, getAvailability, holdReservation, issueTicket } from "../lib/domain/reservations";
 import { getTicketView } from "../lib/domain/ticket-view";
 import { ticketIcs } from "../lib/domain/ticket-ics";
 import { bookConfirmed, insertMultiDay, setupSeededDb } from "./helpers/tickets";
@@ -112,3 +112,31 @@ describe("public ticket surfaces never expose the booking id", () => {
   });
 });
 
+describe("re-confirming an already-confirmed booking", () => {
+  test("cannot reassign the booking to another member", async () => {
+    const { bookingId } = await bookConfirmed(ctx.db);
+    const again = await confirmBooking(ctx.db, { bookingId, memberId: "attacker" });
+    expect(again.ok).toBe(true);
+    expect(again.ok && again.newlyConfirmed).toBe(false);
+    const [b] = await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, bookingId));
+    expect(b.memberId).toBeNull();
+  });
+
+  test("a first confirmation reports newlyConfirmed and links the member", async () => {
+    const avail = await getAvailability(ctx.db, { planKey: "hotdesk", date: "2026-12-01", start: 9, duration: 2 });
+    const held = await holdReservation(ctx.db, {
+      planKey: "hotdesk",
+      resourceIds: [avail.find((a) => a.available)!.resourceId],
+      date: "2026-12-01",
+      start: 9,
+      duration: 2,
+      customerName: "Real Guest",
+      customerEmail: "real@example.com",
+    });
+    if (!held.ok) throw new Error(held.error);
+    const first = await confirmBooking(ctx.db, { bookingId: held.bookingId, memberId: "real-member" });
+    expect(first.ok && first.newlyConfirmed).toBe(true);
+    const [b] = await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, held.bookingId));
+    expect(b.memberId).toBe("real-member");
+  });
+});

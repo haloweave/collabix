@@ -220,7 +220,9 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
 }
 
 export type ConfirmResult =
-  | { ok: true; ticketToken: string }
+  // newlyConfirmed: this call turned held seats into confirmed ones (false on
+  // a repeat call for an already-confirmed booking).
+  | { ok: true; ticketToken: string; newlyConfirmed: boolean }
   | { ok: false; error: string };
 
 // Confirm a whole booking: every held reservation under it becomes confirmed,
@@ -257,7 +259,9 @@ export async function confirmBooking(
         .set({ status: "confirmed" })
         .where(inArray(schema.reservation.id, held.map((r) => r.id)));
     }
-    if (input.memberId) {
+    // Only the confirmation itself may link a member: a repeat call with a
+    // known booking id must not reassign someone else's booking.
+    if (input.memberId && held.length > 0) {
       await tx
         .update(schema.booking)
         .set({ memberId: input.memberId })
@@ -266,7 +270,7 @@ export async function confirmBooking(
     // The ticket is issued with confirmation — once Cashfree lands, confirmation
     // happens only after payment, so "has a ticket" means "paid".
     const ticket = await issueTicket(tx, input.bookingId);
-    return { ok: true as const, ticketToken: ticket.token };
+    return { ok: true as const, ticketToken: ticket.token, newlyConfirmed: held.length > 0 };
   });
 }
 
