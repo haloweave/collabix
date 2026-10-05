@@ -112,9 +112,14 @@ export function TicketScanner() {
           <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Verifying…</p>
         )}
         {check.failed && (
-          <div className="flex items-center justify-between rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
             Couldn&apos;t verify — check your connection.
+            {/* Retry re-sends the last value; Scan next drops it and resumes the
+              camera for the next guest. */}
+          <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={check.retry}><RotateCw className="size-4" /> Retry</Button>
+            <Button size="sm" onClick={next}>Scan next</Button>
+          </div>
           </div>
         )}
       </div>
