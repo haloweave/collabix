@@ -3,7 +3,8 @@
 // SendGrid, Mailgun, Postmark…). With no SMTP config it falls back to logging
 // to the server console, which is how the dev OTP flow works.
 
-type Mail = { to: string; subject: string; text: string; html?: string };
+type Attachment = { filename: string; content: Buffer; contentType?: string; cid?: string };
+type Mail = { to: string; subject: string; text: string; html?: string; attachments?: Attachment[] };
 
 function smtpConfig() {
   const host = process.env.SMTP_HOST;
@@ -22,7 +23,7 @@ export async function sendEmail(mail: Mail): Promise<void> {
   const cfg = smtpConfig();
   if (!cfg) {
     console.log(
-      `[email:dev] to=${mail.to} subject="${mail.subject}"\n${mail.text}`,
+      `[email:dev] to=${mail.to} subject="${mail.subject}"${mail.attachments?.length ? ` (+${mail.attachments.length} attachment)` : ""}\n${mail.text}`,
     );
     return;
   }
@@ -40,5 +41,6 @@ export async function sendEmail(mail: Mail): Promise<void> {
     subject: mail.subject,
     text: mail.text,
     html: mail.html,
+    attachments: mail.attachments,
   });
 }
