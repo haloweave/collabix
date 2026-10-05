@@ -9,8 +9,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
 import { computeQuote, toUtcWindow, validateWindow, type Quote } from "./booking";
 import { getSettings } from "../settings";
+import { newTicketCode, newTicketToken } from "./ticket-codes";
 
 export type Db = PostgresJsDatabase<typeof schema>;
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 const HELD_OR_CONFIRMED = ["held", "confirmed"] as const;
 
@@ -37,6 +39,11 @@ export type HoldResult =
   | { ok: false; error: string };
 
 /** Postgres exclusion-constraint violation (SQLSTATE 23P01). */
+function isUniqueViolation(e: unknown): boolean {
+  const err = e as { code?: string; cause?: { code?: string } };
+  return err?.code === "23505" || err?.cause?.code === "23505";
+}
+
 function isOverlapViolation(e: unknown): boolean {
   const err = e as { code?: string; message?: string; cause?: { code?: string } };
   return (
@@ -212,7 +219,9 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
   }
 }
 
-export type ConfirmResult = { ok: true } | { ok: false; error: string };
+export type ConfirmResult =
+  | { ok: true; ticketToken: string }
+  | { ok: false; error: string };
 
 // Confirm a whole booking: every held reservation under it becomes confirmed,
 // atomically. If any held reservation has expired, expire the lapsed ones and
@@ -254,6 +263,41 @@ export async function confirmBooking(
         .set({ memberId: input.memberId })
         .where(eq(schema.booking.id, input.bookingId));
     }
-    return { ok: true };
+    // The ticket is issued with confirmation — once Cashfree lands, confirmation
+    // happens only after payment, so "has a ticket" means "paid".
+    const ticket = await issueTicket(tx, input.bookingId);
+    return { ok: true as const, ticketToken: ticket.token };
   });
+}
+
+/**
+ * Give a confirmed booking its e-ticket (QR token + backup code). Idempotent:
+ * an existing ticket is returned unchanged. A backup-code collision is retried
+ * inside a savepoint so the caller's transaction survives.
+ */
+export async function issueTicket(
+  tx: Tx,
+  bookingId: string,
+): Promise<{ token: string; code: string }> {
+  const [cur] = await tx
+    .select({ token: schema.booking.ticketToken, code: schema.booking.ticketCode })
+    .from(schema.booking)
+    .where(eq(schema.booking.id, bookingId));
+  if (!cur) throw new Error(`issueTicket: booking ${bookingId} not found`);
+  if (cur.token && cur.code) return { token: cur.token, code: cur.code };
+
+  for (let attempt = 1; ; attempt++) {
+    const next = { token: cur.token ?? newTicketToken(), code: cur.code ?? newTicketCode() };
+    try {
+      await tx.transaction(async (sp) => {
+        await sp
+          .update(schema.booking)
+          .set({ ticketToken: next.token, ticketCode: next.code })
+          .where(eq(schema.booking.id, bookingId));
+      });
+      return next;
+    } catch (e) {
+      if (!isUniqueViolation(e) || attempt >= 5) throw e;
+    }
+  }
 }

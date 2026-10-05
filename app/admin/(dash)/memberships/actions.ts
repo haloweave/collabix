@@ -7,6 +7,7 @@ import * as schema from "@/lib/db/schema";
 import * as authSchema from "@/lib/db/auth-schema";
 import { requireStaff, requireManager } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
+import { issueTicket } from "@/lib/domain/reservations";
 
 export async function createMembershipPlan(input: {
   name: string;
@@ -165,6 +166,7 @@ export async function createLongTermHold(input: {
           },
         })),
       );
+      await issueTicket(tx, b.id);
       return b.id;
     });
 

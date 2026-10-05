@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
+import { issueTicket } from "@/lib/domain/reservations";
 
 // ── Coupons ────────────────────────────────────────────────────────────────
 export async function createCoupon(input: {
@@ -113,6 +114,7 @@ export async function createExtendedBooking(input: {
           },
         })),
       );
+      await issueTicket(tx, b.id);
       return b.id;
     });
 
