@@ -730,8 +730,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   <p className="hold-timer expired">Your hold has expired.</p>
                 )}
                 <p>
-                  We sent a 6-digit code to {phoneE164}. (In local dev, the code
-                  prints to the server console.)
+                  We sent a 6-digit code to {phoneE164}.
                 </p>
                 <form onSubmit={verifyOtp}>
                   <div className="field">
