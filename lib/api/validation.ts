@@ -1,15 +1,10 @@
 import { z } from "zod";
-import { ALLOWED_DURATIONS } from "../domain/booking";
+import { MAX_DURATION } from "../domain/booking";
 
 const planKey = z.enum(["hotdesk", "dedicated", "cabin", "meeting"]);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 const start = z.coerce.number().int().min(0).max(23);
-const duration = z.coerce
-  .number()
-  .int()
-  .refine((d) => (ALLOWED_DURATIONS as readonly number[]).includes(d), {
-    message: "duration must be 1, 2, 4 or 8",
-  });
+const duration = z.coerce.number().int().min(1).max(MAX_DURATION);
 
 // Per-request seat cap — bounds abuse and matches the UI stepper ceiling.
 export const MAX_SEATS = 20;

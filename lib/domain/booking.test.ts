@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  ALLOWED_DURATIONS,
+  MAX_DURATION,
+  PRESET_DURATIONS,
   computeQuote,
   toUtcWindow,
   validateWindow,
@@ -30,9 +31,20 @@ describe("validateWindow", () => {
     expect(r.ok).toBe(false);
   });
 
-  test("rejects a duration not on the allowed list", () => {
-    const r = validateWindow({ date: "2026-09-18", start: 9, duration: 3 }, NOW);
-    expect(r.ok).toBe(false);
+  test("accepts a custom whole-hour duration", () => {
+    expect(validateWindow({ date: "2026-09-18", start: 9, duration: 6 }, NOW))
+      .toEqual({ ok: true });
+  });
+
+  test("accepts the whole 12-hour day", () => {
+    expect(validateWindow({ date: "2026-09-18", start: 8, duration: 12 }, NOW))
+      .toEqual({ ok: true });
+  });
+
+  test("rejects a zero, fractional or over-long duration", () => {
+    for (const duration of [0, 1.5, 13]) {
+      expect(validateWindow({ date: "2026-09-18", start: 8, duration }, NOW).ok).toBe(false);
+    }
   });
 
   test("rejects a date in the past (IST)", () => {
@@ -100,6 +112,7 @@ describe("computeQuote", () => {
   });
 });
 
-test("ALLOWED_DURATIONS is the demo set", () => {
-  expect(ALLOWED_DURATIONS).toEqual([1, 2, 4, 8]);
+test("durations run up to the full 08:00–20:00 window, with quick presets", () => {
+  expect(MAX_DURATION).toBe(12);
+  expect(PRESET_DURATIONS).toEqual([1, 2, 4, 8]);
 });

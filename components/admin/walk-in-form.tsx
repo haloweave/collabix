@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { spaces } from "@/lib/spaces";
-import { ALLOWED_DURATIONS, OPEN_HOUR, CLOSE_HOUR } from "@/lib/domain/booking";
+import { MAX_DURATION, OPEN_HOUR, CLOSE_HOUR } from "@/lib/domain/booking";
 import { createWalkIn } from "@/app/admin/(dash)/bookings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const DURATIONS = Array.from({ length: MAX_DURATION }, (_, i) => i + 1);
 const START_HOURS = Array.from(
   { length: CLOSE_HOUR - OPEN_HOUR },
   (_, i) => OPEN_HOUR + i,
@@ -133,7 +134,7 @@ export function WalkInForm({ today }: { today: string }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALLOWED_DURATIONS.map((d) => (
+                  {DURATIONS.map((d) => (
                     <SelectItem key={d} value={String(d)}>
                       {d}h
                     </SelectItem>
