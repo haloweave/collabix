@@ -996,3 +996,10 @@
   .collabix-site .of-photo { position: static; }
   .collabix-site .of-photo img { aspect-ratio: 16/10; }
 }
+
+/* 404 page (app/not-found.tsx). */
+.collabix-site .nf-hero { min-height: 72vh; display: flex; align-items: center; }
+.collabix-site .nf-code { font-size: clamp(5rem,16vw,10rem); font-weight: 700; line-height: .9; letter-spacing: -.05em; color: rgba(247,245,242,.1); margin-top: 1.4rem; user-select: none; }
+.collabix-site .nf-code span { color: var(--gold); }
+.collabix-site .nf-hero h1 { margin-top: .6rem; }
+.collabix-site .nf-cta { margin-top: 2rem; }
