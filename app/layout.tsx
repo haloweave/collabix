@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Collabix · Work Lounge",
   description:
     "Collabix Work Lounge — a premium managed office and coworking space in Banaswadi, Bengaluru. Where serious work happens.",
-  metadataBase: new URL("https://collabix.com"),
+  metadataBase: new URL("https://collabix.co.in"),
   openGraph: {
     title: "Collabix · Work Lounge",
     description:
