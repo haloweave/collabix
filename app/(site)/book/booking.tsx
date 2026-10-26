@@ -87,20 +87,23 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const codeById = new Map(slots.map((s) => [s.resourceId, s.code]));
 
   // Auto-selection is derived, not stored: when the toggle is on we cluster
-  // `seatCount` available desks live off the current slots. Manual picks live
-  // in manualIds. Rooms are always manual (single-select). Cheap enough to
-  // recompute each render (~4 dozen seats), so no memo needed.
-  const autoIds =
-    isDesk && autoAssign
-      ? autoAssignDesks(
-          slots.filter((s) => s.available).map((s) => s.code),
-          seatCount,
-        )
+  // `seatCount` available desks, or take the first free room, live off the
+  // current slots. Manual picks live in manualIds. Cheap enough to recompute
+  // each render (~4 dozen seats), so no memo needed.
+  const freeSlots = slots.filter((s) => s.available);
+  const autoIds = !autoAssign
+    ? []
+    : isDesk
+      ? autoAssignDesks(freeSlots.map((s) => s.code), seatCount)
           .map((c) => slots.find((s) => s.code === c)?.resourceId)
           .filter((id): id is string => Boolean(id))
-      : [];
+      : freeSlots.slice(0, 1).map((s) => s.resourceId);
 
-  const selectedIds = isDesk && autoAssign ? autoIds : manualIds;
+  const selectedIds = autoAssign ? autoIds : manualIds;
+  // With a single room of this kind there is nothing to choose, so neither the
+  // auto-select toggle nor the floor plan is offered.
+  const canChoose = isDesk || slots.length > 1;
+  const showMap = canChoose && !autoAssign;
   const selectedCodes = selectedIds
     .map((id) => codeById.get(id))
     .filter((c): c is string => Boolean(c));
@@ -546,6 +549,22 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   </div>
                 )}
 
+                {!isDesk && canChoose && (
+                  <div className="seats-control">
+                    <label className="auto-toggle">
+                      <input
+                        type="checkbox"
+                        checked={autoAssign}
+                        onChange={(e) => {
+                          setAutoAssign(e.target.checked);
+                          setManualIds([]);
+                        }}
+                      />
+                      <span>Auto-select a room</span>
+                    </label>
+                  </div>
+                )}
+
                 <div className="booking-avail">
                   {!windowValid ? (
                     <p className="avail-hint">Pick a date to see live availability.</p>
@@ -555,14 +574,14 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     <p className="avail-hint">
                       No spots free for this window. Try another time.
                     </p>
-                  ) : isDesk && autoAssign ? (
-                    // Auto-select hides the floor plan; unticking it reveals the
-                    // map so the guest can pick seats by hand.
-                    <p aria-live="polite" className="avail-hint">
-                      {selectedCodes.length
-                        ? `We've picked ${selectedCodes.length > 1 ? "seats" : "a seat"} for you: ${selectedCodes.join(", ")}. Untick Auto-select seats to choose your own on the floor plan.`
-                        : "No seats free for this window. Try another time."}
-                    </p>
+                  ) : !showMap ? (
+                    // Auto-select hides the floor plan (the summary shows the
+                    // pick); unticking it reveals the map to choose by hand.
+                    !selectedCodes.length && (
+                      <p aria-live="polite" className="avail-hint">
+                        No {isDesk ? "seats" : "rooms"} free for this window. Try another time.
+                      </p>
+                    )
                   ) : (
                     <>
                       <span className="filter-label">
