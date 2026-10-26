@@ -36,6 +36,7 @@ export default function Pricing() {
         <div className="tf-block tf-notes">
           <h3>Please note</h3>
           <ul>{tariffNotes.map((n) => <li key={n}>{n}</li>)}</ul>
+          <p>Accounting, CA support, websites &amp; apps, or anything else not listed here: contact us to know the price.</p>
           <p>Questions about a plan? Call <a href="tel:+919632771444">+91 96327 71444</a> or write to <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a>.</p>
         </div>
       </div>
