@@ -6,9 +6,13 @@ import { db } from "./db/client";
 import * as authSchema from "./db/auth-schema";
 import { sendEmail } from "./email";
 import { sendOtpSms, toIndianMobile } from "./sms";
+import { messageCentralConfigured, sendVerification, validateVerification } from "./message-central";
 
-// Passwordless auth. Sign-in and checkout verify a mobile number by SMS code
-// (Fast2SMS, lib/sms.ts). The email-OTP plugin stays for staff tooling but the
+const mcKey = (phone: string) => `message-central:${phone}`;
+
+// Passwordless auth. Sign-in and checkout verify a mobile number by SMS code:
+// Message Central VerifyNow when configured (lib/message-central.ts), else
+// Fast2SMS (lib/sms.ts). The email-OTP plugin stays for staff tooling but the
 // public login only offers mobile.
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
@@ -50,9 +54,36 @@ export const auth = betterAuth({
       },
       // Indian mobiles only: anything else is refused before an SMS is paid for.
       phoneNumberValidator: (phone) => toIndianMobile(phone) !== null,
-      async sendOTP({ phoneNumber, code }) {
-        await sendOtpSms(phoneNumber, code);
-      },
+      ...(messageCentralConfigured()
+        ? {
+            // Message Central generates, texts and checks the code under its own
+            // DLT registration. Its verificationId is kept in Better Auth's
+            // verification table between the send and the check.
+            async sendOTP({ phoneNumber }, ctx) {
+              const verificationId = await sendVerification(phoneNumber);
+              const adapter = ctx!.context.internalAdapter;
+              await adapter.deleteVerificationByIdentifier(mcKey(phoneNumber));
+              await adapter.createVerificationValue({
+                identifier: mcKey(phoneNumber),
+                value: verificationId,
+                expiresAt: new Date(Date.now() + 10 * 60_000),
+              });
+            },
+            async verifyOTP({ phoneNumber, code }, ctx) {
+              const adapter = ctx!.context.internalAdapter;
+              const row = await adapter.findVerificationValue(mcKey(phoneNumber));
+              if (!row || row.expiresAt < new Date()) return false;
+              const ok = await validateVerification(row.value, code);
+              if (ok) await adapter.deleteVerificationByIdentifier(mcKey(phoneNumber));
+              return ok;
+            },
+          }
+        : {
+            // Fallback: Better Auth's own code, delivered by Fast2SMS.
+            async sendOTP({ phoneNumber, code }) {
+              await sendOtpSms(phoneNumber, code);
+            },
+          }),
     }),
   ],
 });
