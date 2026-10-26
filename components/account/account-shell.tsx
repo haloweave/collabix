@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 import SiteShell from "@/components/site/site-shell";
-import { memberSignOut } from "@/app/account/actions";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 const LINKS: [string, string][] = [
   ["/account", "My bookings"],
@@ -20,6 +21,7 @@ export function AccountShell({
   children: React.ReactNode;
 }) {
   const path = usePathname();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
@@ -61,7 +63,11 @@ export function AccountShell({
             <button
               className="btn btn-navy"
               disabled={pending}
-              onClick={() => startTransition(() => memberSignOut())}
+              onClick={() => startTransition(async () => {
+                  await authClient.signOut().catch(() => {});
+                  router.push("/login");
+                  router.refresh();
+                })}
             >
               {pending ? "Signing out…" : "Sign out"}
             </button>

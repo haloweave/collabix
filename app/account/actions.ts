@@ -1,63 +1,16 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db, sql } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import * as authSchema from "@/lib/db/auth-schema";
-import { MEMBER_COOKIE, getMemberSession } from "@/lib/account/auth";
-
-// Demo login: find-or-create a member by phone and set the session cookie. No
-// OTP — any number works (a known number maps to that customer's bookings).
-export async function demoMemberLogin(phone: string) {
-  const p = phone.trim();
-
-  let user = p
-    ? (
-        await db
-          .select()
-          .from(authSchema.user)
-          .where(eq(authSchema.user.phoneNumber, p))
-      )[0]
-    : undefined;
-
-  if (!user) {
-    const id = randomUUID();
-    await db.insert(authSchema.user).values({
-      id,
-      name: p || "Guest",
-      email: `${id}@demo.local`,
-      phoneNumber: p || null,
-      role: "member",
-      emailVerified: false,
-    });
-    user = (
-      await db.select().from(authSchema.user).where(eq(authSchema.user.id, id))
-    )[0];
-  }
-
-  const store = await cookies();
-  store.set(MEMBER_COOKIE, user!.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  redirect("/account");
-}
-
-export async function memberSignOut() {
-  const store = await cookies();
-  store.delete(MEMBER_COOKIE);
-  redirect("/account/login");
-}
+import { getMemberSession } from "@/lib/account/auth";
 
 export async function updateOwnProfile(name: string) {
   const m = await getMemberSession();
-  if (!m) redirect("/account/login");
+  if (!m) redirect("/login");
   const clean = name.trim();
   if (!clean) return;
   await db

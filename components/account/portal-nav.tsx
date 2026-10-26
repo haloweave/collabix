@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { LogOut } from "lucide-react";
-import { memberSignOut } from "@/app/account/actions";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ const TABS = [
 
 export function PortalNav({ name }: { name: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
@@ -50,7 +51,11 @@ export function PortalNav({ name }: { name: string }) {
           variant="ghost"
           size="sm"
           disabled={pending}
-          onClick={() => startTransition(() => memberSignOut())}
+          onClick={() => startTransition(async () => {
+            await authClient.signOut().catch(() => {});
+            router.push("/login");
+            router.refresh();
+          })}
         >
           <LogOut className="size-4" />
         </Button>
