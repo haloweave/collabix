@@ -1,22 +1,18 @@
 import Image from "next/image";
 import { OfferingIcon } from "@/components/site/offering-icon";
-import { TariffTable } from "@/components/site/tariff-table";
 import { offeringGroups, offeringHref, offerings, type Offering } from "@/lib/offerings";
-import { tariff } from "@/lib/tariff";
 
 const check = "M5 13l4 4L19 7";
+const mail = (o: Offering) => `mailto:connect@collabix.co.in?subject=${encodeURIComponent(`Enquiry: ${o.title}`)}`;
 
 function Ctas({ o, light = false }: { o: Offering; light?: boolean }) {
   const ghost = light ? "btn-ghost-light" : "btn-ghost";
-  const mail = `mailto:connect@collabix.co.in?subject=${encodeURIComponent(`Enquiry: ${o.title}`)}`;
   return o.cta === "book"
     ? <><a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a><a className={`btn ${ghost}`} href="tel:+919632771444">Call +91 96327 71444</a></>
-    : <><a className="btn btn-gold" href="tel:+919632771444">Call +91 96327 71444 <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail}>Email us</a></>;
+    : <><a className="btn btn-gold" href="tel:+919632771444">Call +91 96327 71444 <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>;
 }
 
 export default function OfferingPage({ o }: { o: Offering }) {
-  const section = o.pricing && tariff.find((s) => s.id === o.pricing!.section);
-  const rows = section && (o.pricing!.rows ? section.rows.filter((r) => o.pricing!.rows!.includes(r.name)) : section.rows);
   const group = offeringGroups.find((g) => g.id === o.group)!;
   const related = offerings.filter((x) => x.group === o.group && x.slug !== o.slug);
   return <>
@@ -49,17 +45,10 @@ export default function OfferingPage({ o }: { o: Offering }) {
           </div>
         </div>
 
-        {section && rows && (
-          <div className="tf-block of-pricing" id="pricing">
-            <div className="tf-head">
-              <h2>Pricing</h2>
-              <span className="kicker">All prices before 18% GST</span>
-            </div>
-            <TariffTable section={section} rows={rows} />
-            {(o.pricing!.note ?? section.note) && <p className="pr-note-inline tf-note">{o.pricing!.note ?? section.note}</p>}
-            <a className="link-arw of-all" href={`/pricing#${section.id}`}>See the full tariff <span className="arw">→</span></a>
-          </div>
-        )}
+        <div className="of-ask">
+          <h2>Pricing</h2>
+          <p>Contact us to know the price. Call <a href="tel:+919632771444">+91 96327 71444</a> or write to <a href={mail(o)}>connect@collabix.co.in</a>.</p>
+        </div>
       </div>
     </section>
 

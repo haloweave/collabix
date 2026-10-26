@@ -1,7 +1,7 @@
 /** The Spaces & Services menu and the page behind each item. Workspaces and
  * flexible access live under /spaces/[slug], business services under
- * /services/[slug]. Prices come from the tariff (lib/tariff.ts) so the pages
- * and /pricing never disagree. */
+ * /services/[slug]. Prices live only on /pricing; these pages ask people to
+ * get in touch instead. */
 
 export type OfferingGroup = "workspaces" | "flexible" | "services";
 
@@ -18,8 +18,6 @@ export type Offering = {
   lead: string;
   photo?: { src: string; alt: string };
   highlights: { title: string; text: string }[];
-  /** Tariff section to price from; `rows` narrows it to the named plans. */
-  pricing?: { section: string; rows?: string[]; note?: string };
   /** "book" sends people to /booking; "enquire" to a call or email. */
   cta: "book" | "enquire";
 };
@@ -49,7 +47,6 @@ export const offerings: Offering[] = [
       { title: "Long days covered", text: "Mon–Sat, 08:00–20:00, with after-hours access at 20% extra." },
       { title: "Room to grow", text: "Move up to a dedicated desk or a cabin whenever you're ready." },
     ],
-    pricing: { section: "desks", rows: ["Hot Desk Flexi"] },
     cta: "book",
   },
   {
@@ -70,7 +67,6 @@ export const offerings: Offering[] = [
       { title: "Guest pass on Pro", text: "Bring a guest in on the Dedicated Desk Pro plan." },
       { title: "Ergonomic seating", text: "Task chairs specified for full working days." },
     ],
-    pricing: { section: "desks", rows: ["Dedicated Desk", "Dedicated Desk Pro"] },
     cta: "book",
   },
   {
@@ -91,7 +87,6 @@ export const offerings: Offering[] = [
       { title: "30 pages of prints", text: "Printing included on every cabin plan." },
       { title: "Front desk", text: "A staffed reception to greet your visitors and handle your mail." },
     ],
-    pricing: { section: "cabins" },
     cta: "book",
   },
   {
@@ -110,7 +105,6 @@ export const offerings: Offering[] = [
       { title: "Corporate bundles", text: "Packs of 6, 8 or 10 accesses that anyone on your team can use, any time, with meeting credits." },
       { title: "Everything in the lounge", text: "Wi-Fi, the café and every shared desk." },
     ],
-    pricing: { section: "passes" },
     cta: "book",
   },
   {
@@ -129,7 +123,6 @@ export const offerings: Offering[] = [
       { title: "By the hour", text: "Book only the time you need, online in about a minute." },
       { title: "Use your credits", text: "Member plans include credits. 1 credit is 1 hour of room time." },
     ],
-    pricing: { section: "meeting" },
     cta: "book",
   },
   {
@@ -150,7 +143,6 @@ export const offerings: Offering[] = [
       { title: "Meeting credits", text: "2 or 4 hours of meeting-room time a month for when you need to meet in person." },
       { title: "GST and registration help", text: "Need the registration done too? Our service desk can handle it." },
     ],
-    pricing: { section: "virtual" },
     cta: "enquire",
   },
   {
