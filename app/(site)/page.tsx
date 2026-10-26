@@ -1,12 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { money } from "@/lib/spaces";
-import { tariff } from "@/lib/tariff";
 export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Banaswadi, Bengaluru"};
-// Lowest standard price in a tariff section, for the "from ₹…" card labels.
-const from = (id: string) => money(Math.min(...tariff.find((s) => s.id === id)!.rows.map((r) => r.standard)));
-const planPrice = (id: string, name: string) => money(tariff.find((s) => s.id === id)!.rows.find((r) => r.name === name)!.standard);
 export default function Page() { return <>
 
 
@@ -53,7 +48,7 @@ export default function Page() { return <>
             <span className="kicker">Flexible · 1 person</span>
             <h3>Hot Desk</h3>
             <p>A seat in the open lounge — sit anywhere that&#39;s free, plug in and go.</p>
-            <div className="price"><span className="amt">{planPrice("desks", "Hot Desk Flexi")}</span><span className="per">/ month</span>
+            <div className="price"><span className="per">Contact us to know pricing</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -64,7 +59,7 @@ export default function Page() { return <>
             <span className="kicker">Reserved · 1 person</span>
             <h3>Dedicated Desk</h3>
             <p>Your own fixed seat with a locker and meeting-room credits — same spot, every day.</p>
-            <div className="price"><span className="per">from</span><span className="amt">{planPrice("desks", "Dedicated Desk")}</span><span className="per">/ month</span>
+            <div className="price"><span className="per">Contact us to know pricing</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -75,7 +70,7 @@ export default function Page() { return <>
             <span className="kicker">Private · 4 people</span>
             <h3>Private Cabin</h3>
             <p>An enclosed cabin for a team of four, with standard fit-out — ready to move in.</p>
-            <div className="price"><span className="per">from</span><span className="amt">{from("cabins")}</span><span className="per">/ month</span>
+            <div className="price"><span className="per">Contact us to know pricing</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -86,7 +81,7 @@ export default function Page() { return <>
             <span className="kicker">4-seater &amp; boardroom</span>
             <h3>Meeting Rooms</h3>
             <p>A 4-seat room with TV and whiteboard, and an 8-seat boardroom with integrated VC.</p>
-            <div className="price"><span className="per">from</span><span className="amt">{from("meeting")}</span><span className="per">/ hour</span>
+            <div className="price"><span className="per">Contact us to know pricing</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
