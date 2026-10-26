@@ -1,4 +1,4 @@
-import { money } from "@/lib/spaces";
+import { money } from "@/lib/tariff";
 import type { TariffSection } from "@/lib/tariff";
 
 const unitLabel: Record<TariffSection["unit"], string> = { month: "/ month", hour: "/ hour", day: "/ day", service: "" };

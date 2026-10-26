@@ -3,6 +3,9 @@
  * truth: /pricing renders these rows, and online and walk-in booking price
  * from the BOOKABLE catalogue below, which reads the same rows. */
 
+/** "₹1,23,456" for whole rupees, Indian digit grouping. */
+export const money = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
+
 export const EARLY_BIRD_DEADLINE = "15th Oct 2026";
 /** First day (IST) the Early Bird offer no longer applies. Move this, and the
  * label above, to run the offer again. */
