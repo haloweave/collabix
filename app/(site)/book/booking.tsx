@@ -248,7 +248,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
         const { load } = await import("@cashfreepayments/cashfree-js");
         const cashfree = await load({ mode: data.mode });
         if (!cashfree) {
-          setError("Couldn't load the payment win. Please try again.");
+          setError("Couldn't load the payment window. Please try again.");
           return;
         }
         const result = await cashfree.checkout({
@@ -265,7 +265,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       setPayPhase("confirming");
       await settle();
     } catch {
-      setError("Something went wrong with the payment win. Please try again.");
+      setError("Something went wrong with the payment window. Please try again.");
     } finally {
       setPayPhase("idle");
       setBusy(false);
