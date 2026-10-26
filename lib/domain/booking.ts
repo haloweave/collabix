@@ -154,10 +154,11 @@ export function productWindow(
     return { ok: false, error: "a half day starts between 08:00 and 16:00" };
   }
 
-  // A Full Day Pass stays on sale until the day ends; anything else must not
-  // start in the past.
+  // A Full Day Pass stays on sale until the day ends; anything else can start
+  // no earlier than the hour already under way (so a walk-in at 10:20 can take
+  // 10:00), never in an hour that has fully passed.
   const { startAt, endAt } = toUtcWindow(window);
-  const cutoff = p.key === "day-full" ? endAt : startAt;
+  const cutoff = p.key === "day-full" ? endAt : new Date(startAt.getTime() + 3_600_000);
   if (cutoff.getTime() <= now.getTime()) {
     return { ok: false, error: "that time has already passed" };
   }

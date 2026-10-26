@@ -167,6 +167,12 @@ describe("productWindow", () => {
     expect(productWindow(room, { date: "2026-09-17", start: 11, duration: 1 }, NOW).ok).toBe(false);
   });
 
+  test("the hour already under way can still be booked (walk-ins)", () => {
+    const TWENTY_PAST = new Date("2026-09-17T06:50:00.000Z"); // 12:20 IST
+    expect(productWindow(room, { date: "2026-09-17", start: 12, duration: 1 }, TWENTY_PAST).ok).toBe(true);
+    expect(productWindow(dayHalf, { date: "2026-09-17", start: 12 }, TWENTY_PAST).ok).toBe(true);
+  });
+
   test("rooms take any start and 1–12 hours, overnight allowed", () => {
     expect(productWindow(room, { date: "2026-09-18", start: 22, duration: 6 }, NOW))
       .toEqual({ ok: true, window: { date: "2026-09-18", start: 22, duration: 6 } });
