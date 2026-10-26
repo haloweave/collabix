@@ -105,6 +105,25 @@ describe("ticketState — single-day", () => {
     expect(ticketState(single(), ist("2026-12-02T09:30")).phase).toBe("ended");
   });
 
+  test("an overnight booking stays valid after IST midnight", () => {
+    const b = single({ startAt: ist("2026-12-01T22:00"), endAt: ist("2026-12-02T04:00") });
+    expect(ticketState(b, ist("2026-12-01T21:00")).phase).toBe("too_early");
+    expect(ticketState(b, ist("2026-12-02T01:30")).phase).toBe("valid_now");
+    expect(ticketState(b, ist("2026-12-02T04:00")).phase).toBe("ended");
+  });
+
+  test("an overnight check-in still counts after midnight", () => {
+    const s = ticketState(
+      single({
+        startAt: ist("2026-12-01T22:00"),
+        endAt: ist("2026-12-02T04:00"),
+        checkedInAt: ist("2026-12-01T22:05"),
+      }),
+      ist("2026-12-02T01:30"),
+    );
+    expect(s.checkedInAt?.toISOString()).toBe(ist("2026-12-01T22:05").toISOString());
+  });
+
   test("check-in stamps surface", () => {
     const s = ticketState(
       single({ checkedInAt: ist("2026-12-01T08:50") }),

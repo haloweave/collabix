@@ -85,7 +85,9 @@ export function ticketState(b: TicketBooking, now: Date): TicketState {
     ? new Date(today.getTime() + b.closeHour * HOUR_MS)
     : b.endAt;
 
-  const todays = (d: Date | null) => (d && d >= today ? d : null);
+  // Multi-day passes start fresh each IST day; a single booking (even one that
+  // runs past midnight) keeps its stamps for its whole window.
+  const todays = (d: Date | null) => (!multiDay || (d && d >= today) ? d : null);
 
   const phase = ((): TicketPhase => {
     if (b.status === "cancelled") return "cancelled";
@@ -96,7 +98,9 @@ export function ticketState(b: TicketBooking, now: Date): TicketState {
       if (now < b.startAt) return "other_day";
     } else {
       if (now >= b.endAt) return "ended";
-      if (istDayStart(b.startAt).getTime() !== today.getTime()) return "other_day";
+      if (now < windowStart && istDayStart(b.startAt).getTime() !== today.getTime()) {
+        return "other_day";
+      }
     }
     if (now < windowStart) return "too_early";
     if (now >= windowEnd) return "ended";
