@@ -53,6 +53,34 @@ describe("validateVerification", () => {
     expect((calls[0].init.headers as Record<string, string>).authToken).toBe("TOKEN");
   });
 
+  test("accepts Message Central's real success reply (captured 2026-10-26)", async () => {
+    const { impl } = fakeFetch({
+      responseCode: 200,
+      message: "SUCCESS",
+      data: {
+        verificationId: 13268883,
+        mobileNumber: "<redacted>",
+        verificationStatus: "VERIFICATION_COMPLETED",
+        responseCode: "200",
+        errorMessage: null,
+        transactionId: "<redacted>",
+        referenceId: "JRN-d1c9cd04",
+        authToken: "<redacted>",
+      },
+    });
+    expect(await validateVerification("13268883", "637050", { ...creds, fetchImpl: impl })).toBe(true);
+  });
+
+  test("a response code sent as text still counts", async () => {
+    const { impl } = fakeFetch({ responseCode: "200", data: { verificationStatus: "VERIFICATION_COMPLETED" } });
+    expect(await validateVerification("1", "123456", { ...creds, fetchImpl: impl })).toBe(true);
+  });
+
+  test("ALREADY_VERIFIED is not a pass (no replay of a used verification)", async () => {
+    const { impl } = fakeFetch({ responseCode: 703, message: "ALREADY_VERIFIED" });
+    expect(await validateVerification("1", "999999", { ...creds, fetchImpl: impl })).toBe(false);
+  });
+
   test("a wrong or expired code is rejected, not thrown", async () => {
     for (const responseCode of [702, 705]) {
       const { impl } = fakeFetch({ responseCode, message: "WRONG_OTP_PROVIDED" }, 400);

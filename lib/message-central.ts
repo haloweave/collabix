@@ -48,7 +48,11 @@ export async function validateVerification(verificationId: string, code: string,
   const query = new URLSearchParams({ verificationId, code, flowType: "SMS" });
   const res = await fetchImpl(`${BASE}/validateOtp?${query}`, { method: "GET", headers: { authToken } });
   const data = (await res.json().catch(() => null)) as
-    | { responseCode?: number; data?: { verificationStatus?: string } }
+    | { responseCode?: number | string; message?: string; data?: { verificationStatus?: string } }
     | null;
-  return data?.responseCode === 200 && data.data?.verificationStatus === "VERIFICATION_COMPLETED";
+  const ok = Number(data?.responseCode) === 200 && data?.data?.verificationStatus === "VERIFICATION_COMPLETED";
+  // Codes and messages only (never tokens or numbers), so a rejection can be
+  // diagnosed from the server logs.
+  if (!ok) console.warn(`[message-central] validate: http ${res.status}, ${data?.responseCode} ${data?.message ?? ""}`);
+  return ok;
 }
