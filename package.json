@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx lib/db/seed.ts",
-    "db:seed:owner": "tsx lib/db/seed-owner.ts"
+    "db:seed:owner": "tsx lib/db/seed-owner.ts",
+    "db:tariff": "tsx lib/db/migrate-tariff.ts"
   },
   "dependencies": {
     "@cashfreepayments/cashfree-js": "^1.0.7",
