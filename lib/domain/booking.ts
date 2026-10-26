@@ -1,3 +1,12 @@
+import {
+  GST_RATE,
+  NIGHT_FROM,
+  NIGHT_SURCHARGE,
+  NIGHT_UNTIL,
+  productPriceMinor,
+  type BookableProduct,
+} from "../tariff";
+
 // Pure booking rules — no database, no I/O. The server is authoritative for
 // time windows and money; these functions are the single source of those rules.
 //
@@ -13,7 +22,8 @@ export const CLOSE_HOUR = 24;
 export const MAX_DURATION = 12;
 /** Quick-pick durations shown as buttons; any whole hour up to MAX_DURATION is valid. */
 export const PRESET_DURATIONS = [1, 2, 4, 8] as const;
-export const TAX_RATE = 0.18; // GST at 18%, per the published Collabix tariff.
+/** GST on every price, per the published tariff. */
+export const TAX_RATE = GST_RATE;
 export const IST_OFFSET_MIN = 330; // Asia/Kolkata = UTC+5:30, no DST.
 
 export type WindowInput = { date: string; start: number; duration: number };
@@ -52,28 +62,66 @@ export function toUtcWindow(input: WindowInput): { startAt: Date; endAt: Date } 
   return { startAt, endAt };
 }
 
+/** How many of the `duration` hours from `start` fall in the 20:00–07:00 window. */
+export function nightHours(start: number, duration: number): number {
+  let n = 0;
+  for (let h = start; h < start + duration; h++) {
+    const hour = h % 24;
+    if (hour >= NIGHT_FROM || hour < NIGHT_UNTIL) n++;
+  }
+  return n;
+}
+
+export type QuoteLine = { label: string; qty: number; unitMinor: number; amountMinor: number };
+
 export type Quote = {
+  productKey: string;
+  /** Unit price before any after-hours charge. Kept for existing snapshot readers. */
   rateMinor: number;
   hours: number;
   seats: number;
+  lines: QuoteLine[];
   subtotalMinor: number;
   taxMinor: number;
   totalMinor: number;
 };
 
-/** Server-computed price in integer minor units (paise). Never trust the client. */
-export function computeQuote(
-  rateMinor: number,
-  hours: number,
-  seats = 1,
-  taxRate = TAX_RATE,
+/** Server-computed price from the tariff, in integer paise. Passes are priced
+ * per person; rooms per hour, with the after-hours charge on night hours. */
+export function priceBooking(
+  p: BookableProduct,
+  window: WindowInput,
+  people: number,
+  now = new Date(),
 ): Quote {
-  const subtotalMinor = rateMinor * hours * seats;
-  const taxMinor = Math.round(subtotalMinor * taxRate);
+  const unit = productPriceMinor(p, now);
+  const line = (label: string, qty: number, unitMinor: number): QuoteLine => ({
+    label,
+    qty,
+    unitMinor,
+    amountMinor: qty * unitMinor,
+  });
+  let lines: QuoteLine[];
+  let seats: number;
+  if (p.kind === "pass") {
+    seats = people;
+    lines = [line(p.name, people, unit)];
+  } else {
+    seats = 1;
+    const night = nightHours(window.start, window.duration);
+    lines = [
+      line(p.name, window.duration - night, unit),
+      line(`${p.name} · after hours (+20%)`, night, Math.round(unit * (1 + NIGHT_SURCHARGE))),
+    ].filter((l) => l.qty > 0);
+  }
+  const subtotalMinor = lines.reduce((sum, l) => sum + l.amountMinor, 0);
+  const taxMinor = Math.round(subtotalMinor * GST_RATE);
   return {
-    rateMinor,
-    hours,
+    productKey: p.key,
+    rateMinor: unit,
+    hours: window.duration,
     seats,
+    lines,
     subtotalMinor,
     taxMinor,
     totalMinor: subtotalMinor + taxMinor,

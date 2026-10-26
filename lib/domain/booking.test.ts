@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 import {
   MAX_DURATION,
   PRESET_DURATIONS,
-  computeQuote,
+  nightHours,
+  priceBooking,
   toUtcWindow,
   validateWindow,
 } from "./booking";
+import { bookableProduct } from "../tariff";
 
 // A fixed "now" in IST for deterministic past-date checks: 2026-09-17 12:00 IST.
 const NOW = new Date("2026-09-17T06:30:00.000Z");
@@ -79,38 +81,55 @@ describe("toUtcWindow", () => {
   });
 });
 
-describe("computeQuote", () => {
-  test("computes subtotal, 18% tax and total in integer minor units", () => {
-    // Hot desk ₹120/hr = 12000 minor units, 2 hours.
-    const q = computeQuote(12000, 2);
-    expect(q).toEqual({
-      rateMinor: 12000,
-      hours: 2,
-      seats: 1,
-      subtotalMinor: 24000,
-      taxMinor: 4320,
-      totalMinor: 28320,
-    });
+describe("nightHours", () => {
+  test("counts hours inside 20:00–07:00, wrapping past midnight", () => {
+    expect(nightHours(9, 3)).toBe(0);
+    expect(nightHours(19, 3)).toBe(2);
+    expect(nightHours(6, 3)).toBe(1);
+    expect(nightHours(22, 6)).toBe(6);
+    expect(nightHours(18, 12)).toBe(10);
+  });
+});
+
+describe("priceBooking", () => {
+  // After the Early Bird offer, so standard tariff prices apply.
+  const LATER = new Date("2026-10-26T06:30:00.000Z");
+  const day = { date: "2026-10-27", start: 8, duration: 12 };
+
+  test("Full Day Pass is priced per person with 18% GST", () => {
+    const q = priceBooking(bookableProduct("day-full")!, day, 3, LATER);
+    expect(q.lines).toEqual([{ label: "Full Day Pass", qty: 3, unitMinor: 39900, amountMinor: 119700 }]);
+    expect(q.subtotalMinor).toBe(119700);
+    expect(q.taxMinor).toBe(21546);
+    expect(q.totalMinor).toBe(141246);
   });
 
-  test("rounds tax to the nearest minor unit", () => {
-    // 15000 * 1 = 15000; 18% = 2700 exactly. Use an odd rate to force rounding.
-    const q = computeQuote(12500, 1); // 12500 * 0.18 = 2250 exact
-    expect(q.taxMinor).toBe(2250);
-    expect(q.totalMinor).toBe(14750);
+  test("Half Day Pass for one person", () => {
+    const q = priceBooking(bookableProduct("day-half")!, { date: "2026-10-27", start: 9, duration: 4 }, 1, LATER);
+    expect([q.subtotalMinor, q.taxMinor, q.totalMinor]).toEqual([19900, 3582, 23482]);
   });
 
-  test("defaults to a single seat", () => {
-    expect(computeQuote(12000, 2).seats).toBe(1);
+  test("Boardroom hours after 20:00 carry the 20% after-hours charge", () => {
+    const q = priceBooking(bookableProduct("boardroom")!, { date: "2026-10-27", start: 19, duration: 3 }, 1, LATER);
+    expect(q.lines).toEqual([
+      { label: "The Boardroom", qty: 1, unitMinor: 75000, amountMinor: 75000 },
+      { label: "The Boardroom · after hours (+20%)", qty: 2, unitMinor: 90000, amountMinor: 180000 },
+    ]);
+    expect([q.subtotalMinor, q.taxMinor, q.totalMinor]).toEqual([255000, 45900, 300900]);
   });
 
-  test("scales subtotal, tax and total by the number of seats", () => {
-    const one = computeQuote(12000, 2, 1);
-    const three = computeQuote(12000, 2, 3);
-    expect(three.seats).toBe(3);
-    expect(three.subtotalMinor).toBe(one.subtotalMinor * 3);
-    expect(three.taxMinor).toBe(Math.round(one.subtotalMinor * 3 * 0.18));
-    expect(three.totalMinor).toBe(three.subtotalMinor + three.taxMinor);
+  test("an overnight meeting room booking is all after-hours", () => {
+    const q = priceBooking(bookableProduct("meeting-4")!, { date: "2026-10-27", start: 22, duration: 6 }, 1, LATER);
+    expect(q.lines).toEqual([
+      { label: "Meeting Room (4-seater) · after hours (+20%)", qty: 6, unitMinor: 42000, amountMinor: 252000 },
+    ]);
+    expect(q.subtotalMinor).toBe(252000);
+  });
+
+  test("rooms ignore the people count", () => {
+    const q = priceBooking(bookableProduct("meeting-4")!, { date: "2026-10-27", start: 10, duration: 2 }, 5, LATER);
+    expect(q.seats).toBe(1);
+    expect(q.subtotalMinor).toBe(70000);
   });
 });
 
