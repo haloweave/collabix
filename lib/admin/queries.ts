@@ -230,6 +230,8 @@ export type BookingDetail = {
   createdAt: Date;
   ticketToken: string | null;
   ticketCode: string | null;
+  /** Latest online payment attempt, if the guest paid (or tried to) online. */
+  payment: BookingPayment | null;
   reservations: {
     id: string;
     code: string;
@@ -240,6 +242,16 @@ export type BookingDetail = {
     holdExpiresAt: Date | null;
     quote: Quote;
   }[];
+};
+
+export type BookingPayment = {
+  status: "created" | "paid" | "failed" | "expired" | "refund_due";
+  orderId: string;
+  cfPaymentId: string | null;
+  method: string | null;
+  amountMinor: number;
+  paidAt: Date | null;
+  createdAt: Date;
 };
 
 export async function getBooking(id: string): Promise<BookingDetail | null> {
@@ -253,6 +265,10 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     JOIN rate_plan rp ON rp.id = r.rate_plan_id
     WHERE r.booking_id = ${id}
     ORDER BY res.code`;
+  const [pay] = await sql`
+    SELECT status, order_id, cf_payment_id, payment_method, amount_minor, paid_at, created_at
+    FROM payment WHERE booking_id = ${id}
+    ORDER BY (status = 'paid') DESC, created_at DESC LIMIT 1`;
   return {
     id: b.id as string,
     customerName: b.customer_name as string,
@@ -262,6 +278,17 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     createdAt: new Date(b.created_at as string),
     ticketToken: (b.ticket_token as string) ?? null,
     ticketCode: (b.ticket_code as string) ?? null,
+    payment: pay
+      ? {
+          status: pay.status as BookingPayment["status"],
+          orderId: pay.order_id as string,
+          cfPaymentId: (pay.cf_payment_id as string) ?? null,
+          method: (pay.payment_method as string) ?? null,
+          amountMinor: Number(pay.amount_minor),
+          paidAt: pay.paid_at ? new Date(pay.paid_at as string) : null,
+          createdAt: new Date(pay.created_at as string),
+        }
+      : null,
     reservations: res.map((r: Record<string, unknown>) => ({
       id: r.id as string,
       code: r.code as string,

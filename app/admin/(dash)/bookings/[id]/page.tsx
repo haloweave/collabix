@@ -31,6 +31,16 @@ const RES_VARIANT: Record<string, "default" | "secondary" | "outline" | "destruc
   cancelled: "destructive",
 };
 
+// How an online payment reads to staff. refund_due is loud on purpose: Cashfree
+// took the money but the seat was lost, so someone has to refund it by hand.
+const PAY_LABEL: Record<string, { text: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  paid: { text: "Paid online", variant: "default" },
+  created: { text: "Payment started", variant: "secondary" },
+  failed: { text: "Payment failed", variant: "outline" },
+  expired: { text: "Payment expired", variant: "outline" },
+  refund_due: { text: "Refund due", variant: "destructive" },
+};
+
 export default async function BookingDetailPage({
   params,
 }: {
@@ -74,7 +84,7 @@ export default async function BookingDetailPage({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -107,6 +117,32 @@ export default async function BookingDetailPage({
           </CardHeader>
           <CardContent className="text-xl font-semibold">
             {quote ? rupees(quote.totalMinor) : "—"}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Payment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm">
+            {booking.payment ? (
+              <>
+                <Badge variant={PAY_LABEL[booking.payment.status]?.variant ?? "outline"}>
+                  {PAY_LABEL[booking.payment.status]?.text ?? booking.payment.status}
+                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  {rupees(booking.payment.amountMinor)}
+                  {booking.payment.method ? ` · ${booking.payment.method.toUpperCase()}` : ""}
+                  {booking.payment.paidAt ? ` · ${istDateTime(booking.payment.paidAt)}` : ""}
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground break-all">
+                  {booking.payment.cfPaymentId ?? booking.payment.orderId}
+                </p>
+              </>
+            ) : (
+              <Badge variant="outline">Pay at desk</Badge>
+            )}
           </CardContent>
         </Card>
       </div>

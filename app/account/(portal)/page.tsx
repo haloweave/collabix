@@ -31,6 +31,7 @@ export default async function MyBookingsPage() {
           </p>
           <p className="text-xs text-muted-foreground">
             {b.startAt ? istDateTime(b.startAt) : "—"} · {rupees(b.totalMinor)}
+            {b.confirmed && (b.paid ? " · Paid" : " · Pay at desk")}
           </p>
         </div>
         <div className="flex items-center gap-2">

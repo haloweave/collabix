@@ -14,6 +14,8 @@ export type MyBooking = {
   confirmed: boolean;
   cancellable: boolean;
   ticketToken: string | null;
+  /** Settled online through Cashfree. */
+  paid: boolean;
 };
 
 /** A customer's bookings (by linked member id or captured email), newest first. */
@@ -29,7 +31,8 @@ export async function getMyBookings(
       (array_agg(DISTINCT rp.name))[1] AS plan,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       bool_or(r.status = 'confirmed') AS confirmed,
-      (min(r.start_at) > now()) AS upcoming
+      (min(r.start_at) > now()) AS upcoming,
+      EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid
     FROM booking b
     JOIN reservation r ON r.booking_id = b.id
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
@@ -51,6 +54,7 @@ export async function getMyBookings(
       confirmed,
       cancellable: status === "active" && confirmed && upcoming,
       ticketToken: (r.ticket_token as string) ?? null,
+      paid: Boolean(r.paid),
     };
   });
 }
