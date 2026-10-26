@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { spaces, money } from "@/lib/spaces";
 import { autoAssignDesks } from "@/lib/floorplan";
-import { TAX_RATE } from "@/lib/domain/booking";
+import { MAX_DURATION, PRESET_DURATIONS, TAX_RATE } from "@/lib/domain/booking";
 import FloorMap from "./floor-map";
 
 type Slot = { resourceId: string; code: string; available: boolean };
@@ -37,6 +37,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [date, setDate] = useState(() => localDate()); // default to today (IST)
   const [hour, setHour] = useState(8);
   const [duration, setDuration] = useState(8);
+  // "Custom" reveals an hours picker for durations the preset buttons don't cover.
+  const [customDuration, setCustomDuration] = useState(false);
   const [seatCount, setSeatCount] = useState(1);
   const [autoAssign, setAutoAssign] = useState(true);
   const [manualIds, setManualIds] = useState<string[]>([]);
@@ -176,6 +178,14 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   function resetSelection() {
     setManualIds([]);
     setAutoAssign(true);
+  }
+
+  // Changing the length pulls the start time earlier if needed so the booking
+  // still ends by 20:00.
+  function pickDuration(d: number) {
+    setDuration(d);
+    setHour(Math.min(hour, 20 - d));
+    resetSelection();
   }
 
   // A tap on the floor plan. Rooms: single-select one room. Desks: switch to
@@ -494,21 +504,44 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
 
                 <span className="filter-label">Duration</span>
                 <div className="dur-toggle">
-                  {[1, 2, 4, 8].map((d) => (
+                  {PRESET_DURATIONS.map((d) => (
                     <button
                       key={d}
-                      className={duration === d ? "sel" : ""}
-                      aria-pressed={duration === d}
+                      className={!customDuration && duration === d ? "sel" : ""}
+                      aria-pressed={!customDuration && duration === d}
                       onClick={() => {
-                        setDuration(d);
-                        setHour(Math.min(hour, 20 - d));
-                        resetSelection();
+                        setCustomDuration(false);
+                        pickDuration(d);
                       }}
                     >
                       {d === 8 ? "Full day" : `${d} ${d === 1 ? "hour" : "hours"}`}
                     </button>
                   ))}
+                  <button
+                    className={customDuration ? "sel" : ""}
+                    aria-pressed={customDuration}
+                    onClick={() => setCustomDuration(true)}
+                  >
+                    Custom
+                  </button>
                 </div>
+                {customDuration && (
+                  <div className="field dur-custom">
+                    <label htmlFor="booking-hours">Hours</label>
+                    <select
+                      id="booking-hours"
+                      value={duration}
+                      onChange={(e) => pickDuration(Number(e.target.value))}
+                    >
+                      {Array.from({ length: MAX_DURATION }, (_, i) => i + 1).map((h) => (
+                        <option key={h} value={h}>
+                          {h} {h === 1 ? "hour" : "hours"}
+                          {h === MAX_DURATION ? " (08:00–20:00)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {isDesk && (
                   <div className="seats-control">
