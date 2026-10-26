@@ -9,6 +9,8 @@ import {
 } from "./ticket";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
 import { ticketAmount, ticketSeats, ticketWhen } from "./ticket-display";
+import { ticketIcs } from "./ticket-ics";
+import type { TicketView } from "./ticket-view";
 
 const ist = (s: string) => new Date(`${s}:00+05:30`); // "2026-12-01T08:00"
 
@@ -191,5 +193,21 @@ describe("display copy", () => {
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"], planKey: "boardroom" })).toBe("The Boardroom");
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-02"], planKey: "meeting-4" }))
       .toBe("Meeting Room (4-seater)");
+  });
+});
+
+describe("ticketIcs", () => {
+  const base = {
+    token: "AAAAAAAAAAAAAAAAAAAAAA",
+    startAt: ist("2026-12-01T08:00"),
+    endAt: ist("2026-12-01T20:00"),
+  };
+  test("a day-pass calendar entry never names a desk", () => {
+    const ics = ticketIcs(
+      { ...base, seats: 2, resourceCodes: ["D-03", "D-04"], plan: "Full Day Pass", planKey: "day-full" } as TicketView,
+      "https://collabix.co.in/t/x",
+    );
+    expect(ics).toContain("SUMMARY:Collabix · Full Day Pass · 2 people · Any shared desk");
+    expect(ics).not.toContain("D-03");
   });
 });
