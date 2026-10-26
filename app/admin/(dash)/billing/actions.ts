@@ -6,8 +6,8 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireManager } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
-import { getSettings } from "@/lib/settings";
 import { getMemberSubscription } from "@/lib/admin/queries";
+import { GST_RATE } from "@/lib/tariff";
 
 // Generate a monthly statement for a member's current subscription period:
 //   membership fee + overage (hours booked beyond the included allowance).
@@ -35,8 +35,7 @@ export async function generateStatement(
   }
 
   const subtotalMinor = lineItems.reduce((s, l) => s + l.amountMinor, 0);
-  const settings = await getSettings(db);
-  const taxMinor = Math.round((subtotalMinor * settings.taxPercent) / 100);
+  const taxMinor = Math.round(subtotalMinor * GST_RATE);
   const totalMinor = subtotalMinor + taxMinor;
 
   const [row] = await db

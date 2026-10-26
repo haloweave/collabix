@@ -11,7 +11,6 @@ export type SaveSettingsResult =
   | { ok: false; error: string };
 
 export async function saveSettings(input: {
-  taxPercent: number;
   openHour: number;
   closeHour: number;
   timezone: string;
@@ -19,11 +18,8 @@ export async function saveSettings(input: {
 }): Promise<SaveSettingsResult> {
   await requireManager();
 
-  const taxPercent = Math.round(input.taxPercent);
   const openHour = Math.round(input.openHour);
   const closeHour = Math.round(input.closeHour);
-  if (taxPercent < 0 || taxPercent > 100)
-    return { ok: false, error: "Tax must be between 0 and 100%." };
   if (openHour < 0 || openHour > 23 || closeHour < 1 || closeHour > 24)
     return { ok: false, error: "Hours must be within 0–24." };
   if (closeHour <= openHour)
@@ -35,7 +31,6 @@ export async function saveSettings(input: {
 
   const values = {
     id: 1,
-    taxPercent,
     openHour,
     closeHour,
     timezone: input.timezone.trim() || "Asia/Kolkata",

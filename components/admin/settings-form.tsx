@@ -17,7 +17,6 @@ import {
 
 export function SettingsForm({ settings }: { settings: VenueSettings }) {
   const router = useRouter();
-  const [taxPercent, setTaxPercent] = useState(String(settings.taxPercent));
   const [openHour, setOpenHour] = useState(String(settings.openHour));
   const [closeHour, setCloseHour] = useState(String(settings.closeHour));
   const [timezone, setTimezone] = useState(settings.timezone);
@@ -28,7 +27,6 @@ export function SettingsForm({ settings }: { settings: VenueSettings }) {
     e.preventDefault();
     startTransition(async () => {
       const res = await saveSettings({
-        taxPercent: Number(taxPercent),
         openHour: Number(openHour),
         closeHour: Number(closeHour),
         timezone,
@@ -54,16 +52,6 @@ export function SettingsForm({ settings }: { settings: VenueSettings }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Tax (%)</span>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={taxPercent}
-              onChange={(e) => setTaxPercent(e.target.value)}
-            />
-          </label>
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Timezone</span>
             <Input value={timezone} onChange={(e) => setTimezone(e.target.value)} />

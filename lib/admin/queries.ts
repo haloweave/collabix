@@ -971,27 +971,3 @@ export async function listAuditEvents(): Promise<AuditRow[]> {
   }));
 }
 
-export type RatePlanRow = {
-  id: string;
-  key: string;
-  name: string;
-  appliesToKind: "desk" | "room";
-  rateMinor: number;
-  currency: string;
-  active: boolean;
-};
-
-export async function listRatePlans(): Promise<RatePlanRow[]> {
-  const rows = await sql`
-    SELECT id, key, name, applies_to_kind, rate_minor, currency, active
-    FROM rate_plan ORDER BY rate_minor ASC`;
-  return rows.map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    key: r.key as string,
-    name: r.name as string,
-    appliesToKind: r.applies_to_kind as "desk" | "room",
-    rateMinor: n(r.rate_minor),
-    currency: r.currency as string,
-    active: Boolean(r.active),
-  }));
-}
