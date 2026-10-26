@@ -209,7 +209,8 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ phoneNumber: phoneE164 }),
     });
-    if (!r.ok) setError("Could not send the code. Check the phone number.");
+    if (r.status === 429) setError("Too many codes requested. Please wait a few minutes and try again.");
+    else if (!r.ok) setError("Could not send the code. Check the mobile number.");
   }
 
   async function verifyOtp(e: React.FormEvent) {
