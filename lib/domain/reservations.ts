@@ -229,8 +229,29 @@ export type ConfirmResult =
 // atomically. If any held reservation has expired, expire the lapsed ones and
 // refuse — a team booking confirms in full or not at all.
 export async function confirmBooking(
-  db: Db,
-  input: { bookingId: string; memberId?: string },
+  db: Db | Tx,
+  input: {
+    bookingId: string;
+    memberId?: string;
+    // A paid booking confirms even if its hold lapsed (and was swept to
+    // 'expired'): the guest did pay. The exclusion constraint still refuses if
+    // someone else holds the seat now → { error: "seat_unavailable" }.
+    allowLapsedHold?: boolean;
+  },
+): Promise<ConfirmResult> {
+  try {
+    return await confirmInTx(db, input);
+  } catch (e) {
+    if (input.allowLapsedHold && isOverlapViolation(e)) {
+      return { ok: false, error: "seat_unavailable" };
+    }
+    throw e;
+  }
+}
+
+async function confirmInTx(
+  db: Db | Tx,
+  input: { bookingId: string; memberId?: string; allowLapsedHold?: boolean },
 ): Promise<ConfirmResult> {
   return db.transaction(async (tx) => {
     const rows = await tx
@@ -240,17 +261,23 @@ export async function confirmBooking(
       .for("update");
     if (rows.length === 0) return { ok: false, error: "not_found" };
 
-    const held = rows.filter((r) => r.status === "held");
     const now = Date.now();
-    const expired = held.filter(
-      (r) => r.holdExpiresAt && r.holdExpiresAt.getTime() < now,
-    );
-    if (expired.length > 0) {
-      await tx
-        .update(schema.reservation)
-        .set({ status: "expired" })
-        .where(inArray(schema.reservation.id, expired.map((r) => r.id)));
-      return { ok: false, error: "hold_expired" };
+    // Seats this call will confirm: live holds, plus lapsed/expired ones when
+    // the caller vouches for payment.
+    const held = input.allowLapsedHold
+      ? rows.filter((r) => r.status === "held" || r.status === "expired")
+      : rows.filter((r) => r.status === "held");
+    if (!input.allowLapsedHold) {
+      const expired = held.filter(
+        (r) => r.holdExpiresAt && r.holdExpiresAt.getTime() < now,
+      );
+      if (expired.length > 0) {
+        await tx
+          .update(schema.reservation)
+          .set({ status: "expired" })
+          .where(inArray(schema.reservation.id, expired.map((r) => r.id)));
+        return { ok: false, error: "hold_expired" };
+      }
     }
 
     if (held.length > 0) {
@@ -258,6 +285,10 @@ export async function confirmBooking(
         .update(schema.reservation)
         .set({ status: "confirmed" })
         .where(inArray(schema.reservation.id, held.map((r) => r.id)));
+    } else if (!rows.some((r) => r.status === "confirmed")) {
+      // Nothing to confirm and nothing confirmed (all cancelled/expired): no
+      // ticket may be issued for a booking that holds no seat.
+      return { ok: false, error: "not_confirmable" };
     }
     // Only the confirmation itself may link a member: a repeat call with a
     // known booking id must not reassign someone else's booking.
