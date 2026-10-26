@@ -18,6 +18,22 @@ function localDate() {
   }).format(new Date());
 }
 
+// The next whole hour in IST, so the default slot is never already in the past.
+// Rolls to 00:00 tomorrow late at night.
+function nextSlot(): { date: string; hour: number } {
+  const ist = new Date(Date.now() + 330 * 60_000);
+  const hour = ist.getUTCHours() + 1;
+  if (hour < 24) return { date: localDate(), hour };
+  return { date: new Date(ist.getTime() + 3_600_000).toISOString().slice(0, 10), hour: 0 };
+}
+
+// "22:00–4:00 IST (next day)" — bookings may run past midnight.
+function timeRange(hour: number, duration: number) {
+  const end = hour + duration;
+  if (end === 24) return `${hour}:00–midnight IST`;
+  return `${hour}:00–${end % 24}:00 IST${end > 24 ? " (next day)" : ""}`;
+}
+
 const rupees = (minor: number) => money(Math.round(minor / 100));
 
 // Steps: Book(0) · Details(1) · Verify(2) · Pay(3) · Done(4)
@@ -34,8 +50,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     spaces.find((s) => s.key === initialSpace)?.key ?? "hotdesk",
   );
   const [step, setStep] = useState(0);
-  const [date, setDate] = useState(() => localDate()); // default to today (IST)
-  const [hour, setHour] = useState(8);
+  const [date, setDate] = useState(() => nextSlot().date);
+  const [hour, setHour] = useState(() => nextSlot().hour);
   const [duration, setDuration] = useState(8);
   // "Custom" reveals an hours picker for durations the preset buttons don't cover.
   const [customDuration, setCustomDuration] = useState(false);
@@ -114,7 +130,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const priceSeats = isDesk ? selectedIds.length || seatCount : 1;
 
   const windowValid =
-    date !== "" && date >= localDate() && hour + duration <= 20;
+    date !== "" && date >= localDate();
 
   const phoneE164 =
     phone.replace(/\D/g, "").length === 10
@@ -180,11 +196,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     setAutoAssign(true);
   }
 
-  // Changing the length pulls the start time earlier if needed so the booking
-  // still ends by 20:00.
   function pickDuration(d: number) {
     setDuration(d);
-    setHour(Math.min(hour, 20 - d));
     resetSelection();
   }
 
@@ -491,7 +504,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                         resetSelection();
                       }}
                     >
-                      {Array.from({ length: 13 - duration }, (_, i) => i + 8).map(
+                      {Array.from({ length: 24 }, (_, i) => i).map(
                         (h) => (
                           <option key={h} value={h}>
                             {String(h).padStart(2, "0")}:00
@@ -514,7 +527,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                         pickDuration(d);
                       }}
                     >
-                      {d === 8 ? "Full day" : `${d} ${d === 1 ? "hour" : "hours"}`}
+                      {d} {d === 1 ? "hour" : "hours"}
                     </button>
                   ))}
                   <button
@@ -536,7 +549,6 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       {Array.from({ length: MAX_DURATION }, (_, i) => i + 1).map((h) => (
                         <option key={h} value={h}>
                           {h} {h === 1 ? "hour" : "hours"}
-                          {h === MAX_DURATION ? " (08:00–20:00)" : ""}
                         </option>
                       ))}
                     </select>
@@ -777,7 +789,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     {selectedCodes.length ? ` · ${selectedCodes.join(", ")}` : ""}
                   </p>
                   <p>
-                    {date} · {hour}:00–{hour + duration}:00 IST
+                    {date} · {timeRange(hour, duration)}
                   </p>
                   {quote && <p>Total to pay: {rupees(quote.totalMinor)}</p>}
                 </div>
@@ -830,7 +842,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       : ""}
                   </p>
                   <p>
-                    {date} · {hour}:00–{hour + duration}:00 IST
+                    {date} · {timeRange(hour, duration)}
                   </p>
                   <p>{email}</p>
                   {quote && <p>Total paid: {rupees(quote.totalMinor)}</p>}
@@ -888,7 +900,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               {([
                 ["Space", space.name],
                 ["Date", date || "Choose a date"],
-                ["Time", `${hour}:00–${hour + duration}:00 IST`],
+                ["Time", timeRange(hour, duration)],
                 ["Spot", spotSummary],
                 [
                   "Subtotal",
