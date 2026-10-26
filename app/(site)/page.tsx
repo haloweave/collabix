@@ -25,7 +25,7 @@ export default function Page() { return <>
           <div className="item"><div className="k">28</div><div className="l">Shared desks</div></div>
           <div className="item"><div className="k">04</div><div className="l">Private cabins</div></div>
           <div className="item"><div className="k">02</div><div className="l">Meeting rooms</div></div>
-          <div className="item"><div className="k">24·7</div><div className="l">Access · Mon–Sat</div></div>
+          <div className="item"><div className="k">24·7</div><div className="l">Open · Every day</div></div>
         </div>
       </div>
     </div>
@@ -172,7 +172,7 @@ export default function Page() { return <>
           <span className="eyebrow">04 · Find us</span>
           <h2 className="section-title" style={{"margin": "1rem 0 1.6rem"}}>Banaswadi, Bengaluru.</h2>
           <div className="addr-row"><span className="lab">Address</span><span className="val">Collabix Work Lounge, 261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout,<br />Bengaluru, Karnataka 560043</span></div>
-          <div className="addr-row"><span className="lab">Hours</span><span className="val">Mon–Sat, 08:00–20:00 &nbsp;·&nbsp; After hours (20:00–07:00) available</span></div>
+          <div className="addr-row"><span className="lab">Hours</span><span className="val">Open 24/7, every day</span></div>
           <div className="addr-row"><span className="lab">Enquiries</span><span className="val"><a href="tel:+919632771444">+91 96327 71444</a> &nbsp;·&nbsp; <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a></span></div>
           <div style={{"marginTop": "1.8rem", "display": "flex", "gap": "1rem", "flexWrap": "wrap"}}><a className="btn btn-navy" href="/book">Book a tour &amp; space <span className="arw">→</span></a><a className="btn btn-ghost" href="https://maps.app.goo.gl/arjxnvUYfqe5oUKX7" target="_blank" rel="noopener noreferrer">Open in Google Maps <span className="arw">→</span></a></div>
         </div>

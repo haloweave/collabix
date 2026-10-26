@@ -44,7 +44,7 @@ export const offerings: Offering[] = [
       { title: "1 Gbps Wi-Fi", text: "Enterprise fibre with wired backup, so calls don't drop." },
       { title: "10 pages of prints", text: "Printing included every month." },
       { title: "Café & pantry", text: "Barista coffee and a stocked pantry a few steps away." },
-      { title: "Long days covered", text: "Mon–Sat, 08:00–20:00, with after-hours access when you need it." },
+      { title: "Open 24/7", text: "Open around the clock, every day, so you can work whenever suits you." },
       { title: "Room to grow", text: "Move up to a dedicated desk or a cabin whenever you're ready." },
     ],
     cta: "book",

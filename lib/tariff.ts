@@ -40,7 +40,7 @@ export const tariff: TariffSection[] = [
   {
     id: "desks",
     title: "Shared Desks",
-    subtitle: "28 desks · Mon–Sat, 08:00–20:00 IST",
+    subtitle: "28 desks · Open 24/7",
     unit: "month",
     rows: [
       { name: "Hot Desk Flexi", includes: "Any desk + 10 pages of prints", standard: 6000, earlyBird: 5400, annual: 72000 },
