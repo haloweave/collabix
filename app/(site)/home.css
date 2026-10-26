@@ -942,3 +942,26 @@
 .collabix-site .tf-notes a { color:var(--navy); font-weight:600; }
 /* An odd feature count leaves a blank grid cell; let the last one span the row. */
 @media (min-width: 821px) { .collabix-site .feat-list .feat:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+
+/* Spaces & Services pages (/spaces/[slug], /services/[slug]). */
+.collabix-site .of-cta { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.collabix-site .page-hero .of-cta { margin-top: 2rem; }
+.collabix-site .of-intro { display: grid; grid-template-columns: 5fr 7fr; gap: clamp(2rem,4vw,3.5rem); align-items: start; }
+.collabix-site .of-intro.no-photo { grid-template-columns: 1fr; }
+.collabix-site .of-photo { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-md); position: sticky; top: 100px; }
+.collabix-site .of-photo img { width: 100%; aspect-ratio: 4/5; object-fit: cover; }
+.collabix-site .of-intro .sec-head { margin-bottom: 2rem; }
+.collabix-site .of-feats .feat { background: var(--white); }
+.collabix-site .of-pricing { margin-top: clamp(3rem,6vw,4.5rem); }
+.collabix-site .of-all { margin-top: 1rem; }
+.collabix-site .of-related { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
+.collabix-site .of-related-card { display: flex; flex-direction: column; gap: .5rem; background: var(--ivory); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.6rem; transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .35s; }
+.collabix-site .of-related-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--line-gold); }
+.collabix-site .of-related-card .ic { color: var(--gold); }
+.collabix-site .of-related-card h3 { font-size: 1.15rem; }
+.collabix-site .of-related-card p { font-size: .88rem; flex: 1; }
+@media (max-width: 820px) {
+  .collabix-site .of-intro { grid-template-columns: 1fr; }
+  .collabix-site .of-photo { position: static; }
+  .collabix-site .of-photo img { aspect-ratio: 16/10; }
+}
