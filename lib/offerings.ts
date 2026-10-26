@@ -129,7 +129,7 @@ export const offerings: Offering[] = [
     slug: "virtual-office",
     group: "flexible",
     title: "Virtual Office",
-    blurb: "A Banaswadi address for GST and registration",
+    blurb: "Your business address for GST and registration",
     icon: "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
     kicker: "Business address",
     headline: "A real address for your business.",
