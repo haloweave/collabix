@@ -555,15 +555,18 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     <p className="avail-hint">
                       No spots free for this window. Try another time.
                     </p>
+                  ) : isDesk && autoAssign ? (
+                    // Auto-select hides the floor plan; unticking it reveals the
+                    // map so the guest can pick seats by hand.
+                    <p aria-live="polite" className="avail-hint">
+                      {selectedCodes.length
+                        ? `We've picked ${selectedCodes.length > 1 ? "seats" : "a seat"} for you: ${selectedCodes.join(", ")}. Untick Auto-select seats to choose your own on the floor plan.`
+                        : "No seats free for this window. Try another time."}
+                    </p>
                   ) : (
                     <>
                       <span className="filter-label">
-                        Live floor plan ·{" "}
-                        {isDesk
-                          ? autoAssign
-                            ? "auto-selected — tap to choose your own"
-                            : "tap seats to select"
-                          : "tap a room"}
+                        Live floor plan · {isDesk ? "tap seats to select" : "tap a room"}
                       </span>
                       <FloorMap
                         slots={slots}
