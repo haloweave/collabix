@@ -9,12 +9,34 @@ import { classifyIdentifier, dashboardFor, type LoginIdentifier } from "@/lib/au
 // One sign-in for members and staff, by mobile number only: an SMS code (the
 // same flow checkout uses). After the code is accepted we read the session's
 // role and go to that person's dashboard.
+const linkButton = { background: "none", border: 0, padding: 0, color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" } as const;
+
 export function UniversalLoginForm() {
   const router = useRouter();
   const [raw, setRaw] = useState("");
   const [id, setId] = useState<LoginIdentifier | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+
+  async function requestCode(target: LoginIdentifier) {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/auth/phone-number/send-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phoneNumber: target.value }),
+      });
+      if (r.status === 429) throw new Error("Too many codes requested. Please wait a few minutes and try again.");
+      if (!r.ok) throw new Error("Could not send the code. Check the number.");
+      setId(target);
+      setCode("");
+      toast.success("Code sent by SMS.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send the code.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -23,22 +45,7 @@ export function UniversalLoginForm() {
       toast.error("Enter your 10-digit mobile number.");
       return;
     }
-    setBusy(true);
-    try {
-      const r = await fetch("/api/auth/phone-number/send-otp", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phoneNumber: parsed.value }),
-      });
-      if (r.status === 429) throw new Error("Too many codes requested. Please wait a few minutes and try again.");
-      if (!r.ok) throw new Error("Could not send the code. Check the number.");
-      setId(parsed);
-      toast.success("Code sent by SMS.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send the code.");
-    } finally {
-      setBusy(false);
-    }
+    await requestCode(parsed);
   }
 
   async function verify(e: React.FormEvent) {
@@ -109,8 +116,13 @@ export function UniversalLoginForm() {
       <button type="submit" className="login-submit" disabled={busy || code.length < 4}>
         {busy ? "Signing in…" : <>Verify &amp; sign in <span className="arw">→</span></>}
       </button>
+      <p className="login-hint">The code expires in 1 minute.</p>
       <p className="login-hint">
-        <button type="button" onClick={() => { setId(null); setCode(""); }} style={{ background: "none", border: 0, padding: 0, color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" }}>
+        <button type="button" disabled={busy} onClick={() => void requestCode(id)} style={linkButton}>
+          Resend code
+        </button>
+        {" · "}
+        <button type="button" onClick={() => { setId(null); setCode(""); }} style={linkButton}>
           Use a different number
         </button>
       </p>
