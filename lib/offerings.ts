@@ -3,6 +3,8 @@
  * /services/[slug]. Prices live only on /pricing; these pages ask people to
  * get in touch instead. */
 
+import type { ProductKey } from "./tariff";
+
 export type OfferingGroup = "workspaces" | "flexible" | "services";
 
 export type Offering = {
@@ -18,8 +20,11 @@ export type Offering = {
   lead: string;
   photo?: { src: string; alt: string };
   highlights: { title: string; text: string }[];
-  /** "book" sends people to /book; "enquire" to a call or email. */
+  /** "book" sends people to /book; "enquire" to a call or email. Only tariff
+   * products sold online get "book". */
   cta: "book" | "enquire";
+  /** The /book product a "book" button opens on. */
+  bookProduct?: ProductKey;
 };
 
 export const offeringGroups: { id: OfferingGroup; label: string }[] = [
@@ -47,7 +52,7 @@ export const offerings: Offering[] = [
       { title: "Open 24/7", text: "Open around the clock, every day, so you can work whenever suits you." },
       { title: "Room to grow", text: "Move up to a dedicated desk or a cabin whenever you're ready." },
     ],
-    cta: "book",
+    cta: "enquire",
   },
   {
     slug: "dedicated-desk",
@@ -67,7 +72,7 @@ export const offerings: Offering[] = [
       { title: "Guest pass on Pro", text: "Bring a guest in on the Dedicated Desk Pro plan." },
       { title: "Ergonomic seating", text: "Task chairs specified for full working days." },
     ],
-    cta: "book",
+    cta: "enquire",
   },
   {
     slug: "private-cabin",
@@ -87,7 +92,7 @@ export const offerings: Offering[] = [
       { title: "30 pages of prints", text: "Printing included on every cabin plan." },
       { title: "Front desk", text: "A staffed reception to greet your visitors and handle your mail." },
     ],
-    cta: "book",
+    cta: "enquire",
   },
   {
     slug: "day-pass",
@@ -106,6 +111,7 @@ export const offerings: Offering[] = [
       { title: "Everything in the lounge", text: "Wi-Fi, the café and every shared desk." },
     ],
     cta: "book",
+    bookProduct: "day-full",
   },
   {
     slug: "meeting-rooms",
@@ -124,6 +130,7 @@ export const offerings: Offering[] = [
       { title: "Use your credits", text: "Member plans include credits. 1 credit is 1 hour of room time." },
     ],
     cta: "book",
+    bookProduct: "meeting-4",
   },
   {
     slug: "virtual-office",
