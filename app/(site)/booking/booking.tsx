@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { spaces, money } from "@/lib/spaces";
 import { autoAssignDesks } from "@/lib/floorplan";
+import { TAX_RATE } from "@/lib/domain/booking";
 import FloorMap from "./floor-map";
 
 type Slot = { resourceId: string; code: string; available: boolean };
@@ -848,7 +849,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   quote
                     ? rupees(quote.taxMinor)
                     : spaceRate != null
-                      ? money(Math.round(spaceRate * duration * priceSeats * 0.18))
+                      ? money(Math.round(spaceRate * duration * priceSeats * TAX_RATE))
                       : rateSkel,
                 ],
               ] as [string, ReactNode][]).map(([k, v]) => (
@@ -866,7 +867,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   : spaceRate != null
                     ? money(
                         spaceRate * duration * priceSeats +
-                          Math.round(spaceRate * duration * priceSeats * 0.18),
+                          Math.round(spaceRate * duration * priceSeats * TAX_RATE),
                       )
                     : rateSkel}
               </span>
