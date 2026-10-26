@@ -38,3 +38,10 @@ export const confirmBody = z.object({
   bookingId: z.string().uuid(),
   memberId: z.string().optional(),
 });
+
+// Begin an online payment for a held booking. The phone is the OTP-verified
+// number (E.164 or 10-digit Indian); Cashfree needs it on the order.
+export const payBody = z.object({
+  bookingId: z.string().uuid(),
+  phone: z.string().trim().regex(/^\+?\d{10,15}$/, "phone must be 10-15 digits"),
+});
