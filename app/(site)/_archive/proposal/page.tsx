@@ -1,3 +1,5 @@
+// Archived: kept for reference, not served. The leading underscore on _archive
+// opts this folder out of routing; move it back to app/(site)/proposal to restore /proposal.
 import type { Metadata } from "next";
 export const metadata: Metadata = {title: "Collabix \u00b7 Development proposal", robots: {index: false, follow: false}};
 export default function Page() { return <>

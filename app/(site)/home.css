@@ -721,7 +721,7 @@
     /* ---------- pricing page (scoped: .pr-*) ---------- */
     .collabix-site .pr-note-inline { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; color: var(--graphite); opacity: .72; line-height: 1.6; }
 
-    /* headline summary, for the demo */
+    /* headline summary (archived proposal page) */
     .collabix-site .pr-summary { display: grid; grid-template-columns: 1fr 1.5fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: center;
       background: var(--navy); border-radius: var(--radius); padding: clamp(1.8rem, 3.5vw, 3rem); box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
     .collabix-site .pr-summary::before { content: ""; position: absolute; inset: 0; background: radial-gradient(72% 120% at 90% -10%, rgba(200,155,83,.2), transparent 55%); }
