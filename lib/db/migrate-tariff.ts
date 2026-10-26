@@ -2,17 +2,23 @@
 // production) onto the tariff: inventory from lib/floorplan.ts, rate-plan
 // registry from lib/tariff.ts. Unlike the seed it never truncates or deletes:
 // surplus resources and the old demo plans are switched off, so past bookings
-// keep their seats and plan names. Run with `npm run db:tariff`.
+// keep their seats and plan names. Run with `npm run db:tariff` BEFORE the
+// code that sells tariff products goes live, or holds fail with unknown_plan.
 
 import { eq, inArray, notInArray } from "drizzle-orm";
 import * as schema from "./schema";
-import type { Db } from "../domain/reservations";
+import type { Db, Tx } from "../domain/reservations";
 import { seats } from "../floorplan";
 import { REGISTRY_PLANS } from "../tariff";
 
 const OLD_PLAN_KEYS = ["hotdesk", "dedicated", "cabin", "meeting"];
 
+/** All-or-nothing: a failure part-way leaves the database as it was. */
 export async function migrateToTariff(db: Db): Promise<string[]> {
+  return db.transaction((tx) => migrate(tx));
+}
+
+async function migrate(db: Tx): Promise<string[]> {
   const log: string[] = [];
   const all = seats();
 
