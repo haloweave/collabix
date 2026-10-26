@@ -3,14 +3,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { OfferingIcon } from "@/components/site/offering-icon";
+import { offeringGroups, offeringHref, offerings } from "@/lib/offerings";
 export default function SiteShell({children, minimal=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
+ const [menu,setMenu]=useState(false);
  const path=usePathname();
- const links=[["/#spaces","Spaces"],["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
+ const links=[["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
  return <div className="collabix-site">
  <header className="site-header solid"><div className="wrap bar">
  <Link className="logo" href="/" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></Link>
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
+ <div className={`nav-drop ${menu?"open":""}`} onMouseLeave={()=>setMenu(false)}>
+  <button type="button" className={`navlink nav-drop-btn ${path.startsWith("/spaces/")||path.startsWith("/services/")?"active":""}`} aria-expanded={menu} aria-controls="services-menu" onClick={()=>setMenu(!menu)} onMouseEnter={()=>setMenu(true)}>Spaces &amp; Services <span className="chev" aria-hidden="true">▾</span></button>
+  <div id="services-menu" className="mega">{offeringGroups.map(g=><div key={g.id} className="mega-col">
+   <span className="mega-h">{g.label}</span>
+   {offerings.filter(o=>o.group===g.id).map(o=><a key={o.slug} className={`mega-item ${path===offeringHref(o)?"active":""}`} href={offeringHref(o)} onClick={()=>{setMenu(false);setOpen(false);}}>
+    <span className="ic"><OfferingIcon d={o.icon} size={20}/></span>
+    <span><b>{o.title}</b><small>{o.blurb}</small></span>
+   </a>)}
+  </div>)}</div>
+ </div>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
  <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
  {/* Login / Account link hidden for now — `authed` is still passed in for when it returns. */}</nav>
