@@ -84,7 +84,7 @@ export default function Page() { return <>
           <div><h4>Lockers &amp; Storage</h4><p>A personal locker with every Dedicated Desk and Dedicated Desk Pro plan.</p></div></div>
 
         <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg></span>
-          <div><h4>Extended Hours</h4><p>Mon–Sat, 08:00–20:00, with after-hours access (20:00–07:00) at 20% extra.</p></div></div>
+          <div><h4>Extended Hours</h4><p>Mon–Sat, 08:00–20:00, with after-hours access (20:00–07:00) when you need it.</p></div></div>
 
         <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6 9V4h12v5M6 18H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-1"></path><rect x="7" y="15" width="10" height="6"></rect></svg></span>
           <div><h4>Printing Included</h4><p>10 to 30 pages of prints a month, depending on your plan.</p></div></div>
@@ -126,7 +126,7 @@ export default function Page() { return <>
         <div className="hours-card grid-texture reveal d1">
           <div className="grid-texture"></div>
           <div className="hours-row"><span className="d">Standard hours · Mon – Sat</span><span className="t">08:00 – 20:00</span></div>
-          <div className="hours-row"><span className="d">After hours · +20%</span><span className="t">20:00 – 07:00</span></div>
+          <div className="hours-row"><span className="d">After hours</span><span className="t">20:00 – 07:00</span></div>
           <div className="hours-row"><span className="d">Sunday</span><span className="t">Closed</span></div>
           <div className="hours-row"><span className="d">Café &amp; pantry</span><span className="t">08:00 – 19:00</span></div>
           <div className="hours-row"><span className="d">Guided tours</span><span className="t">By appointment</span></div>
