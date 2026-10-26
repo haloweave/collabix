@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import SiteShell from "@/components/site/site-shell";
-import { MEMBER_COOKIE } from "@/lib/account/auth";
+import { getSessionUser } from "@/lib/admin/auth";
 import "./home.css";
 export const metadata: Metadata = {
  title: "Collabix · Work Lounge",
@@ -9,9 +8,8 @@ export const metadata: Metadata = {
  openGraph: { title: "Collabix · Work Lounge", description: "A premium managed work lounge in Banaswadi, Bengaluru. Where serious work happens." },
 };
 export default async function Layout({children}: {children: React.ReactNode}) {
- // Auth-aware header: swap the Login CTA for an Account link when a member
- // session cookie is present. Presence is enough here — the portal itself
- // re-validates against the DB.
- const authed = Boolean((await cookies()).get(MEMBER_COOKIE)?.value);
+ // Auth-aware header: "Login" for visitors, "My account" for anyone signed in
+ // (/login forwards a signed-in user to their own dashboard).
+ const authed = Boolean(await getSessionUser());
  return <SiteShell authed={authed}>{children}</SiteShell>;
 }
