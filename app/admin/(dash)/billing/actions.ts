@@ -8,7 +8,6 @@ import { requireManager } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { getSettings } from "@/lib/settings";
 import { getMemberSubscription } from "@/lib/admin/queries";
-import { createPaymentOrder } from "@/lib/payments";
 
 // Generate a monthly statement for a member's current subscription period:
 //   membership fee + overage (hours booked beyond the included allowance).
@@ -83,36 +82,4 @@ export async function voidInvoice(id: string) {
     .where(eq(schema.invoice.id, id));
   await logAudit({ action: "invoice.void", targetType: "invoice", targetId: id });
   revalidatePath("/admin/billing");
-}
-
-// Create a gateway payment order for an invoice. In manual mode (no Razorpay
-// keys) returns { manual: true } so the UI falls back to "mark paid".
-export async function createInvoicePaymentLink(
-  id: string,
-): Promise<{ manual: true } | { manual: false; orderId: string }> {
-  await requireManager();
-  const [inv] = await db
-    .select()
-    .from(schema.invoice)
-    .where(eq(schema.invoice.id, id));
-  if (!inv) throw new Error("invoice_not_found");
-
-  const order = await createPaymentOrder({
-    amountMinor: inv.totalMinor,
-    receipt: inv.id,
-  });
-  if (!order) return { manual: true };
-
-  await db
-    .update(schema.invoice)
-    .set({ status: "sent", paymentRef: order.orderId })
-    .where(eq(schema.invoice.id, id));
-  await logAudit({
-    action: "invoice.payment_link",
-    targetType: "invoice",
-    targetId: id,
-    detail: { orderId: order.orderId },
-  });
-  revalidatePath("/admin/billing");
-  return { manual: false, orderId: order.orderId };
 }

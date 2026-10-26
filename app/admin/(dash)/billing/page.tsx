@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireManager } from "@/lib/admin/auth";
 import { listInvoices } from "@/lib/admin/queries";
 import { rupees, istDate } from "@/lib/admin/format";
-import { paymentsEnabled } from "@/lib/payments";
 import { TableSkeleton, TextSkeleton } from "@/components/admin/skeletons";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,9 +60,7 @@ async function BillingSummary({
     <>
       {rupees(outstanding)} outstanding across {invoices.length} invoice
       {invoices.length === 1 ? "" : "s"}.{" "}
-      {paymentsEnabled()
-        ? "Razorpay is configured."
-        : "Manual mode — mark invoices paid by hand."}{" "}
+      Mark invoices paid by hand.{" "}
       Generate statements from a member&apos;s profile.
     </>
   );
