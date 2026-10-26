@@ -4,7 +4,7 @@
 // is the source of truth for exclusion. These functions layer server-authoritative
 // validation, pricing, and the expiry sweep on top.
 
-import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, gt, inArray, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
 import { computeQuote, toUtcWindow, validateWindow, type Quote } from "./booking";
@@ -15,6 +15,10 @@ export type Db = PostgresJsDatabase<typeof schema>;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 const HELD_OR_CONFIRMED = ["held", "confirmed"] as const;
+
+// Cabins and the meeting room share the "room" kind, so each room plan is
+// pinned to its floor zone (lib/floorplan.ts). Desk plans take any desk.
+const PLAN_ZONE: Record<string, string> = { cabin: "Cabins", meeting: "Meeting" };
 
 export type HoldInput = {
   planKey: string;
@@ -91,13 +95,16 @@ export async function getAvailability(db: Db, input: AvailabilityInput) {
 
   const { startAt, endAt } = toUtcWindow(input);
 
+  const zoneName = PLAN_ZONE[plan.key];
   const resources = await db
-    .select()
+    .select(getTableColumns(schema.resource))
     .from(schema.resource)
+    .innerJoin(schema.zone, eq(schema.zone.id, schema.resource.zoneId))
     .where(
       and(
         eq(schema.resource.kind, plan.appliesToKind),
         eq(schema.resource.enabled, true),
+        zoneName ? eq(schema.zone.name, zoneName) : undefined,
       ),
     )
     .orderBy(schema.resource.code);
@@ -141,13 +148,19 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
   if (resourceIds.length === 0) return { ok: false, error: "no_seats" };
 
   const resources = await db
-    .select()
+    .select({ ...getTableColumns(schema.resource), zoneName: schema.zone.name })
     .from(schema.resource)
+    .innerJoin(schema.zone, eq(schema.zone.id, schema.resource.zoneId))
     .where(inArray(schema.resource.id, resourceIds));
   if (resources.length !== resourceIds.length) {
     return { ok: false, error: "unknown_resource" };
   }
-  if (resources.some((r) => r.kind !== plan.appliesToKind)) {
+  const zoneName = PLAN_ZONE[plan.key];
+  if (
+    resources.some(
+      (r) => r.kind !== plan.appliesToKind || (zoneName && r.zoneName !== zoneName),
+    )
+  ) {
     return { ok: false, error: "plan_kind_mismatch" };
   }
 
