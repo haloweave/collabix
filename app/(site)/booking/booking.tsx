@@ -57,8 +57,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   // Pay step: what the button is doing right now, for its label.
   const [payPhase, setPayPhase] = useState<"idle" | "opening" | "confirming">("idle");
   // Live hourly rates (whole rupees) keyed by plan key, lazy-loaded from the DB
-  // after the page renders so the first paint isn't blocked on a query. Until it
-  // resolves we show the static indicative rate from lib/spaces.ts.
+  // after the page renders so the first paint isn't blocked on a query.
   const [rates, setRates] = useState<Record<string, number> | null>(null);
   useEffect(() => {
     let active = true;
