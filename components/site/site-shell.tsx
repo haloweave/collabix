@@ -44,7 +44,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
           <a href="/amenities">Amenities</a><br />
           <a href="/pricing">Pricing</a><br />
           <Link href="/#location">Location</Link><br />
-          <a href="/booking">Book a Space</a>
+          <a href="/book">Book a Space</a>
         </div>
         <div>
           <h5>Visit</h5>
@@ -59,6 +59,6 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
       </div>
     </div>
   </footer>
- <nav className="tabbar" aria-label="Quick navigation">{[["/","Home"],["/#spaces","Spaces"],["/booking","Book"],["/pricing","Pricing"],["/amenities","Amenities"]].map(([href,label])=><a key={href} href={href} className={`tab ${path===href?"active":""}`} aria-current={path===href?"page":undefined}>{label}</a>)}</nav>
+ <nav className="tabbar" aria-label="Quick navigation">{[["/","Home"],["/#spaces","Spaces"],["/book","Book"],["/pricing","Pricing"],["/amenities","Amenities"]].map(([href,label])=><a key={href} href={href} className={`tab ${path===href?"active":""}`} aria-current={path===href?"page":undefined}>{label}</a>)}</nav>
  </div>;
 }

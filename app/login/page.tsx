@@ -78,7 +78,7 @@ export default async function LoginPage() {
             <p className="login-hint">Local dev: the code prints to the server console.</p>
           )}
           <p className="login-legal">
-            New to Collabix? <Link href="/booking">Book a space</Link> — your account is created automatically at checkout.
+            New to Collabix? <Link href="/book">Book a space</Link> — your account is created automatically at checkout.
           </p>
         </div>
       </main>

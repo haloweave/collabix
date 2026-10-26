@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       memberId: session?.user?.id,
       phone: parsed.data.phone,
       // Cashfree substitutes {order_id} itself; the return page settles the order.
-      returnUrl: `${base}/booking/return?order_id={order_id}`,
+      returnUrl: `${base}/book/return?order_id={order_id}`,
       notifyUrl: webhookUrl(base),
     });
   } catch (e) {

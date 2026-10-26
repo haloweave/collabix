@@ -8,7 +8,7 @@ const mail = (o: Offering) => `mailto:connect@collabix.co.in?subject=${encodeURI
 function Ctas({ o, light = false }: { o: Offering; light?: boolean }) {
   const ghost = light ? "btn-ghost-light" : "btn-ghost";
   return o.cta === "book"
-    ? <><a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a><a className={`btn ${ghost}`} href="tel:+919632771444">Call +91 96327 71444</a></>
+    ? <><a className="btn btn-gold" href="/book">Book a Space <span className="arw">→</span></a><a className={`btn ${ghost}`} href="tel:+919632771444">Call +91 96327 71444</a></>
     : <><a className="btn btn-gold" href="tel:+919632771444">Call +91 96327 71444 <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>;
 }
 

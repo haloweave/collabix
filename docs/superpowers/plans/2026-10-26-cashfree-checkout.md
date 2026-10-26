@@ -106,7 +106,7 @@
 - Modify: `app/api/bookings/confirm/route.ts`
 
 **Interfaces:**
-- `POST /api/bookings/pay` → 200 `{ mode: "disabled" }` when `paymentsDisabled()`; 503 `{ error: "payments_not_configured" }` when no gateway; else 200 `{ orderId, paymentSessionId, amountMinor, mode }` or 404/409 with `{ error }`. `memberId` = session user id if any; `returnUrl` = `${siteUrl()}/booking/return?order_id={order_id}`; `notifyUrl` = `CASHFREE_WEBHOOK_URL` ?? (`siteUrl()` https ? `${siteUrl()}/api/payments/cashfree/webhook` : undefined). `siteUrl()` moves from `lib/ticket-qr.ts` to `lib/site-url.ts` (export; ticket-qr imports it).
+- `POST /api/bookings/pay` → 200 `{ mode: "disabled" }` when `paymentsDisabled()`; 503 `{ error: "payments_not_configured" }` when no gateway; else 200 `{ orderId, paymentSessionId, amountMinor, mode }` or 404/409 with `{ error }`. `memberId` = session user id if any; `returnUrl` = `${siteUrl()}/book/return?order_id={order_id}`; `notifyUrl` = `CASHFREE_WEBHOOK_URL` ?? (`siteUrl()` https ? `${siteUrl()}/api/payments/cashfree/webhook` : undefined). `siteUrl()` moves from `lib/ticket-qr.ts` to `lib/site-url.ts` (export; ticket-qr imports it).
 - `POST /api/bookings/confirm` body `{ bookingId }`: if `paymentsDisabled()` → old behaviour. Else `settleLatestForBooking`; `paid` → 200 `{ ok: true, ticketToken }` (+ ticket email after response when `newlyConfirmed`); `pending` → 402 `{ error: "payment_pending" }`; `failed|expired` → 402 `{ error: "payment_failed" }`; `refund_due` → 409 `{ error: "seat_lost" }`; no payment → 402 `{ error: "payment_required" }`.
 
 - [ ] Implement both routes.
@@ -126,7 +126,7 @@
 ### Task 6: Return page (redirect fallback)
 
 **Files:**
-- Create: `app/(site)/booking/return/page.tsx` (`dynamic = "force-dynamic"`)
+- Create: `app/(site)/book/return/page.tsx` (`dynamic = "force-dynamic"`)
 
 - [ ] Read `order_id` from search params; settle; `paid` → `redirect("/t/<token>")`; otherwise render a short page: "Payment not completed" with the state in plain words and a link to `/booking`.
 - [ ] Commit: `feat(booking): return page for Cashfree redirect checkouts`.

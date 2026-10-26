@@ -48,7 +48,7 @@ export default async function PaymentReturnPage({
         <span className="eyebrow">Payment</span>
         <h2>{copy.title}</h2>
         <p>{copy.body}</p>
-        <Link className="btn btn-gold" href="/booking">
+        <Link className="btn btn-gold" href="/book">
           Back to booking <span className="arw">→</span>
         </Link>
       </div>

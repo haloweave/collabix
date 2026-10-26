@@ -18,7 +18,7 @@ export default function Page() { return <>
         <h1 className="display reveal d1">Where serious<br />work <em>happens.</em></h1>
         <p className="lead hero-sub reveal d2">A premium managed work lounge built for growth-stage founders, enterprise teams and senior professionals. Restrained. Purposeful. Ready when you are.</p>
         <div className="hero-cta reveal d3">
-          <a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a>
+          <a className="btn btn-gold" href="/book">Book a Space <span className="arw">→</span></a>
           <a className="btn btn-ghost-light" href="#spaces">Explore spaces</a>
         </div>
         <div className="hero-meta reveal d4">
@@ -159,7 +159,7 @@ export default function Page() { return <>
     <div className="wrap">
       <div className="inner reveal">
         <h2>Reserve your space at <span className="gold-line">Collabix</span> — it takes about a minute.</h2>
-        <a className="btn btn-gold" href="/booking">Book a Space <span className="arw">→</span></a>
+        <a className="btn btn-gold" href="/book">Book a Space <span className="arw">→</span></a>
       </div>
     </div>
   </section>
@@ -174,7 +174,7 @@ export default function Page() { return <>
           <div className="addr-row"><span className="lab">Address</span><span className="val">Collabix Work Lounge, 261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout,<br />Bengaluru, Karnataka 560043</span></div>
           <div className="addr-row"><span className="lab">Hours</span><span className="val">Mon–Sat, 08:00–20:00 &nbsp;·&nbsp; After hours (20:00–07:00) available</span></div>
           <div className="addr-row"><span className="lab">Enquiries</span><span className="val"><a href="tel:+919632771444">+91 96327 71444</a> &nbsp;·&nbsp; <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a></span></div>
-          <div style={{"marginTop": "1.8rem", "display": "flex", "gap": "1rem", "flexWrap": "wrap"}}><a className="btn btn-navy" href="/booking">Book a tour &amp; space <span className="arw">→</span></a><a className="btn btn-ghost" href="https://maps.app.goo.gl/arjxnvUYfqe5oUKX7" target="_blank" rel="noopener noreferrer">Open in Google Maps <span className="arw">→</span></a></div>
+          <div style={{"marginTop": "1.8rem", "display": "flex", "gap": "1rem", "flexWrap": "wrap"}}><a className="btn btn-navy" href="/book">Book a tour &amp; space <span className="arw">→</span></a><a className="btn btn-ghost" href="https://maps.app.goo.gl/arjxnvUYfqe5oUKX7" target="_blank" rel="noopener noreferrer">Open in Google Maps <span className="arw">→</span></a></div>
         </div>
         <div className="map reveal d1">
           <iframe title="Collabix Work Lounge on Google Maps" loading="lazy" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d5005.883606920683!2d77.65261799999999!3d13.017910200000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae17006cc90ed3%3A0xd1fad3fb1839eda9!2sCollabix%20Work%20Lounge!5e1!3m2!1sen!2sin!4v1790176052775!5m2!1sen!2sin"></iframe>

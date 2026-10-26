@@ -22,7 +22,7 @@ export default function NotFound() {
         <p className="lead">The page you were looking for has moved, or the link is mistyped. Everything else at Collabix is right where you left it.</p>
         <div className="hero-cta nf-cta">
           <Link className="btn btn-gold" href="/">Back to home <span className="arw">→</span></Link>
-          <a className="btn btn-ghost-light" href="/booking">Book a Space</a>
+          <a className="btn btn-ghost-light" href="/book">Book a Space</a>
         </div>
       </div>
     </section>

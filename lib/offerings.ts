@@ -18,7 +18,7 @@ export type Offering = {
   lead: string;
   photo?: { src: string; alt: string };
   highlights: { title: string; text: string }[];
-  /** "book" sends people to /booking; "enquire" to a call or email. */
+  /** "book" sends people to /book; "enquire" to a call or email. */
   cta: "book" | "enquire";
 };
 

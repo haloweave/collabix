@@ -14,6 +14,11 @@ const nextConfig = {
     return [
       { source: "/home", destination: "/", permanent: true },
       { source: "/home/:path*", destination: "/:path*", permanent: true },
+      // The booking page moved from /booking to /book (2026-10-26). Keep the
+      // old path alive for shared links and for Cashfree return URLs issued
+      // before the move; Next forwards the query string (order_id) as well.
+      { source: "/booking", destination: "/book", permanent: true },
+      { source: "/booking/:path*", destination: "/book/:path*", permanent: true },
     ];
   },
 };
