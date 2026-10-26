@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "@/lib/db/client";
 import type { Quote } from "@/lib/domain/booking";
+import { rateForCode } from "@/lib/tariff";
 
 // All admin reads live here as parameterised SQL. Money is integer paise; a
 // booking's `quote_snapshot.totalMinor` is identical across its reservations and
@@ -879,20 +880,13 @@ export async function getMemberHolds(memberId: string): Promise<HoldRow[]> {
   }));
 }
 
-/** Per-code hourly rate (paise), for extended-booking price suggestions. Rooms
- * are split by code prefix: M* = meeting, else cabin. */
+/** Per-code hourly hint (paise) for extended-booking price suggestions, from
+ * the tariff (see rateForCode). */
 export async function getResourceRates(): Promise<Record<string, number>> {
-  const rows = await sql`
-    SELECT res.code,
-      CASE
-        WHEN res.kind = 'desk' THEN (SELECT rate_minor FROM rate_plan WHERE key = 'hotdesk')
-        WHEN res.code LIKE 'M%' THEN (SELECT rate_minor FROM rate_plan WHERE key = 'meeting')
-        ELSE (SELECT rate_minor FROM rate_plan WHERE key = 'cabin')
-      END AS rate_minor
-    FROM resource res WHERE res.enabled = true`;
+  const rows = await sql`SELECT code, kind FROM resource WHERE enabled = true`;
   const out: Record<string, number> = {};
   for (const r of rows as Record<string, unknown>[]) {
-    out[r.code as string] = n(r.rate_minor);
+    out[r.code as string] = rateForCode(r.code as string, r.kind as "desk" | "room");
   }
   return out;
 }

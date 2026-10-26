@@ -7,6 +7,7 @@ import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { issueTicket } from "@/lib/domain/reservations";
+import { registryKeyFor } from "@/lib/floorplan";
 
 // ── Coupons ────────────────────────────────────────────────────────────────
 export async function createCoupon(input: {
@@ -81,9 +82,11 @@ export async function createExtendedBooking(input: {
     return { ok: false, error: "One or more codes were not found." };
 
   const plans = await db.select().from(schema.ratePlan);
-  const planByKind = new Map(plans.map((p) => [p.appliesToKind, p.id]));
-  if (resources.some((r) => !planByKind.has(r.kind)))
-    return { ok: false, error: "No rate plan for a resource kind." };
+  const planIdByKey = new Map(plans.map((p) => [p.key, p.id]));
+  const planIdFor = (r: { code: string; kind: "desk" | "room" }) =>
+    planIdByKey.get(registryKeyFor(r));
+  if (resources.some((r) => !planIdFor(r)))
+    return { ok: false, error: "No rate plan for a resource." };
 
   const totalMinor = Math.max(0, Math.round(input.totalMinor));
 
@@ -100,7 +103,7 @@ export async function createExtendedBooking(input: {
         resources.map((r) => ({
           bookingId: b.id,
           resourceId: r.id,
-          ratePlanId: planByKind.get(r.kind)!,
+          ratePlanId: planIdFor(r)!,
           startAt,
           endAt,
           status: "confirmed" as const,

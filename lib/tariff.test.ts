@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { BOOKABLE, bookableProduct, productPriceMinor } from "./tariff";
+import { BOOKABLE, bookableProduct, productPriceMinor, rateForCode } from "./tariff";
 
 describe("bookable catalogue", () => {
   test("bookable prices come from the tariff rows", () => {
@@ -28,5 +28,15 @@ describe("bookable catalogue", () => {
 
   test("keys outside the tariff are unknown", () => {
     expect(bookableProduct("hotdesk")).toBeUndefined();
+  });
+});
+
+describe("rateForCode (interim extended-booking hints)", () => {
+  test("desks use a twelfth of the Full Day Pass, rooms their hourly price, cabins nothing", () => {
+    const LATER = new Date("2026-10-26T06:00:00Z");
+    expect(rateForCode("D-01", "desk", LATER)).toBe(3325);
+    expect(rateForCode("M-01", "room", LATER)).toBe(75000);
+    expect(rateForCode("M-02", "room", LATER)).toBe(35000);
+    expect(rateForCode("C-01", "room", LATER)).toBe(0);
   });
 });

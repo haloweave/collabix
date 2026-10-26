@@ -202,3 +202,12 @@ export const REGISTRY_PLANS: {
   { key: "desk-membership", name: "Desk (membership)", appliesToKind: "desk", rateMinor: 0, active: false },
   { key: "cabin-membership", name: "Private Cabin (membership)", appliesToKind: "room", rateMinor: 0, active: false },
 ];
+
+/** Interim per-hour hint for staff extended bookings (replaced in the staff
+ * billing project): desks a twelfth of the Full Day Pass, the two meeting rooms
+ * their hourly price, cabins none (they are monthly-only in the tariff). */
+export function rateForCode(code: string, kind: "desk" | "room", now = new Date()): number {
+  if (kind === "desk") return Math.round(productPriceMinor(bookableProduct("day-full")!, now) / 12);
+  const room = BOOKABLE.find((p) => p.roomCode === code);
+  return room ? productPriceMinor(room, now) : 0;
+}

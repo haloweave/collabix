@@ -8,6 +8,7 @@ import * as authSchema from "@/lib/db/auth-schema";
 import { requireStaff, requireManager } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { issueTicket } from "@/lib/domain/reservations";
+import { registryKeyFor } from "@/lib/floorplan";
 
 export async function createMembershipPlan(input: {
   name: string;
@@ -137,9 +138,11 @@ export async function createLongTermHold(input: {
   if (!member) return { ok: false, error: "Member not found." };
 
   const plans = await db.select().from(schema.ratePlan);
-  const planByKind = new Map(plans.map((p) => [p.appliesToKind, p.id]));
-  if (resources.some((r) => !planByKind.has(r.kind)))
-    return { ok: false, error: "No rate plan for a resource kind." };
+  const planIdByKey = new Map(plans.map((p) => [p.key, p.id]));
+  const planIdFor = (r: { code: string; kind: "desk" | "room" }) =>
+    planIdByKey.get(registryKeyFor(r));
+  if (resources.some((r) => !planIdFor(r)))
+    return { ok: false, error: "No rate plan for a resource." };
 
   try {
     const bookingId = await db.transaction(async (tx) => {
@@ -155,7 +158,7 @@ export async function createLongTermHold(input: {
         resources.map((r) => ({
           bookingId: b.id,
           resourceId: r.id,
-          ratePlanId: planByKind.get(r.kind)!,
+          ratePlanId: planIdFor(r)!,
           startAt,
           endAt,
           status: "confirmed" as const,
