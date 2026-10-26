@@ -118,3 +118,66 @@ export const tariffNotes = [
   "* Courier charges on a to-pay basis through Bluedart.",
   "1 credit = 1 hour of meeting-room time.",
 ];
+
+/* ---------- Bookable products ----------
+ * What can be booked online or at the desk, priced straight from the tariff
+ * rows above so /pricing and the booking logic can never disagree. */
+
+export const GST_RATE = 0.18;
+/** Tariff note: 20:00–07:00 IST is 20% additional. Applies to hourly rooms. */
+export const NIGHT_SURCHARGE = 0.2;
+export const NIGHT_FROM = 20;
+export const NIGHT_UNTIL = 7;
+
+export type ProductKey = "day-full" | "day-half" | "meeting-4" | "boardroom";
+export const PRODUCT_KEYS = ["day-full", "day-half", "meeting-4", "boardroom"] as const satisfies readonly [ProductKey, ...ProductKey[]];
+
+export type BookableProduct = {
+  key: ProductKey;
+  name: string;
+  blurb: string;
+  kind: "pass" | "room";
+  unit: "person" | "hour";
+  priceMinor: number;
+  earlyBirdMinor: number | null;
+  roomCode: "M-01" | "M-02" | null;
+};
+
+function tariffRow(sectionId: string, name: string): TariffRow {
+  const row = tariff.find((s) => s.id === sectionId)?.rows.find((r) => r.name === name);
+  if (!row) throw new Error(`tariff row missing: ${sectionId} / ${name}`);
+  return row;
+}
+
+function product(
+  key: ProductKey,
+  sectionId: string,
+  rowName: string,
+  rest: Pick<BookableProduct, "kind" | "unit" | "roomCode">,
+): BookableProduct {
+  const row = tariffRow(sectionId, rowName);
+  return {
+    key,
+    name: row.name,
+    blurb: row.includes,
+    priceMinor: row.standard * 100,
+    earlyBirdMinor: row.earlyBird != null ? row.earlyBird * 100 : null,
+    ...rest,
+  };
+}
+
+export const BOOKABLE: readonly BookableProduct[] = [
+  product("day-full", "passes", "Full Day Pass", { kind: "pass", unit: "person", roomCode: null }),
+  product("day-half", "passes", "Half Day Pass", { kind: "pass", unit: "person", roomCode: null }),
+  product("meeting-4", "meeting", "Meeting Room (4-seater)", { kind: "room", unit: "hour", roomCode: "M-02" }),
+  product("boardroom", "meeting", "The Boardroom", { kind: "room", unit: "hour", roomCode: "M-01" }),
+];
+
+export function bookableProduct(key: string): BookableProduct | undefined {
+  return BOOKABLE.find((p) => p.key === key);
+}
+
+/** The price that applies now: Early Bird while the offer is open, else standard. */
+export function productPriceMinor(p: BookableProduct, now = new Date()): number {
+  return earlyBirdOpen(now) && p.earlyBirdMinor != null ? p.earlyBirdMinor : p.priceMinor;
+}
