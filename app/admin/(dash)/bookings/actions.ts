@@ -6,10 +6,9 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
-import { getActiveCoupon, couponDiscount } from "@/lib/admin/queries";
+import { holdBody } from "@/lib/api/validation";
 import {
   confirmBooking,
-  getAvailability,
   holdReservation,
 } from "@/lib/domain/reservations";
 
@@ -47,6 +46,12 @@ export async function cancelBooking(bookingId: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
+const WALK_IN_ERRORS: Record<string, string> = {
+  not_enough_desks: "Not enough free desks for that day.",
+  seat_unavailable: "That room is already booked for that time.",
+  closed_date: "Collabix is closed on that date.",
+};
+
 export type WalkInResult =
   | { ok: true; bookingId: string }
   | { ok: false; error: string };
@@ -55,81 +60,40 @@ export type WalkInResult =
 // window, hold them, and confirm immediately — same engine as the customer flow
 // but without the OTP step. All-or-nothing on availability.
 export async function createWalkIn(input: {
-  planKey: string;
+  productKey: string;
   date: string;
-  start: number;
-  duration: number;
-  seats: number;
+  start?: number;
+  duration?: number;
+  people?: number;
   customerName: string;
   customerEmail: string;
-  couponCode?: string;
 }): Promise<WalkInResult> {
   await requireStaff();
 
-  const seats = Math.max(1, Math.min(20, Math.round(input.seats)));
-  const window = {
-    planKey: input.planKey,
-    date: input.date,
-    start: input.start,
-    duration: input.duration,
-  };
-
-  let free;
-  try {
-    const avail = await getAvailability(db, window);
-    free = avail.filter((a) => a.available).slice(0, seats);
-  } catch {
-    return { ok: false, error: "Invalid plan or window." };
-  }
-  if (free.length < seats) {
-    return {
-      ok: false,
-      error: `Only ${free.length} seat(s) free for that window.`,
-    };
-  }
+  const parsed = holdBody.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Check the product, date, time and customer details." };
 
   const held = await holdReservation(db, {
-    ...window,
-    resourceIds: free.map((f) => f.resourceId),
-    customerName: input.customerName.trim(),
-    customerEmail: input.customerEmail.trim().toLowerCase(),
+    ...parsed.data,
+    customerEmail: parsed.data.customerEmail.toLowerCase(),
     holdMinutes: 5,
   });
-  if (!held.ok) return { ok: false, error: held.error };
+  if (!held.ok) return { ok: false, error: WALK_IN_ERRORS[held.error] ?? held.error };
 
   const confirmed = await confirmBooking(db, { bookingId: held.bookingId });
   if (!confirmed.ok) return { ok: false, error: confirmed.error };
-
-  // Apply a discount coupon by rewriting the (identical) quote snapshot on every
-  // reservation of the booking.
-  if (input.couponCode?.trim()) {
-    const coupon = await getActiveCoupon(input.couponCode);
-    if (coupon) {
-      const discountMinor = couponDiscount(coupon, held.quote.totalMinor);
-      await db
-        .update(schema.reservation)
-        .set({
-          quoteSnapshot: {
-            ...held.quote,
-            couponCode: coupon.code,
-            discountMinor,
-            totalMinor: held.quote.totalMinor - discountMinor,
-          },
-        })
-        .where(eq(schema.reservation.bookingId, held.bookingId));
-    }
-  }
 
   await logAudit({
     action: "booking.create_walkin",
     targetType: "booking",
     targetId: held.bookingId,
     detail: {
-      planKey: input.planKey,
-      seats,
-      date: input.date,
-      start: input.start,
-      duration: input.duration,
+      productKey: parsed.data.productKey,
+      people: parsed.data.people,
+      date: parsed.data.date,
+      start: parsed.data.start,
+      duration: parsed.data.duration,
+      totalMinor: held.quote.totalMinor,
     },
   });
 

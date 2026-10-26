@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { spaces } from "@/lib/spaces";
-import { MAX_DURATION, OPEN_HOUR, CLOSE_HOUR } from "@/lib/domain/booking";
+import { BOOKABLE, bookableProduct } from "@/lib/tariff";
+import { HALF_DAY_HOURS, MAX_DURATION, PASS_DAY } from "@/lib/domain/booking";
 import { createWalkIn } from "@/app/admin/(dash)/bookings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,23 +23,24 @@ import {
 } from "@/components/ui/select";
 
 const DURATIONS = Array.from({ length: MAX_DURATION }, (_, i) => i + 1);
-const START_HOURS = Array.from(
-  { length: CLOSE_HOUR - OPEN_HOUR },
-  (_, i) => OPEN_HOUR + i,
+const ROOM_STARTS = Array.from({ length: 24 }, (_, i) => i);
+const HALF_DAY_STARTS = Array.from(
+  { length: PASS_DAY.end - HALF_DAY_HOURS - PASS_DAY.start + 1 },
+  (_, i) => PASS_DAY.start + i,
 );
 const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
 export function WalkInForm({ today }: { today: string }) {
   const router = useRouter();
-  const [planKey, setPlanKey] = useState<string>(spaces[0].key);
+  const [productKey, setProductKey] = useState<string>(BOOKABLE[0].key);
   const [date, setDate] = useState(today);
   const [start, setStart] = useState("9");
   const [duration, setDuration] = useState("2");
-  const [seats, setSeats] = useState("1");
+  const [people, setPeople] = useState("1");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [coupon, setCoupon] = useState("");
   const [pending, startTransition] = useTransition();
+  const product = bookableProduct(productKey)!;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,14 +50,13 @@ export function WalkInForm({ today }: { today: string }) {
     }
     startTransition(async () => {
       const res = await createWalkIn({
-        planKey,
+        productKey,
         date,
         start: Number(start),
         duration: Number(duration),
-        seats: Number(seats),
+        people: Number(people),
         customerName: name,
         customerEmail: email,
-        couponCode: coupon,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -75,31 +75,33 @@ export function WalkInForm({ today }: { today: string }) {
       <CardContent>
         <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Space</span>
-            <Select value={planKey} onValueChange={setPlanKey}>
+            <span className="text-muted-foreground">Product</span>
+            <Select value={productKey} onValueChange={setProductKey}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {spaces.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>
-                    {s.name}
+                {BOOKABLE.map((p) => (
+                  <SelectItem key={p.key} value={p.key}>
+                    {p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </label>
 
-          <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Seats</span>
-            <Input
-              type="number"
-              min={1}
-              max={20}
-              value={seats}
-              onChange={(e) => setSeats(e.target.value)}
-            />
-          </label>
+          {product.kind === "pass" && (
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted-foreground">People</span>
+              <Input
+                type="number"
+                min={1}
+                max={20}
+                value={people}
+                onChange={(e) => setPeople(e.target.value)}
+              />
+            </label>
+          )}
 
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Date</span>
@@ -111,6 +113,7 @@ export function WalkInForm({ today }: { today: string }) {
             />
           </label>
 
+          {product.key !== "day-full" && (
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 text-sm">
               <span className="text-muted-foreground">Start</span>
@@ -119,7 +122,7 @@ export function WalkInForm({ today }: { today: string }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {START_HOURS.map((h) => (
+                  {(product.kind === "room" ? ROOM_STARTS : HALF_DAY_STARTS).map((h) => (
                     <SelectItem key={h} value={String(h)}>
                       {hh(h)}
                     </SelectItem>
@@ -127,6 +130,7 @@ export function WalkInForm({ today }: { today: string }) {
                 </SelectContent>
               </Select>
             </label>
+            {product.kind === "room" && (
             <label className="grid gap-1.5 text-sm">
               <span className="text-muted-foreground">Hours</span>
               <Select value={duration} onValueChange={setDuration}>
@@ -142,7 +146,9 @@ export function WalkInForm({ today }: { today: string }) {
                 </SelectContent>
               </Select>
             </label>
+            )}
           </div>
+          )}
 
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Customer name</span>
@@ -158,14 +164,6 @@ export function WalkInForm({ today }: { today: string }) {
             />
           </label>
 
-          <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Coupon code (optional)</span>
-            <Input
-              value={coupon}
-              onChange={(e) => setCoupon(e.target.value)}
-              placeholder="e.g. WELCOME10"
-            />
-          </label>
 
           <div className="sm:col-span-2">
             <Button type="submit" disabled={pending}>
