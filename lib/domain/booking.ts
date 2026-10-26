@@ -7,7 +7,7 @@
 export const OPEN_HOUR = 8; // 08:00 IST, first bookable start
 export const CLOSE_HOUR = 20; // 20:00 IST, latest bookable end
 export const ALLOWED_DURATIONS = [1, 2, 4, 8] as const;
-export const TAX_RATE = 0.18; // Indicative, carried from the demo — not a verified GST config.
+export const TAX_RATE = 0.18; // GST at 18%, per the published Collabix tariff.
 export const IST_OFFSET_MIN = 330; // Asia/Kolkata = UTC+5:30, no DST.
 
 export type WindowInput = { date: string; start: number; duration: number };
