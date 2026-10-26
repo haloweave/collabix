@@ -4,10 +4,13 @@
 // Collabix is a single location in Asia/Kolkata, which has no DST, so a fixed
 // UTC+5:30 offset is exact. Revisit if the platform ever goes multi-timezone.
 
-export const OPEN_HOUR = 8; // 08:00 IST, first bookable start
-export const CLOSE_HOUR = 20; // 20:00 IST, latest bookable end
-/** Bookings are whole hours, from 1 up to the full open window (12 hours). */
-export const MAX_DURATION = CLOSE_HOUR - OPEN_HOUR;
+// Collabix is open 24/7: any whole-hour start, every day, and a booking may
+// run past midnight.
+export const OPEN_HOUR = 0;
+export const CLOSE_HOUR = 24;
+/** Hourly bookings run 1–12 whole hours. Kept under 24 so they never read as a
+ * multi-day booking (see isMultiDay in ./ticket). */
+export const MAX_DURATION = 12;
 /** Quick-pick durations shown as buttons; any whole hour up to MAX_DURATION is valid. */
 export const PRESET_DURATIONS = [1, 2, 4, 8] as const;
 export const TAX_RATE = 0.18; // GST at 18%, per the published Collabix tariff.
@@ -22,23 +25,14 @@ function istDateString(now: Date): string {
   return shifted.toISOString().slice(0, 10);
 }
 
-export function validateWindow(
-  input: WindowInput,
-  now: Date,
-  bounds?: { openHour?: number; closeHour?: number },
-): ValidationResult {
+export function validateWindow(input: WindowInput, now: Date): ValidationResult {
   const { date, start, duration } = input;
-  const openHour = bounds?.openHour ?? OPEN_HOUR;
-  const closeHour = bounds?.closeHour ?? CLOSE_HOUR;
 
   if (!Number.isInteger(duration) || duration < 1 || duration > MAX_DURATION) {
     return { ok: false, error: `duration must be a whole number of hours from 1 to ${MAX_DURATION}` };
   }
-  if (!Number.isInteger(start) || start < openHour) {
-    return { ok: false, error: `start must be at or after ${openHour}:00` };
-  }
-  if (start + duration > closeHour) {
-    return { ok: false, error: `booking must end by ${closeHour}:00` };
+  if (!Number.isInteger(start) || start < OPEN_HOUR || start >= CLOSE_HOUR) {
+    return { ok: false, error: "start must be a whole hour from 0 to 23" };
   }
   if (date < istDateString(now)) {
     return { ok: false, error: "date is in the past" };

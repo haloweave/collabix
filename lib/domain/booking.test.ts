@@ -16,19 +16,21 @@ describe("validateWindow", () => {
       .toEqual({ ok: true });
   });
 
-  test("accepts a booking that ends exactly at closing time", () => {
-    expect(validateWindow({ date: "2026-09-18", start: 12, duration: 8 }, NOW))
+  test("accepts any start hour, day or night (open 24/7)", () => {
+    for (const start of [0, 3, 7, 21, 23]) {
+      expect(validateWindow({ date: "2026-09-18", start, duration: 1 }, NOW)).toEqual({ ok: true });
+    }
+  });
+
+  test("accepts an overnight booking that runs past midnight", () => {
+    expect(validateWindow({ date: "2026-09-18", start: 22, duration: 6 }, NOW))
       .toEqual({ ok: true });
   });
 
-  test("rejects a start before opening hour", () => {
-    const r = validateWindow({ date: "2026-09-18", start: 7, duration: 1 }, NOW);
-    expect(r.ok).toBe(false);
-  });
-
-  test("rejects a window that runs past closing hour", () => {
-    const r = validateWindow({ date: "2026-09-18", start: 18, duration: 4 }, NOW);
-    expect(r.ok).toBe(false);
+  test("rejects a start hour outside 0–23", () => {
+    for (const start of [-1, 24, 9.5]) {
+      expect(validateWindow({ date: "2026-09-18", start, duration: 1 }, NOW).ok).toBe(false);
+    }
   });
 
   test("accepts a custom whole-hour duration", () => {
@@ -36,8 +38,8 @@ describe("validateWindow", () => {
       .toEqual({ ok: true });
   });
 
-  test("accepts the whole 12-hour day", () => {
-    expect(validateWindow({ date: "2026-09-18", start: 8, duration: 12 }, NOW))
+  test("accepts the 12-hour maximum", () => {
+    expect(validateWindow({ date: "2026-09-18", start: 20, duration: 12 }, NOW))
       .toEqual({ ok: true });
   });
 
@@ -112,7 +114,7 @@ describe("computeQuote", () => {
   });
 });
 
-test("durations run up to the full 08:00–20:00 window, with quick presets", () => {
+test("durations run up to 12 hours, with quick presets", () => {
   expect(MAX_DURATION).toBe(12);
   expect(PRESET_DURATIONS).toEqual([1, 2, 4, 8]);
 });

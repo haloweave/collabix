@@ -132,10 +132,7 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
   await sweepExpiredHolds(db);
 
   const settings = await getSettings(db);
-  const window = validateWindow(input, new Date(), {
-    openHour: settings.openHour,
-    closeHour: settings.closeHour,
-  });
+  const window = validateWindow(input, new Date());
   if (!window.ok) return { ok: false, error: window.error };
   if (settings.closedDates.includes(input.date)) {
     return { ok: false, error: "closed_date" };
