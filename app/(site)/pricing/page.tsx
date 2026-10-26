@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { TariffTable } from "@/components/site/tariff-table";
-import { tariff, tariffNotes, EARLY_BIRD_DEADLINE } from "@/lib/tariff";
+import { tariff, tariffNotes, EARLY_BIRD_DEADLINE, earlyBirdNote, earlyBirdOpen } from "@/lib/tariff";
 export const metadata: Metadata = { title: "Collabix · Membership & pricing" };
+// Re-render hourly so the Early Bird offer drops off soon after it ends.
+export const revalidate = 3600;
 
 export default function Pricing() {
+  const early = earlyBirdOpen();
   return <>
     <section className="page-hero grid-texture">
       <div className="glow"></div>
@@ -12,7 +15,7 @@ export default function Pricing() {
         <span className="eyebrow">Membership &amp; Services Tariff 2026</span>
         <h1>Space to work. Room to grow.</h1>
         <p className="lead">Monthly desks and cabins, meeting rooms by the hour, day passes, virtual office plans and business services. All prices are before 18% GST.</p>
-        <p className="tf-early-banner">Early Bird pricing for bookings before {EARLY_BIRD_DEADLINE}</p>
+        {early && <p className="tf-early-banner">Early Bird pricing for bookings before {EARLY_BIRD_DEADLINE}</p>}
       </div>
     </section>
 
@@ -28,8 +31,8 @@ export default function Pricing() {
               <h2>{s.title}</h2>
               {s.subtitle && <span className="kicker">{s.subtitle}</span>}
             </div>
-            <TariffTable section={s} />
-            {s.note && <p className="pr-note-inline tf-note">{s.note}</p>}
+            <TariffTable section={s} showEarly={early} />
+            {(early || s.note) && <p className="pr-note-inline tf-note">{[early && earlyBirdNote, s.note].filter(Boolean).join(" ")}</p>}
           </div>
         ))}
 

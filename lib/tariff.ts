@@ -4,6 +4,18 @@
  * plans (see lib/rates.ts). */
 
 export const EARLY_BIRD_DEADLINE = "15th Oct 2026";
+/** First day (IST) the Early Bird offer no longer applies. Move this, and the
+ * label above, to run the offer again. */
+const EARLY_BIRD_ENDS_ON = "2026-10-15";
+
+/** Early Bird prices show only while the offer is open, so an expired offer
+ * never stays on the site. */
+export function earlyBirdOpen(now = new Date()): boolean {
+  const todayIst = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  return todayIst < EARLY_BIRD_ENDS_ON;
+}
+
+export const earlyBirdNote = `Early Bird: attractive offers for booking before ${EARLY_BIRD_DEADLINE}.`;
 
 export type TariffRow = {
   name: string;
@@ -20,10 +32,9 @@ export type TariffSection = {
   /** Column headers for the price columns, in order: standard, early bird, annual. */
   unit: "month" | "hour" | "day" | "service";
   rows: TariffRow[];
+  /** Terms that hold whether or not the Early Bird offer is open. */
   note?: string;
 };
-
-const earlyBird = `Early Bird: attractive offers for booking before ${EARLY_BIRD_DEADLINE}.`;
 
 export const tariff: TariffSection[] = [
   {
@@ -36,7 +47,7 @@ export const tariff: TariffSection[] = [
       { name: "Dedicated Desk", includes: "Fixed seat + locker + 2 credits + 20 pages of prints", standard: 8500, earlyBird: 7700, annual: 102000 },
       { name: "Dedicated Desk Pro", includes: "Fixed seat + locker + 4 credits + 1 guest pass + 30 pages of prints", standard: 10000, earlyBird: 9000, annual: 120000 },
     ],
-    note: `${earlyBird} Annual plans: 15% off + 50% waiver on security deposit.`,
+    note: "Annual plans: 15% off + 50% waiver on security deposit.",
   },
   {
     id: "cabins",
@@ -48,7 +59,7 @@ export const tariff: TariffSection[] = [
       { name: "Cabin · Pro", includes: "Standard fit-out + 2 credits + 30 pages of prints", standard: 34000, earlyBird: 30800, annual: 408000 },
       { name: "Cabin · Enterprise", includes: "Standard fit-out + 4 credits + 2 guest passes + 30 pages of prints", standard: 40000, earlyBird: 36000, annual: 480000 },
     ],
-    note: `${earlyBird} Annual plans: 15% off + 50% waiver on security deposit.`,
+    note: "Annual plans: 15% off + 50% waiver on security deposit.",
   },
   {
     id: "meeting",
@@ -58,7 +69,6 @@ export const tariff: TariffSection[] = [
       { name: "Meeting Room (4-seater)", includes: "Compact meeting room + TV + whiteboard", standard: 350, earlyBird: 300 },
       { name: "The Boardroom", includes: "8 seats, integrated VC, interactive panel", standard: 750, earlyBird: 700 },
     ],
-    note: earlyBird,
   },
   {
     id: "virtual",
@@ -69,7 +79,7 @@ export const tariff: TariffSection[] = [
       { name: "Address + GST", includes: "Business address + GST NOC + 2 credits + mail notification / pouch*", standard: 2000, earlyBird: 1799, annual: 24000 },
       { name: "Virtual Pro", includes: "Business address + GST NOC + display + 4 credits + mail notification / pouch*", standard: 3300, earlyBird: 2999, annual: 39600 },
     ],
-    note: `${earlyBird} Annual plans: 15% off. Minimum 1-year lock-in.`,
+    note: "Annual plans: 15% off. Minimum 1-year lock-in.",
   },
   {
     id: "passes",
@@ -83,7 +93,6 @@ export const tariff: TariffSection[] = [
       { name: "Corporate Bundle (8-pack)", includes: "8 accesses, anybody / anytime + 8 credits", standard: 375, earlyBird: 350 },
       { name: "Corporate Bundle (10-pack)", includes: "10 accesses, anybody / anytime + 10 credits", standard: 375, earlyBird: 350 },
     ],
-    note: earlyBird,
   },
   {
     id: "services",

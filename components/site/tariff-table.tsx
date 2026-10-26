@@ -3,10 +3,10 @@ import type { TariffSection } from "@/lib/tariff";
 
 const unitLabel: Record<TariffSection["unit"], string> = { month: "/ month", hour: "/ hour", day: "/ day", service: "" };
 
-/** One tariff section as a price table. */
-export function TariffTable({ section }: { section: TariffSection }) {
+/** One tariff section as a price table. The Early Bird column shows only when `showEarly` is set. */
+export function TariffTable({ section, showEarly }: { section: TariffSection; showEarly: boolean }) {
   const { rows } = section;
-  const hasEarly = rows.some((r) => r.earlyBird != null);
+  const hasEarly = showEarly && rows.some((r) => r.earlyBird != null);
   const hasAnnual = rows.some((r) => r.annual != null);
   const per = unitLabel[section.unit];
   return (
