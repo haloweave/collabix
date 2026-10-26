@@ -508,17 +508,6 @@
 .collabix-site .field.invalid input { border-color: #b45; }
 .collabix-site .field.invalid .err { display: block; }
 
-/* toast */
-.collabix-site .demo-note {
-  position: fixed; bottom: 18px; left: 18px; z-index: 200;
-  background: var(--navy); color: rgba(247,245,242,.85); border: 1px solid var(--line-gold);
-  border-radius: var(--radius); padding: .7rem 1rem; font-size: .72rem; font-family: var(--font-mono);
-  letter-spacing: .04em; box-shadow: var(--shadow-md); max-width: 260px; line-height: 1.5;
-  display: flex; gap: .6rem; align-items: flex-start;
-}
-.collabix-site .demo-note .x { margin-left: auto; cursor: pointer; color: var(--gold); background: none; border: 0; font-size: 1rem; line-height: 1; padding: 0; }
-.collabix-site .demo-note b { color: var(--gold); font-weight: 500; }
-
 /* ============================================================
    MOBILE APP TAB BAR (bottom navigation)
    ============================================================ */
@@ -573,8 +562,6 @@
   .collabix-site .tabbar { display: flex; }
   .collabix-site { padding-bottom: 62px; }
   .collabix-site .site-footer { margin-bottom: 0; }
-  /* lift the demo note above the tab bar */
-  .collabix-site .demo-note { bottom: calc(62px + env(safe-area-inset-bottom, 0) + 12px); left: 12px; right: 12px; max-width: none; }
   .collabix-site .nav { position: fixed; inset: 76px 0 auto 0; flex-direction: column; gap: 0; background: rgba(11,31,58,.98); backdrop-filter: blur(14px); padding: 1rem var(--gutter) 1.6rem; transform: translateY(-120%); transition: transform .4s var(--ease); border-bottom: 1px solid var(--line-gold); }
   .collabix-site .nav.open { transform: none; }
   .collabix-site .nav a.navlink { width: 100%; padding: .9rem 0; border-bottom: 1px solid rgba(247,245,242,.08); }
