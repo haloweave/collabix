@@ -4,6 +4,7 @@ import {
   PRESET_DURATIONS,
   nightHours,
   priceBooking,
+  productWindow,
   toUtcWindow,
   validateWindow,
 } from "./booking";
@@ -136,4 +137,40 @@ describe("priceBooking", () => {
 test("durations run up to 12 hours, with quick presets", () => {
   expect(MAX_DURATION).toBe(12);
   expect(PRESET_DURATIONS).toEqual([1, 2, 4, 8]);
+});
+
+describe("productWindow", () => {
+  const dayFull = bookableProduct("day-full")!;
+  const dayHalf = bookableProduct("day-half")!;
+  const room = bookableProduct("boardroom")!;
+  const AFTER_8PM = new Date("2026-09-17T15:00:00.000Z"); // 20:30 IST
+
+  test("a Full Day Pass always covers 08:00–20:00", () => {
+    expect(productWindow(dayFull, { date: "2026-09-18", start: 3, duration: 2 }, NOW))
+      .toEqual({ ok: true, window: { date: "2026-09-18", start: 8, duration: 12 } });
+  });
+
+  test("today's Full Day Pass can be bought until 20:00", () => {
+    expect(productWindow(dayFull, { date: "2026-09-17" }, NOW).ok).toBe(true);
+    expect(productWindow(dayFull, { date: "2026-09-17" }, AFTER_8PM).ok).toBe(false);
+  });
+
+  test("a Half Day Pass is a 4-hour block starting 08:00–16:00", () => {
+    expect(productWindow(dayHalf, { date: "2026-09-18", start: 16 }, NOW))
+      .toEqual({ ok: true, window: { date: "2026-09-18", start: 16, duration: 4 } });
+    expect(productWindow(dayHalf, { date: "2026-09-18", start: 17 }, NOW).ok).toBe(false);
+    expect(productWindow(dayHalf, { date: "2026-09-18", start: 7 }, NOW).ok).toBe(false);
+  });
+
+  test("a start time already past today is refused", () => {
+    expect(productWindow(dayHalf, { date: "2026-09-17", start: 11 }, NOW).ok).toBe(false);
+    expect(productWindow(room, { date: "2026-09-17", start: 11, duration: 1 }, NOW).ok).toBe(false);
+  });
+
+  test("rooms take any start and 1–12 hours, overnight allowed", () => {
+    expect(productWindow(room, { date: "2026-09-18", start: 22, duration: 6 }, NOW))
+      .toEqual({ ok: true, window: { date: "2026-09-18", start: 22, duration: 6 } });
+    expect(productWindow(room, { date: "2026-09-18", start: 24, duration: 1 }, NOW).ok).toBe(false);
+    expect(productWindow(room, { date: "2026-09-18", start: 9, duration: 13 }, NOW).ok).toBe(false);
+  });
 });

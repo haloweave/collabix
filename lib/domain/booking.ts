@@ -127,3 +127,39 @@ export function priceBooking(
     totalMinor: subtotalMinor + taxMinor,
   };
 }
+
+/** Day passes cover the standard working day; a Half Day Pass is a 4-hour block inside it. */
+export const PASS_DAY = { start: 8, end: 20 } as const;
+export const HALF_DAY_HOURS = 4;
+
+/** The booking window a product implies, or why the request can't be booked. */
+export function productWindow(
+  p: BookableProduct,
+  input: { date: string; start?: number; duration?: number },
+  now: Date,
+): { ok: true; window: WindowInput } | { ok: false; error: string } {
+  const window: WindowInput =
+    p.key === "day-full"
+      ? { date: input.date, start: PASS_DAY.start, duration: PASS_DAY.end - PASS_DAY.start }
+      : p.key === "day-half"
+        ? { date: input.date, start: input.start ?? NaN, duration: HALF_DAY_HOURS }
+        : { date: input.date, start: input.start ?? NaN, duration: input.duration ?? NaN };
+
+  const valid = validateWindow(window, now);
+  if (!valid.ok) return valid;
+  if (
+    p.key === "day-half" &&
+    (window.start < PASS_DAY.start || window.start + HALF_DAY_HOURS > PASS_DAY.end)
+  ) {
+    return { ok: false, error: "a half day starts between 08:00 and 16:00" };
+  }
+
+  // A Full Day Pass stays on sale until the day ends; anything else must not
+  // start in the past.
+  const { startAt, endAt } = toUtcWindow(window);
+  const cutoff = p.key === "day-full" ? endAt : startAt;
+  if (cutoff.getTime() <= now.getTime()) {
+    return { ok: false, error: "that time has already passed" };
+  }
+  return { ok: true, window };
+}
