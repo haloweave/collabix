@@ -6,11 +6,12 @@
 import * as schema from "./schema";
 import type { Db } from "../domain/reservations";
 import { seats } from "../floorplan";
+import { REGISTRY_PLANS } from "../tariff";
 
 export async function seedInventory(db: Db) {
   const [loc] = await db
     .insert(schema.location)
-    .values({ name: "Collabix (seed)", timezone: "Asia/Kolkata" })
+    .values({ name: "Collabix Work Lounge", timezone: "Asia/Kolkata" })
     .returning();
   const [fl] = await db
     .insert(schema.floor)
@@ -44,12 +45,7 @@ export async function seedInventory(db: Db) {
     })),
   );
 
-  await db.insert(schema.ratePlan).values([
-    { key: "hotdesk", name: "Hot Desk", appliesToKind: "desk", rateMinor: 12000 },
-    { key: "dedicated", name: "Dedicated Desk", appliesToKind: "desk", rateMinor: 20000 },
-    { key: "cabin", name: "Private Cabin", appliesToKind: "room", rateMinor: 60000 },
-    { key: "meeting", name: "Meeting Room", appliesToKind: "room", rateMinor: 90000 },
-  ]);
+  await db.insert(schema.ratePlan).values(REGISTRY_PLANS);
 }
 
 // CLI entry: `npm run db:seed`. Clears inventory + bookings, then re-seeds.
@@ -63,7 +59,7 @@ async function main() {
   const desks = all.filter((s) => s.kind === "desk").length;
   const roomCount = all.filter((s) => s.kind === "room").length;
   console.log(
-    `Seeded ${desks} desks and ${roomCount} rooms (from the floor plan) and 4 rate plans.`,
+    `Seeded ${desks} desks and ${roomCount} rooms (from the floor plan) and ${REGISTRY_PLANS.length} rate plans.`,
   );
 }
 

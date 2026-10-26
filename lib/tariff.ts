@@ -1,7 +1,7 @@
 /** Collabix Membership & Services Tariff 2026 — the published rate card.
- * Prices are whole rupees before 18% GST. These are the advertised plan prices
- * for the marketing pages; online hourly booking still quotes from the DB rate
- * plans (see lib/rates.ts). */
+ * Prices are whole rupees before 18% GST. This file is the single source of
+ * truth: /pricing renders these rows, and online and walk-in booking price
+ * from the BOOKABLE catalogue below, which reads the same rows. */
 
 export const EARLY_BIRD_DEADLINE = "15th Oct 2026";
 /** First day (IST) the Early Bird offer no longer applies. Move this, and the
@@ -181,3 +181,24 @@ export function bookableProduct(key: string): BookableProduct | undefined {
 export function productPriceMinor(p: BookableProduct, now = new Date()): number {
   return earlyBirdOpen(now) && p.earlyBirdMinor != null ? p.earlyBirdMinor : p.priceMinor;
 }
+
+/** The rate_plan rows reservations reference: one per bookable product, plus
+ * two never-sold rows for member holds and extended bookings. Prices are
+ * recorded for reference only; quotes always come from BOOKABLE. */
+export const REGISTRY_PLANS: {
+  key: string;
+  name: string;
+  appliesToKind: "desk" | "room";
+  rateMinor: number;
+  active: boolean;
+}[] = [
+  ...BOOKABLE.map((p) => ({
+    key: p.key,
+    name: p.name,
+    appliesToKind: p.kind === "pass" ? ("desk" as const) : ("room" as const),
+    rateMinor: p.priceMinor,
+    active: true,
+  })),
+  { key: "desk-membership", name: "Desk (membership)", appliesToKind: "desk", rateMinor: 0, active: false },
+  { key: "cabin-membership", name: "Private Cabin (membership)", appliesToKind: "room", rateMinor: 0, active: false },
+];

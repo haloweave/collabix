@@ -4,10 +4,12 @@
 // is the source of truth for exclusion. These functions layer server-authoritative
 // validation, pricing, and the expiry sweep on top.
 
-import { and, eq, getTableColumns, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
-import { computeQuote, toUtcWindow, validateWindow, type Quote } from "./booking";
+import { priceBooking, productWindow, toUtcWindow, type Quote, type WindowInput } from "./booking";
+import { bookableProduct, type BookableProduct } from "../tariff";
+import { autoAssignDesks, type Slot } from "../floorplan";
 import { getSettings } from "../settings";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
 
@@ -16,16 +18,18 @@ export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 const HELD_OR_CONFIRMED = ["held", "confirmed"] as const;
 
-// Cabins and the meeting room share the "room" kind, so each room plan is
-// pinned to its floor zone (lib/floorplan.ts). Desk plans take any desk.
-const PLAN_ZONE: Record<string, string> = { cabin: "Cabins", meeting: "Meeting" };
-
 export type HoldInput = {
-  planKey: string;
-  resourceIds: string[];
+  /** A tariff product key (lib/tariff.ts BOOKABLE). */
+  productKey: string;
   date: string;
-  start: number;
-  duration: number;
+  /** Half Day Pass and rooms: start hour (IST). */
+  start?: number;
+  /** Rooms: length in hours. */
+  duration?: number;
+  /** Passes: number of people, one desk each. Rooms ignore it. */
+  people?: number;
+  /** Passes only: specific free desks to use; otherwise desks are auto-assigned. */
+  resourceIds?: string[];
   customerName: string;
   customerEmail: string;
   idempotencyKey?: string;
@@ -82,29 +86,29 @@ export async function sweepExpiredHolds(db: Db): Promise<number> {
 }
 
 export type AvailabilityInput = {
-  planKey: string;
+  productKey: string;
   date: string;
-  start: number;
-  duration: number;
+  start?: number;
+  duration?: number;
 };
 
-export async function getAvailability(db: Db, input: AvailabilityInput) {
-  await sweepExpiredHolds(db);
-  const plan = await getPlan(db, input.planKey);
-  if (!plan) throw new Error(`unknown rate plan: ${input.planKey}`);
+export type AvailabilityResult =
+  | { ok: true; window: WindowInput; resources: Slot[] }
+  | { ok: false; error: string };
 
-  const { startAt, endAt } = toUtcWindow(input);
-
-  const zoneName = PLAN_ZONE[plan.key];
+/** The resources a product can use in a window, each marked free or taken.
+ * Passes draw on the enabled desks; a room product on its own room only. */
+async function productSlots(db: Db, product: BookableProduct, window: WindowInput): Promise<Slot[]> {
+  const { startAt, endAt } = toUtcWindow(window);
   const resources = await db
-    .select(getTableColumns(schema.resource))
+    .select()
     .from(schema.resource)
-    .innerJoin(schema.zone, eq(schema.zone.id, schema.resource.zoneId))
     .where(
       and(
-        eq(schema.resource.kind, plan.appliesToKind),
         eq(schema.resource.enabled, true),
-        zoneName ? eq(schema.zone.name, zoneName) : undefined,
+        product.kind === "pass"
+          ? eq(schema.resource.kind, "desk")
+          : eq(schema.resource.code, product.roomCode!),
       ),
     )
     .orderBy(schema.resource.code);
@@ -120,46 +124,41 @@ export async function getAvailability(db: Db, input: AvailabilityInput) {
       ),
     );
   const taken = new Set(overlapping.map((r) => r.resourceId));
-
-  return resources.map((r) => ({
-    resourceId: r.id,
-    code: r.code,
-    available: !taken.has(r.id),
-  }));
+  return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
 }
 
-export async function holdReservation(db: Db, input: HoldInput): Promise<HoldResult> {
+export async function getAvailability(
+  db: Db,
+  input: AvailabilityInput,
+  now = new Date(),
+): Promise<AvailabilityResult> {
+  await sweepExpiredHolds(db);
+  const product = bookableProduct(input.productKey);
+  if (!product) return { ok: false, error: "unknown_product" };
+  const w = productWindow(product, input, now);
+  if (!w.ok) return w;
+  return { ok: true, window: w.window, resources: await productSlots(db, product, w.window) };
+}
+
+export async function holdReservation(
+  db: Db,
+  input: HoldInput,
+  now = new Date(),
+): Promise<HoldResult> {
   await sweepExpiredHolds(db);
 
+  const product = bookableProduct(input.productKey);
+  if (!product) return { ok: false, error: "unknown_product" };
+  const w = productWindow(product, input, now);
+  if (!w.ok) return { ok: false, error: w.error };
+  const window = w.window;
   const settings = await getSettings(db);
-  const window = validateWindow(input, new Date());
-  if (!window.ok) return { ok: false, error: window.error };
-  if (settings.closedDates.includes(input.date)) {
+  if (settings.closedDates.includes(window.date)) {
     return { ok: false, error: "closed_date" };
   }
 
-  const plan = await getPlan(db, input.planKey);
-  if (!plan) return { ok: false, error: "unknown_plan" };
-
-  const resourceIds = [...new Set(input.resourceIds)];
-  if (resourceIds.length === 0) return { ok: false, error: "no_seats" };
-
-  const resources = await db
-    .select({ ...getTableColumns(schema.resource), zoneName: schema.zone.name })
-    .from(schema.resource)
-    .innerJoin(schema.zone, eq(schema.zone.id, schema.resource.zoneId))
-    .where(inArray(schema.resource.id, resourceIds));
-  if (resources.length !== resourceIds.length) {
-    return { ok: false, error: "unknown_resource" };
-  }
-  const zoneName = PLAN_ZONE[plan.key];
-  if (
-    resources.some(
-      (r) => r.kind !== plan.appliesToKind || (zoneName && r.zoneName !== zoneName),
-    )
-  ) {
-    return { ok: false, error: "plan_kind_mismatch" };
-  }
+  const plan = await getPlan(db, product.key);
+  if (!plan || !plan.active) return { ok: false, error: "unknown_plan" };
 
   // Idempotency: an existing booking for this key wins without re-inserting.
   // The key is carried by the booking's first reservation.
@@ -184,13 +183,30 @@ export async function holdReservation(db: Db, input: HoldInput): Promise<HoldRes
     }
   }
 
-  const quote = computeQuote(
-    plan.rateMinor,
-    input.duration,
-    resourceIds.length,
-    settings.taxPercent / 100,
-  );
-  const { startAt, endAt } = toUtcWindow(input);
+  // Pick the resources server-side: a room product only ever gets its room;
+  // a pass gets one free desk per person (the guest's picks if all are free).
+  const slots = await productSlots(db, product, window);
+  const free = slots.filter((s) => s.available);
+  let resourceIds: string[];
+  const people = product.kind === "pass" ? Math.max(1, input.people ?? 1) : 1;
+  if (product.kind === "room") {
+    if (free.length === 0) return { ok: false, error: "seat_unavailable" };
+    resourceIds = [free[0].resourceId];
+  } else {
+    const picked = [...new Set(input.resourceIds ?? [])];
+    const freeIds = new Set(free.map((s) => s.resourceId));
+    if (picked.length === people && picked.every((id) => freeIds.has(id))) {
+      resourceIds = picked;
+    } else {
+      const codes = autoAssignDesks(free.map((s) => s.code), people);
+      if (codes.length < people) return { ok: false, error: "not_enough_desks" };
+      const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
+      resourceIds = codes.map((c) => idByCode.get(c)!);
+    }
+  }
+
+  const quote = priceBooking(product, window, people, now);
+  const { startAt, endAt } = toUtcWindow(window);
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
 
   try {

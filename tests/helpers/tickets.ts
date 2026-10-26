@@ -5,7 +5,6 @@ import { eq } from "drizzle-orm";
 import * as schema from "../../lib/db/schema";
 import {
   confirmBooking,
-  getAvailability,
   holdReservation,
   issueTicket,
 } from "../../lib/domain/reservations";
@@ -29,18 +28,20 @@ export function setupSeededDb() {
   return ctx;
 }
 
-/** A confirmed public-flow hot-desk booking (default 2026-12-01 09:00–11:00 IST). */
+/** A confirmed public-flow booking on 2026-12-01: one person books the 4-seater
+ * room (default 09:00–11:00 IST); a group books Half Day Passes from `start`. */
 export async function bookConfirmed(
   db: TestDb,
   opts: { date?: string; start?: number; duration?: number; seats?: number } = {},
 ) {
-  const window = { date: opts.date ?? "2026-12-01", start: opts.start ?? 9, duration: opts.duration ?? 2 };
-  const avail = await getAvailability(db, { planKey: "hotdesk", ...window });
-  const resourceIds = avail.filter((a) => a.available).slice(0, opts.seats ?? 1).map((a) => a.resourceId);
+  const date = opts.date ?? "2026-12-01";
+  const start = opts.start ?? 9;
+  const product =
+    (opts.seats ?? 1) > 1
+      ? { productKey: "day-half", date, start, people: opts.seats }
+      : { productKey: "meeting-4", date, start, duration: opts.duration ?? 2 };
   const held = await holdReservation(db, {
-    planKey: "hotdesk",
-    resourceIds,
-    ...window,
+    ...product,
     customerName: "Test Guest",
     customerEmail: "guest@example.com",
   });

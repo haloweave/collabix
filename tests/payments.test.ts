@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
-import { getAvailability, holdReservation, sweepExpiredHolds } from "../lib/domain/reservations";
+import { holdReservation, sweepExpiredHolds } from "../lib/domain/reservations";
 import { beginPayment, PAYMENT_WINDOW_MIN, settlePayment } from "../lib/domain/payments";
 import { setupSeededDb } from "./helpers/tickets";
 import { FakeGateway } from "./helpers/fake-gateway";
@@ -12,11 +12,10 @@ const guest = { customerName: "Test Guest", customerEmail: "guest@example.com" }
 const begin = (gw: FakeGateway, bookingId: string, extra: Partial<Parameters<typeof beginPayment>[2]> = {}) =>
   beginPayment(ctx.db, gw, { bookingId, phone: "+919876543210", returnUrl: "https://x.test/r?order_id={order_id}", ...extra });
 
-async function holdOne(resourceIds?: string[]) {
-  const ids = resourceIds ?? (await getAvailability(ctx.db, { planKey: "hotdesk", ...slot })).filter((a) => a.available).slice(0, 1).map((a) => a.resourceId);
-  const held = await holdReservation(ctx.db, { planKey: "hotdesk", resourceIds: ids, ...slot, ...guest });
+async function holdOne() {
+  const held = await holdReservation(ctx.db, { productKey: "meeting-4", ...slot, ...guest });
   if (!held.ok) throw new Error(held.error);
-  return { ...held, ids };
+  return held;
 }
 
 async function reservations(bookingId: string) {
@@ -138,7 +137,7 @@ describe("settlePayment", () => {
     if (!r.ok) throw new Error(r.error);
     await ctx.db.execute(sql`UPDATE reservation SET hold_expires_at = now() - interval '1 minute' WHERE booking_id = ${a.bookingId}`);
     await sweepExpiredHolds(ctx.db);
-    const b = await holdOne(a.ids); // same desk, same window
+    const b = await holdOne(); // same room, same window
     gw.setStatus(r.orderId, "PAID");
     const s = await settlePayment(ctx.db, gw, { orderId: r.orderId });
     expect(s).toEqual({ ok: true, status: "refund_due", bookingId: a.bookingId });

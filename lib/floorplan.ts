@@ -78,17 +78,28 @@ export const deskBanks: DeskBank[] = [
   { id: "left-mid", zone: "Open desks", anchor: { x: 70, y: 360 }, rows: 2, cols: 2, dx: 95, dy: 95 },
   { id: "right-top", zone: "Open desks", anchor: { x: 1070, y: 180 }, rows: 3, cols: 2, dx: 95, dy: 95 },
   { id: "center-bottom", zone: "Open desks", anchor: { x: 640, y: 570 }, rows: 4, cols: 2, dx: 95, dy: 92 },
-  { id: "right-bottom", zone: "Open desks", anchor: { x: 900, y: 570 }, rows: 4, cols: 2, dx: 95, dy: 92 },
-  { id: "right-col", zone: "Open desks", anchor: { x: 1180, y: 570 }, rows: 4, cols: 1, dx: 0, dy: 92 },
-  { id: "left-bottom", zone: "Open desks", anchor: { x: 430, y: 560 }, rows: 2, cols: 2, dx: 95, dy: 92 },
 ];
 
-// Enclosed, bookable rooms — the top-left boardroom and the right-side cabins.
+// Enclosed rooms: the top-left boardroom, the 4-seater meeting room and the
+// four cabins. C-03, C-04 and M-02 sit at approximate positions (the drawing
+// shows two cabins and one meeting room; the tariff lists four and two).
 export const rooms: Room[] = [
-  { code: "M-01", kind: "room", zone: "Meeting", label: "Meeting Room", capacity: 8, x: 60, y: 60, w: 240, h: 260 },
+  { code: "M-01", kind: "room", zone: "Meeting", label: "The Boardroom", capacity: 8, x: 60, y: 60, w: 240, h: 260 },
+  { code: "M-02", kind: "room", zone: "Meeting", label: "Meeting Room (4-seater)", capacity: 4, x: 1100, y: 600, w: 200, h: 170 },
   { code: "C-01", kind: "room", zone: "Cabins", label: "Cabin 1", capacity: 4, x: 880, y: 60, w: 170, h: 130 },
   { code: "C-02", kind: "room", zone: "Cabins", label: "Cabin 2", capacity: 4, x: 880, y: 210, w: 170, h: 130 },
+  { code: "C-03", kind: "room", zone: "Cabins", label: "Cabin 3", capacity: 4, x: 880, y: 600, w: 170, h: 130 },
+  { code: "C-04", kind: "room", zone: "Cabins", label: "Cabin 4", capacity: 4, x: 880, y: 750, w: 170, h: 130 },
 ];
+
+/** The rate_plan registry key a reservation on this resource is recorded
+ * under when it isn't a sale (member holds, extended bookings). */
+export function registryKeyFor(r: { code: string; kind: "desk" | "room" }): string {
+  if (r.kind === "desk") return "desk-membership";
+  if (r.code === "M-01") return "boardroom";
+  if (r.code === "M-02") return "meeting-4";
+  return "cabin-membership";
+}
 
 // Expand banks + rooms into the flat list of bookable resources. Desks are
 // numbered continuously (D-01, D-02, …) in bank/row/column order.

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { getActiveRates } from "@/lib/rates";
+import { BOOKABLE, productPriceMinor } from "@/lib/tariff";
 
 export const dynamic = "force-dynamic";
 
-// Public: live hourly rates (whole rupees) keyed by plan key. Lazy-loaded by the
-// booking page after render so advertised prices track the admin rate plans.
+// Public: the tariff price (whole rupees) of each bookable product, keyed by
+// product key. Dynamic so an Early Bird window takes effect without a deploy.
 export async function GET() {
-  const rates = await getActiveRates();
-  return NextResponse.json(rates);
+  const now = new Date();
+  return NextResponse.json(
+    Object.fromEntries(BOOKABLE.map((p) => [p.key, Math.round(productPriceMinor(p, now) / 100)])),
+  );
 }

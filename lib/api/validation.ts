@@ -1,29 +1,28 @@
 import { z } from "zod";
 import { MAX_DURATION } from "../domain/booking";
+import { PRODUCT_KEYS } from "../tariff";
 
-const planKey = z.enum(["hotdesk", "dedicated", "cabin", "meeting"]);
+const productKey = z.enum(PRODUCT_KEYS);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
-const start = z.coerce.number().int().min(0).max(23);
-const duration = z.coerce.number().int().min(1).max(MAX_DURATION);
+// Optional window parts: which ones a product needs is checked by productWindow.
+const start = z.coerce.number().int().min(0).max(23).optional();
+const duration = z.coerce.number().int().min(1).max(MAX_DURATION).optional();
 
-// Per-request seat cap — bounds abuse and matches the UI stepper ceiling.
+// Per-request people cap for passes — bounds abuse; the 28 desks cap it anyway.
 export const MAX_SEATS = 20;
-const seats = z.coerce.number().int().min(1).max(MAX_SEATS);
+const people = z.coerce.number().int().min(1).max(MAX_SEATS).default(1);
 
-export const availabilityQuery = z.object({ planKey, date, start, duration });
+export const availabilityQuery = z.object({ productKey, date, start, duration });
 
-export const quoteBody = z.object({
-  planKey,
-  duration,
-  seats: seats.default(1),
-});
+export const quoteBody = z.object({ productKey, date, start, duration, people });
 
 export const holdBody = z.object({
-  planKey,
-  resourceIds: z.array(z.string().uuid()).min(1).max(MAX_SEATS),
+  productKey,
   date,
   start,
   duration,
+  people,
+  resourceIds: z.array(z.string().uuid()).max(MAX_SEATS).optional(),
   customerName: z.string().trim().min(2).max(100),
   customerEmail: z.string().email().max(254),
   idempotencyKey: z.string().max(200).optional(),

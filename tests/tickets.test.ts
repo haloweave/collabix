@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
-import { confirmBooking, getAvailability, holdReservation, issueTicket } from "../lib/domain/reservations";
+import { confirmBooking, holdReservation, issueTicket } from "../lib/domain/reservations";
 import { getTicketView } from "../lib/domain/ticket-view";
 import { ticketIcs } from "../lib/domain/ticket-ics";
 import { bookConfirmed, insertMultiDay, setupSeededDb } from "./helpers/tickets";
@@ -74,7 +74,8 @@ describe("getTicketView", () => {
       expect(v!.resourceCodes).toHaveLength(2);
       expect([...v!.resourceCodes].sort()).toEqual(v!.resourceCodes);
       expect(v!.plan).toBeTruthy();
-      expect(v!.totalMinor).toBe(2 * 2 * 12000 + Math.round(2 * 2 * 12000 * 0.18));
+      // Two Half Day Passes: 2 × ₹199 + 18% GST.
+      expect(v!.totalMinor).toBe(46964);
       expect(v!.startAt).toBeInstanceOf(Date);
       expect(v!.checkedInAt).toBeNull();
     }
@@ -123,10 +124,8 @@ describe("re-confirming an already-confirmed booking", () => {
   });
 
   test("a first confirmation reports newlyConfirmed and links the member", async () => {
-    const avail = await getAvailability(ctx.db, { planKey: "hotdesk", date: "2026-12-01", start: 9, duration: 2 });
     const held = await holdReservation(ctx.db, {
-      planKey: "hotdesk",
-      resourceIds: [avail.find((a) => a.available)!.resourceId],
+      productKey: "meeting-4",
       date: "2026-12-01",
       start: 9,
       duration: 2,
