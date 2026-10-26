@@ -182,4 +182,14 @@ describe("display copy", () => {
     expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"] })).toBe("2 seats · D-03, D-04");
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"] })).toBe("1 seat · M-01");
   });
+
+  test("day passes say any shared desk; rooms show the room's name", () => {
+    expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"], planKey: "day-full" }))
+      .toBe("2 people · Any shared desk");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["D-09"], planKey: "day-half" }))
+      .toBe("1 person · Any shared desk");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"], planKey: "boardroom" })).toBe("The Boardroom");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["M-02"], planKey: "meeting-4" }))
+      .toBe("Meeting Room (4-seater)");
+  });
 });

@@ -20,6 +20,8 @@ export type TicketView = {
   seats: number;
   resourceCodes: string[];
   plan: string | null;
+  /** Rate-plan registry key (a tariff product key for sales). */
+  planKey: string | null;
   /** null for membership holds, which carry no price. */
   totalMinor: number | null;
   /** Settled online (a paid `payment` row); staff bookings pay at the desk. */
@@ -49,6 +51,7 @@ export async function getTicketView(db: Db, key: TicketKey): Promise<TicketView 
       count(r.id)::int AS seats,
       array_agg(res.code ORDER BY res.code) AS codes,
       (array_agg(DISTINCT rp.name))[1] AS plan,
+      (array_agg(DISTINCT rp.key))[1] AS plan_key,
       (array_agg(r.quote_snapshot ->> 'totalMinor'))[1] AS total_minor,
       EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid,
       max(r.checked_in_at) FILTER (WHERE r.status = 'confirmed') AS checked_in_at,
@@ -77,6 +80,7 @@ export async function getTicketView(db: Db, key: TicketKey): Promise<TicketView 
     seats: Number(r.seats),
     resourceCodes: Array.isArray(r.codes) ? (r.codes as string[]) : [],
     plan: (r.plan as string | null) ?? null,
+    planKey: (r.plan_key as string | null) ?? null,
     totalMinor: r.total_minor == null ? null : Number(r.total_minor),
     paid: Boolean(r.paid),
     checkedInAt: date(r.checked_in_at),

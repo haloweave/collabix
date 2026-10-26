@@ -4,6 +4,7 @@
 
 import { istDate, istTime, rupees } from "../admin/format";
 import { isMultiDay } from "./ticket";
+import { bookableProduct } from "../tariff";
 
 export const PAY_AT_DESK = "Pay at desk";
 export const PAID = "Paid";
@@ -24,6 +25,10 @@ export function ticketAmount(v: { totalMinor: number | null; paid?: boolean }): 
     : `${rupees(v.totalMinor)} · ${v.paid ? PAID : PAY_AT_DESK}`;
 }
 
-export function ticketSeats(v: { seats: number; resourceCodes: string[] }): string {
+export function ticketSeats(v: { seats: number; resourceCodes: string[]; planKey?: string | null }): string {
+  const product = v.planKey ? bookableProduct(v.planKey) : undefined;
+  // A day pass is any free shared desk, so no desk number is printed.
+  if (product?.kind === "pass") return `${v.seats} ${v.seats === 1 ? "person" : "people"} · Any shared desk`;
+  if (product?.kind === "room") return product.name;
   return `${v.seats} seat${v.seats === 1 ? "" : "s"} · ${v.resourceCodes.join(", ")}`;
 }
