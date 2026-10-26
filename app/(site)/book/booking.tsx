@@ -478,7 +478,8 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   <p className="hold-timer expired">Your hold has expired.</p>
                 )}
                 <p>
-                  We sent a 6-digit code to {phoneE164}.
+                  We sent a 6-digit code to {phoneE164}. It expires in 1 minute —
+                  tap Resend code if it runs out.
                 </p>
                 <form onSubmit={verifyOtp}>
                   <div className="field">
