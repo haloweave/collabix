@@ -19,8 +19,14 @@ function localDate() {
 
 const rupees = (minor: number) => money(Math.round(minor / 100));
 
-// Steps: Book(0) · Details(1) · Verify(2) · Done(3)
-const STEPS = ["Book", "Details", "Verify", "Done"];
+// Steps: Book(0) · Details(1) · Verify(2) · Pay(3) · Done(4)
+const STEPS = ["Book", "Details", "Verify", "Pay", "Done"];
+
+// How long we keep asking the server about a payment Cashfree hasn't settled
+// yet (the webhook or the bank can lag the modal closing by a few seconds).
+const SETTLE_RETRIES = 5;
+const SETTLE_DELAY_MS = 2000;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [key, setKey] = useState(
@@ -47,6 +53,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [confirmedCodes, setConfirmedCodes] = useState<string[] | null>(null);
   const [ticketToken, setTicketToken] = useState<string | null>(null);
+  // Pay step: what the button is doing right now, for its label.
+  const [payPhase, setPayPhase] = useState<"idle" | "opening" | "confirming">("idle");
   // Live hourly rates (whole rupees) keyed by plan key, lazy-loaded from the DB
   // after the page renders so the first paint isn't blocked on a query. Until it
   // resolves we show the static indicative rate from lib/spaces.ts.
@@ -248,7 +256,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     if (!r.ok) setError("Could not send the code. Check the phone number.");
   }
 
-  async function verifyAndConfirm(e: React.FormEvent) {
+  async function verifyOtp(e: React.FormEvent) {
     e.preventDefault();
     if (otp.trim().length < 4 || !bookingId) return;
     setBusy(true);
@@ -263,25 +271,105 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
         setError("That code didn't match. Please try again.");
         return;
       }
-      const c = await fetch("/api/bookings/confirm", {
+      setStep(3); // Pay
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Pay step: ask the server for a Cashfree order, open the checkout popup,
+  // then ask the server to confirm. The popup's result is only a hint — the
+  // server settles against Cashfree before any seat is confirmed.
+  async function startPayment() {
+    if (!bookingId) return;
+    setBusy(true);
+    setError(null);
+    setPayPhase("opening");
+    try {
+      const p = await fetch("/api/bookings/pay", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bookingId }),
+        body: JSON.stringify({ bookingId, phone: phoneE164 }),
       });
-      const data = await c.json();
-      if (!c.ok) {
+      const data = await p.json();
+      if (!p.ok) {
         setError(
           data.error === "hold_expired"
             ? "Your hold expired. Please start again."
-            : "We couldn't confirm the booking.",
+            : data.error === "payments_not_configured"
+              ? "Online payment isn't available right now. Please try again later."
+              : "We couldn't start the payment. Please try again.",
         );
         return;
       }
+      if (data.mode !== "disabled") {
+        const { load } = await import("@cashfreepayments/cashfree-js");
+        const cashfree = await load({ mode: data.mode });
+        if (!cashfree) {
+          setError("Couldn't load the payment window. Please try again.");
+          return;
+        }
+        const result = await cashfree.checkout({
+          paymentSessionId: data.paymentSessionId,
+          redirectTarget: "_modal",
+        });
+        // Closed the popup without paying: one quick check, no retry loop.
+        if (result?.error && !result.paymentDetails) {
+          setPayPhase("confirming");
+          await settle(SETTLE_RETRIES, true);
+          return;
+        }
+      }
+      setPayPhase("confirming");
+      await settle();
+    } catch {
+      setError("Something went wrong with the payment window. Please try again.");
+    } finally {
+      setPayPhase("idle");
+      setBusy(false);
+    }
+  }
+
+  async function settle(attempt = 0, dismissed = false): Promise<void> {
+    const c = await fetch("/api/bookings/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ bookingId }),
+    });
+    const data = await c.json().catch(() => ({ error: "gateway_error" }));
+    if (c.ok) {
       setConfirmedCodes(selectedCodes);
       setTicketToken(data.ticketToken ?? null);
-      setStep(3); // Done
-    } finally {
-      setBusy(false);
+      setStep(4); // Done
+      return;
+    }
+    switch (data.error) {
+      case "payment_pending":
+      case "gateway_error":
+        if (dismissed) {
+          setError("Payment wasn't completed. Your seat is still held — pay whenever you're ready.");
+          return;
+        }
+        if (attempt < SETTLE_RETRIES) {
+          await wait(SETTLE_DELAY_MS);
+          return settle(attempt + 1);
+        }
+        setError(
+          "We're still waiting for the bank. If money was debited you'll get your ticket by email within a few minutes — or try paying again.",
+        );
+        return;
+      case "payment_failed":
+      case "payment_required":
+        setError("Payment didn't go through. Nothing was charged — please try again.");
+        return;
+      case "seat_lost":
+        setError("That seat was taken while you paid. We'll refund you in full — please pick another seat.");
+        return;
+      case "hold_expired":
+        setError("Your hold expired. Please start again.");
+        return;
+      default:
+        setError("We couldn't confirm the booking.");
     }
   }
 
@@ -302,6 +390,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
     setError(null);
     setConfirmedCodes(null);
     setTicketToken(null);
+    setPayPhase("idle");
   }
 
   const spotSummary = isDesk
@@ -577,7 +666,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                   We sent a 6-digit code to {phoneE164}. (In local dev, the code
                   prints to the server console.)
                 </p>
-                <form onSubmit={verifyAndConfirm}>
+                <form onSubmit={verifyOtp}>
                   <div className="field">
                     <label htmlFor="booking-otp">One-time code</label>
                     <input
@@ -604,10 +693,66 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                       type="submit"
                       disabled={busy || otp.length < 4 || remaining === 0}
                     >
-                      {busy ? "Confirming…" : "Verify & confirm →"}
+                      {busy ? "Checking…" : "Verify & continue →"}
                     </button>
                   </div>
                 </form>
+              </>
+            )}
+
+            {label === "Pay" && (
+              <>
+                <h2>Pay to lock it in.</h2>
+                {holdExpiresAt && remaining > 0 ? (
+                  <p className="hold-timer" aria-live="polite">
+                    {selectedCodes.length > 1 ? "Spots held" : "Spot held"} for{" "}
+                    <strong>{mmss}</strong>
+                  </p>
+                ) : (
+                  <p className="hold-timer expired">Your hold has expired.</p>
+                )}
+                <p>
+                  Your number is verified. Pay securely and your{" "}
+                  {selectedCodes.length > 1 ? "seats are" : "seat is"} confirmed the
+                  moment the bank says yes — your e-ticket arrives by email.
+                </p>
+                <div className="confirm-details">
+                  <p>
+                    {space.name}
+                    {selectedCodes.length ? ` · ${selectedCodes.join(", ")}` : ""}
+                  </p>
+                  <p>
+                    {date} · {hour}:00–{hour + duration}:00 IST
+                  </p>
+                  {quote && <p>Total to pay: {rupees(quote.totalMinor)}</p>}
+                </div>
+                <div className="step-actions">
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    onClick={restart}
+                    disabled={busy}
+                  >
+                    Start over
+                  </button>
+                  <button
+                    className="btn btn-gold"
+                    type="button"
+                    onClick={startPayment}
+                    disabled={busy || remaining === 0 || !quote}
+                  >
+                    {payPhase === "opening"
+                      ? "Opening secure checkout…"
+                      : payPhase === "confirming"
+                        ? "Confirming your payment…"
+                        : quote
+                          ? `Pay ${rupees(quote.totalMinor)} securely →`
+                          : "Pay securely →"}
+                  </button>
+                </div>
+                <p className="avail-hint">
+                  Secure payment by Cashfree · UPI, cards, net banking.
+                </p>
               </>
             )}
 
@@ -633,7 +778,7 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
                     {date} · {hour}:00–{hour + duration}:00 IST
                   </p>
                   <p>{email}</p>
-                  {quote && <p>Total paid on arrival: {rupees(quote.totalMinor)}</p>}
+                  {quote && <p>Total paid: {rupees(quote.totalMinor)}</p>}
                 </div>
                 {ticketToken && (
                   <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
@@ -727,8 +872,8 @@ export default function Booking({ initialSpace }: { initialSpace?: string }) {
               </span>
             </div>
             <p className="summary-note">
-              Availability and totals are live. Payment is collected on arrival in
-              this preview.
+              Availability and totals are live. Pay securely online to confirm
+              your seat.
             </p>
           </aside>
         </div>
