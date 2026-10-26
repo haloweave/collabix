@@ -157,7 +157,9 @@ describe("display copy", () => {
 
   test("amount and seats", () => {
     expect(ticketAmount({ totalMinor: 28320 })).toBe("₹283 · Pay at desk");
+    expect(ticketAmount({ totalMinor: 28320, paid: true })).toBe("₹283 · Paid");
     expect(ticketAmount({ totalMinor: null })).toBe("Included in membership");
+    expect(ticketAmount({ totalMinor: null, paid: true })).toBe("Included in membership");
     expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"] })).toBe("2 seats · D-03, D-04");
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"] })).toBe("1 seat · M-01");
   });

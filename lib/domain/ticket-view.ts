@@ -22,6 +22,8 @@ export type TicketView = {
   plan: string | null;
   /** null for membership holds, which carry no price. */
   totalMinor: number | null;
+  /** Settled online (a paid `payment` row); staff bookings pay at the desk. */
+  paid: boolean;
   checkedInAt: Date | null;
   checkedOutAt: Date | null;
 };
@@ -48,6 +50,7 @@ export async function getTicketView(db: Db, key: TicketKey): Promise<TicketView 
       array_agg(res.code ORDER BY res.code) AS codes,
       (array_agg(DISTINCT rp.name))[1] AS plan,
       (array_agg(r.quote_snapshot ->> 'totalMinor'))[1] AS total_minor,
+      EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid,
       max(r.checked_in_at) FILTER (WHERE r.status = 'confirmed') AS checked_in_at,
       CASE WHEN bool_and(r.checked_out_at IS NOT NULL) FILTER (WHERE r.status = 'confirmed')
         THEN max(r.checked_out_at) FILTER (WHERE r.status = 'confirmed')
@@ -75,6 +78,7 @@ export async function getTicketView(db: Db, key: TicketKey): Promise<TicketView 
     resourceCodes: Array.isArray(r.codes) ? (r.codes as string[]) : [],
     plan: (r.plan as string | null) ?? null,
     totalMinor: r.total_minor == null ? null : Number(r.total_minor),
+    paid: Boolean(r.paid),
     checkedInAt: date(r.checked_in_at),
     checkedOutAt: date(r.checked_out_at),
   };
