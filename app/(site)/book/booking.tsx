@@ -70,6 +70,9 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
+  // The window the server held. Steps after Book show this, not a window
+  // recomputed from the clock (which goes null once the start time passes).
+  const [heldWin, setHeldWin] = useState<WindowInput | null>(null);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +88,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   // and that held quote is what's charged.
   const estimate = win ? priceBooking(product, win, choice.people) : null;
   const shown = quote ?? estimate;
+  const shownWin = heldWin ?? win;
 
   const isPass = product.kind === "pass";
 
@@ -149,13 +153,22 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   }
 
   const holdErrors: Record<string, string> = {
+    "that time has already passed": "That time has just passed. Please pick another time.",
     not_enough_desks: "Not enough desks are free that day any more. Please try fewer people or another day.",
     seat_unavailable: `${product.name} was just booked for that time. Please pick another time.`,
   };
 
   async function submitDetails(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim().length < 2 || !win) return;
+    if (name.trim().length < 2) return;
+    // Re-check against the clock now, not the last render: the start time may
+    // have passed while the guest was typing.
+    const fresh = productWindow(product, choice, new Date());
+    if (!fresh.ok) {
+      setError("That time has just passed. Please pick another time.");
+      setStep(0);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -165,8 +178,8 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
         body: JSON.stringify({
           productKey: product.key,
           date: choice.date,
-          start: win?.start,
-          duration: win?.duration,
+          start: fresh.window.start,
+          duration: fresh.window.duration,
           people: isPass ? choice.people : 1,
           customerName: name.trim(),
           customerEmail: email.trim(),
@@ -181,6 +194,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       setBookingId(data.bookingId);
       setHoldExpiresAt(data.holdExpiresAt);
       setQuote(data.quote);
+      setHeldWin(fresh.window);
       setStep(2); // Verify
       await sendOtp();
     } finally {
@@ -324,6 +338,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     setBookingId(null);
     setHoldExpiresAt(null);
     setQuote(null);
+    setHeldWin(null);
     setOtp("");
     setError(null);
     setTicketToken(null);
@@ -516,7 +531,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                 </p>
                 <div className="confirm-details">
                   <p>{product.name} · {whoWhere}</p>
-                  {win && <p>{win.date} · {timeRange(win)}</p>}
+                  {shownWin && <p>{shownWin.date} · {timeRange(shownWin)}</p>}
                   {quote && <p>Total to pay: {rupees(quote.totalMinor)}</p>}
                 </div>
                 <div className="step-actions">
@@ -558,7 +573,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                 </p>
                 <div className="confirm-details">
                   <p>{product.name} · {whoWhere}</p>
-                  {win && <p>{win.date} · {timeRange(win)}</p>}
+                  {shownWin && <p>{shownWin.date} · {timeRange(shownWin)}</p>}
                   <p>{email}</p>
                   {quote && <p>Total paid: {rupees(quote.totalMinor)}</p>}
                 </div>
@@ -614,8 +629,8 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
             <div className="s-body">
               {([
                 ["Booking", product.name],
-                ["Date", win?.date ?? choice.date],
-                ["Time", win ? timeRange(win) : "Choose a time"],
+                ["Date", shownWin?.date ?? choice.date],
+                ["Time", shownWin ? timeRange(shownWin) : "Choose a time"],
                 [isPass ? "People" : "Room", isPass ? `${choice.people} · any shared desk` : product.name],
                 ...(shown?.lines ?? []).map((l): [string, ReactNode] => [
                   l.qty > 1 || product.kind === "room" ? `${l.label} × ${l.qty}` : l.label,
