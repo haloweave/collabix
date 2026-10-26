@@ -9,6 +9,7 @@
 
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -169,6 +170,42 @@ export const booking = pgTable("booking", {
     .notNull()
     .defaultNow(),
 });
+
+// One row per online payment attempt (see lib/domain/payments.ts). A booking
+// may carry several (a retry after a failed attempt is a new order). status:
+// created | paid | failed | expired | refund_due — refund_due means Cashfree
+// took the money but the seat was lost before we could confirm.
+export const payment = pgTable(
+  "payment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => booking.id),
+    // Member who started the payment, carried through so a webhook-driven
+    // settlement (no session) can still link the booking to them.
+    memberId: text("member_id"),
+    provider: text("provider").notNull().default("cashfree"),
+    orderId: text("order_id").notNull().unique(), // our id, sent to Cashfree
+    cfOrderId: text("cf_order_id"),
+    paymentSessionId: text("payment_session_id"),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull().default("INR"),
+    status: text("status").notNull().default("created"),
+    cfPaymentId: text("cf_payment_id"),
+    paymentMethod: text("payment_method"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    raw: jsonb("raw"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("payment_booking_id_idx").on(t.bookingId)],
+);
 
 // Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
 // member); staff record who they are and who they're here to see.
