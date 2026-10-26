@@ -36,7 +36,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
       {!minimal && <div className="footer-top">
         <div>
           <Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" className="flogo" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" />
-          <p style={{"maxWidth": "300px", "fontSize": ".92rem", "lineHeight": "1.7"}}>A premium managed work lounge in Banaswadi, Bengaluru. Where serious work happens.</p>
+          <p style={{"maxWidth": "300px", "fontSize": ".92rem", "lineHeight": "1.7"}}>A premium managed work lounge in Bengaluru. Where serious work happens.</p>
         </div>
         <div>
           <h5>Explore</h5>
@@ -55,7 +55,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
         </div>
       </div>}
       <div className="footer-bottom">
-        <span>COLLABIX © <span data-year="">2026</span> · Work Lounge · Banaswadi, Bengaluru</span>
+        <span>COLLABIX © <span data-year="">2026</span> · Work Lounge · Bengaluru</span>
       </div>
     </div>
   </footer>

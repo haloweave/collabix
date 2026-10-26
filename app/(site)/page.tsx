@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Banaswadi, Bengaluru"};
+export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Bengaluru"};
 export default function Page() { return <>
 
 
@@ -14,7 +14,7 @@ export default function Page() { return <>
     <div className="hero-scrim"></div>
     <div className="wrap">
       <div className="hero-inner">
-        <span className="eyebrow reveal">Work Lounge · Banaswadi, Bengaluru</span>
+        <span className="eyebrow reveal">Work Lounge · Bengaluru</span>
         <h1 className="display reveal d1">Where serious<br />work <em>happens.</em></h1>
         <p className="lead hero-sub reveal d2">A premium managed work lounge built for growth-stage founders, enterprise teams and senior professionals. Restrained. Purposeful. Ready when you are.</p>
         <div className="hero-cta reveal d3">
@@ -170,7 +170,7 @@ export default function Page() { return <>
       <div className="loc">
         <div className="reveal">
           <span className="eyebrow">04 · Find us</span>
-          <h2 className="section-title" style={{"margin": "1rem 0 1.6rem"}}>Banaswadi, Bengaluru.</h2>
+          <h2 className="section-title" style={{"margin": "1rem 0 1.6rem"}}>Bengaluru.</h2>
           <div className="addr-row"><span className="lab">Address</span><span className="val">Collabix Work Lounge, 261, Ashwini Arcade, 3rd Floor, 100 Feet Road, HRBR Layout,<br />Bengaluru, Karnataka 560043</span></div>
           <div className="addr-row"><span className="lab">Hours</span><span className="val">Open 24/7, every day</span></div>
           <div className="addr-row"><span className="lab">Enquiries</span><span className="val"><a href="tel:+919632771444">+91 96327 71444</a> &nbsp;·&nbsp; <a href="mailto:connect@collabix.co.in">connect@collabix.co.in</a></span></div>

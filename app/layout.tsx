@@ -19,12 +19,12 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Collabix · Work Lounge",
   description:
-    "Collabix Work Lounge — a premium managed office and coworking space in Banaswadi, Bengaluru. Where serious work happens.",
+    "Collabix Work Lounge — a premium managed office and coworking space in Bengaluru. Where serious work happens.",
   metadataBase: new URL("https://collabix.co.in"),
   openGraph: {
     title: "Collabix · Work Lounge",
     description:
-      "A premium managed work lounge in Banaswadi, Bengaluru. Where serious work happens.",
+      "A premium managed work lounge in Bengaluru. Where serious work happens.",
     type: "website",
   },
 };

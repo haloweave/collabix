@@ -4,8 +4,8 @@ import { getSessionUser } from "@/lib/admin/auth";
 import "./home.css";
 export const metadata: Metadata = {
  title: "Collabix · Work Lounge",
- description: "Explore hot desks, dedicated desks, private cabins and meeting rooms at Collabix, Banaswadi, Bengaluru.",
- openGraph: { title: "Collabix · Work Lounge", description: "A premium managed work lounge in Banaswadi, Bengaluru. Where serious work happens." },
+ description: "Explore hot desks, dedicated desks, private cabins and meeting rooms at Collabix, Bengaluru.",
+ openGraph: { title: "Collabix · Work Lounge", description: "A premium managed work lounge in Bengaluru. Where serious work happens." },
 };
 export default async function Layout({children}: {children: React.ReactNode}) {
  // Auth-aware header: "Login" for visitors, "My account" for anyone signed in
