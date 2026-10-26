@@ -5,15 +5,19 @@ import { phoneNumber } from "better-auth/plugins/phone-number";
 import { db } from "./db/client";
 import * as authSchema from "./db/auth-schema";
 import { sendEmail } from "./email";
+import { sendOtpSms, toIndianMobile } from "./sms";
 
-// Passwordless auth: email OTP / magic link + phone SMS OTP.
-// Dev transport logs the OTP to the server console. Before launch, wire
-// sendVerificationOTP to transactional email (in the proposal) and sendOTP to
-// an SMS provider (NOT in the proposal — an added cost; see /proposal).
+// Passwordless auth. Sign-in and checkout verify a mobile number by SMS code
+// (Fast2SMS, lib/sms.ts). The email-OTP plugin stays for staff tooling but the
+// public login only offers mobile.
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
+  // Every code is a paid SMS: at most 3 send requests per address per 10 minutes.
+  rateLimit: {
+    customRules: { "/phone-number/send-otp": { window: 600, max: 3 } },
+  },
   user: {
     additionalFields: {
       // Surfaced on the session user so route guards can gate /admin. `input:
@@ -44,8 +48,10 @@ export const auth = betterAuth({
         getTempEmail: (phone) => `${phone}@phone.collabix.local`,
         getTempName: (phone) => phone,
       },
+      // Indian mobiles only: anything else is refused before an SMS is paid for.
+      phoneNumberValidator: (phone) => toIndianMobile(phone) !== null,
       async sendOTP({ phoneNumber, code }) {
-        console.log(`[sms-otp] code for ${phoneNumber}: ${code}`);
+        await sendOtpSms(phoneNumber, code);
       },
     }),
   ],
