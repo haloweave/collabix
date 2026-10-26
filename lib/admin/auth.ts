@@ -60,8 +60,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 }
 
 /**
- * Guard for every admin route. Bounces anonymous visitors to the sign-in page
- * and non-staff accounts to the "no access" screen. Returns the staff user so
+ * Guard for every admin route. Bounces anonymous visitors to /login; a signed-in
+ * non-staff account is sent there too, and /login forwards it to its own dashboard. Returns the staff user so
  * pages/layouts can greet them.
  */
 export async function requireStaff(): Promise<SessionUser> {
@@ -72,8 +72,8 @@ export async function requireStaff(): Promise<SessionUser> {
     return user && isStaff(user.role) ? user : DEV_ADMIN;
   }
   const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
-  if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  if (!user) redirect("/login");
+  if (!isStaff(user.role)) redirect("/login");
   return user;
 }
 
@@ -87,8 +87,8 @@ export async function requireAdminAccess(): Promise<SessionUser> {
     return user && isStaff(user.role) ? user : DEV_ADMIN;
   }
   const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
-  if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  if (!user) redirect("/login");
+  if (!isStaff(user.role)) redirect("/login");
   if (user.role === "reception") redirect("/staff");
   return user;
 }
@@ -103,8 +103,8 @@ export async function requireManager(): Promise<SessionUser> {
     return user && isManager(user.role) ? user : DEV_ADMIN;
   }
   const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
-  if (!isStaff(user.role)) redirect("/admin/login?error=forbidden");
+  if (!user) redirect("/login");
+  if (!isStaff(user.role)) redirect("/login");
   if (!isManager(user.role)) redirect("/admin");
   return user;
 }

@@ -40,7 +40,7 @@ async function main() {
       emailVerified: true,
       role: "owner",
     });
-    console.log(`Created owner account ${email}. Sign in at /admin/login.`);
+    console.log(`Created owner account ${email}. Sign in at /login.`);
   }
 
   await sql.end();

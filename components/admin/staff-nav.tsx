@@ -22,7 +22,7 @@ export function StaffNav() {
 
   async function signOut() {
     await authClient.signOut().catch(() => {});
-    router.push("/admin/login");
+    router.push("/login");
   }
 
   return (

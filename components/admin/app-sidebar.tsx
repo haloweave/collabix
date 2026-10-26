@@ -79,7 +79,7 @@ export function AppSidebar({
 
   async function signOut() {
     await authClient.signOut();
-    router.push("/admin/login");
+    router.push("/login");
     router.refresh();
   }
 
