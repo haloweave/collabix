@@ -1,10 +1,11 @@
 import { money } from "@/lib/spaces";
-import type { TariffRow, TariffSection } from "@/lib/tariff";
+import type { TariffSection } from "@/lib/tariff";
 
 const unitLabel: Record<TariffSection["unit"], string> = { month: "/ month", hour: "/ hour", day: "/ day", service: "" };
 
-/** One tariff section as a price table. Pass `rows` to show a subset of the section. */
-export function TariffTable({ section, rows = section.rows }: { section: TariffSection; rows?: TariffRow[] }) {
+/** One tariff section as a price table. */
+export function TariffTable({ section }: { section: TariffSection }) {
+  const { rows } = section;
   const hasEarly = rows.some((r) => r.earlyBird != null);
   const hasAnnual = rows.some((r) => r.annual != null);
   const per = unitLabel[section.unit];
