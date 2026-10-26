@@ -154,6 +154,7 @@
   height: 76px;
 }
 .collabix-site .site-header .logo img { height: 30px; width: auto; }
+@media (min-width: 821px) { .collabix-site .site-header .logo img { height: 42px; } }
 .collabix-site .site-header.solid {
   background: rgba(11,31,58,0.92);
   backdrop-filter: blur(12px);
