@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { classifyIdentifier, dashboardFor, type LoginIdentifier } from "@/lib/auth/login-routing";
 
-// One sign-in for members and staff. An email runs the email-OTP flow, a
-// mobile number the SMS-OTP flow (the same one checkout uses). After the code
-// is accepted we read the session's role and go to that person's dashboard.
+// One sign-in for members and staff, by mobile number only: an SMS code (the
+// same flow checkout uses). After the code is accepted we read the session's
+// role and go to that person's dashboard.
 export function UniversalLoginForm() {
   const router = useRouter();
   const [raw, setRaw] = useState("");
@@ -19,25 +19,21 @@ export function UniversalLoginForm() {
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
     const parsed = classifyIdentifier(raw);
-    if (!parsed) {
-      toast.error("Enter your email address or 10-digit mobile number.");
+    if (!parsed || parsed.kind !== "phone") {
+      toast.error("Enter your 10-digit mobile number.");
       return;
     }
     setBusy(true);
     try {
-      if (parsed.kind === "email") {
-        const { error } = await authClient.emailOtp.sendVerificationOtp({ email: parsed.value, type: "sign-in" });
-        if (error) throw new Error(error.message ?? "Could not send the code.");
-      } else {
-        const r = await fetch("/api/auth/phone-number/send-otp", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ phoneNumber: parsed.value }),
-        });
-        if (!r.ok) throw new Error("Could not send the code. Check the number.");
-      }
+      const r = await fetch("/api/auth/phone-number/send-otp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phoneNumber: parsed.value }),
+      });
+      if (r.status === 429) throw new Error("Too many codes requested. Please wait a few minutes and try again.");
+      if (!r.ok) throw new Error("Could not send the code. Check the number.");
       setId(parsed);
-      toast.success(parsed.kind === "email" ? "Code sent. Check your email." : "Code sent by SMS.");
+      toast.success("Code sent by SMS.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send the code.");
     } finally {
@@ -50,17 +46,12 @@ export function UniversalLoginForm() {
     if (!id || code.trim().length < 4) return;
     setBusy(true);
     try {
-      if (id.kind === "email") {
-        const { error } = await authClient.signIn.emailOtp({ email: id.value, otp: code.trim() });
-        if (error) throw new Error(error.message ?? "That code didn't match.");
-      } else {
-        const r = await fetch("/api/auth/phone-number/verify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ phoneNumber: id.value, code: code.trim() }),
-        });
-        if (!r.ok) throw new Error("That code didn't match. Please try again.");
-      }
+      const r = await fetch("/api/auth/phone-number/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phoneNumber: id.value, code: code.trim() }),
+      });
+      if (!r.ok) throw new Error("That code didn't match. Please try again.");
       const { data } = await authClient.getSession();
       const role = (data?.user as { role?: string } | undefined)?.role;
       router.push(dashboardFor(role));
@@ -76,14 +67,15 @@ export function UniversalLoginForm() {
       <form onSubmit={sendCode} className="login-form">
         <div className="login-field">
           <label htmlFor="login-id" className="login-label">
-            Email or mobile number
+            Mobile number
           </label>
           <input
             id="login-id"
             className="login-input"
-            autoComplete="username"
-            inputMode="email"
-            placeholder="you@example.com or 98765 43210"
+            type="tel"
+            autoComplete="tel"
+            inputMode="tel"
+            placeholder="98765 43210"
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             autoFocus
@@ -119,7 +111,7 @@ export function UniversalLoginForm() {
       </button>
       <p className="login-hint">
         <button type="button" onClick={() => { setId(null); setCode(""); }} style={{ background: "none", border: 0, padding: 0, color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" }}>
-          Use a different email or number
+          Use a different number
         </button>
       </p>
     </form>

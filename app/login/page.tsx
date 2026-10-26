@@ -69,7 +69,7 @@ export default async function LoginPage() {
           <span className="login-eyebrow">Welcome back</span>
           <h2 className="login-card__title">Sign in</h2>
           <p className="login-card__desc">
-            Enter the email or mobile number on your account. We&#39;ll send a one-time code — no password needed.
+            Enter the mobile number on your account. We&#39;ll text you a one-time code — no password needed.
           </p>
 
           <UniversalLoginForm />
