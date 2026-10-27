@@ -538,16 +538,8 @@ export function CheckoutSteps({
 
       {label === "Pay" && (
         <>
-          <h2>Pay to lock it in.</h2>
           {timer}
-          <p>
-            Your booking is confirmed the moment the bank says yes, and your
-            e-ticket arrives by email.
-          </p>
-          <div className="confirm-details">
-            {details}
-            {quote && <p>Total to pay: {rupees(quote.totalMinor)}</p>}
-          </div>
+          <div className="confirm-details">{details}</div>
           <div className="step-actions">
             <button
               className="btn btn-outline"
@@ -573,7 +565,8 @@ export function CheckoutSteps({
             </button>
           </div>
           <p className="avail-hint">
-            Secure payment by Cashfree · UPI, cards, net banking.
+            Secure payment by Cashfree · UPI, cards, net banking. Your
+            e-ticket arrives by email.
           </p>
         </>
       )}
@@ -583,13 +576,12 @@ export function CheckoutSteps({
           <h2>You&#39;re booked in.</h2>
           <p>
             {account
-              ? `Thanks, ${co.name}. Your booking is confirmed and saved to your account.`
-              : `Thanks, ${co.name}. Your booking is confirmed and your account is set up — next time, just verify your number to book.`}
+              ? `Thanks, ${co.name}. It's saved to your account.`
+              : `Thanks, ${co.name}. Your account is set up, so next time just verify your number to book.`}
           </p>
           <div className="confirm-details">
             {details}
             <p>{co.email}</p>
-            {quote && <p>Total paid: {rupees(quote.totalMinor)}</p>}
           </div>
           {co.ticketToken && (
             <div style={{ marginTop: "1.25rem", textAlign: "center" }}>
