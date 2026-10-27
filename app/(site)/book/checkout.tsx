@@ -630,7 +630,6 @@ export function BookingSummary({
   return (
     <aside className={`summary ${open ? "open" : ""}`} aria-label="Booking summary">
       <div className="s-head">
-        <span className="eyebrow">Your workday</span>
         <h3>Booking summary</h3>
       </div>
       <div className="s-body" id="summary-breakdown">
@@ -655,10 +654,6 @@ export function BookingSummary({
           <span aria-hidden="true">{open ? "▾" : "▴"}</span>
         </button>
       </div>
-      <p className="summary-note">
-        Prices are from the Collabix tariff, including 18% GST. Pay
-        securely online to confirm.
-      </p>
     </aside>
   );
 }
