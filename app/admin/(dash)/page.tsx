@@ -71,7 +71,7 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-6">
       <StatGridSkeleton count={4} />
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCardSkeleton />
         <StatCardSkeleton />
       </div>
@@ -127,7 +127,7 @@ async function DashboardBody() {
         />
       </div>
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard
           title="Revenue · today"
           value={rupees(stats.revenueTodayMinor)}
