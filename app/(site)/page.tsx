@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Bengaluru"};
-export default function Page() { return <>
+export default function Page() { return <div className="home">
 
 
   
@@ -193,4 +193,4 @@ export default function Page() { return <>
 
   
 
-</>; }
+</div>; }

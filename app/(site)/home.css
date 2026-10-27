@@ -962,6 +962,25 @@
 .collabix-site .theme-toggle .ic-moon, .collabix-site .on-light { display: none; }
 @media (max-width: 820px) { .collabix-site .bar-end { margin-left: auto; } }
 
+/* Homepage type scale — a notch larger than the inner pages. */
+.collabix-site .home .lead { font-size: clamp(1.12rem, 1.7vw, 1.32rem); }
+.collabix-site .home .section-title { font-size: clamp(2rem, 3.8vw, 3rem); }
+.collabix-site .home .display { font-size: clamp(2.9rem, 6.6vw, 4.9rem); }
+.collabix-site .home .eyebrow { font-size: .78rem; }
+.collabix-site .home .hero-meta .item .k { font-size: 1.7rem; }
+.collabix-site .home .hero-meta .item .l { font-size: .8rem; }
+.collabix-site .home .pillar h3 { font-size: 1.4rem; }
+.collabix-site .home .pillar p { font-size: 1rem; }
+.collabix-site .home .space-card h3 { font-size: 1.65rem; }
+.collabix-site .home .space-card p { font-size: .96rem; }
+.collabix-site .home .space-card .price .amt { font-size: 1.25rem; }
+.collabix-site .home .amenity-strip h4 { font-size: 1.1rem; }
+.collabix-site .home .amenity-strip p { font-size: .92rem; }
+.collabix-site .home .cta-band h2 { font-size: clamp(1.9rem, 3.3vw, 2.9rem); }
+.collabix-site .home .addr-row .val { font-size: 1.06rem; }
+.collabix-site .home .link-arw { font-size: .98rem; }
+.collabix-site .home .btn { font-size: .92rem; }
+
 /* ============================================================
    LIGHT THEME — html[data-theme="light"], set by the header switch.
    The ivory sections already are light; this re-skins the navy
