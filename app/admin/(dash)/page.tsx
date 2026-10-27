@@ -5,7 +5,10 @@ import {
   Clock,
   CalendarCheck,
   IndianRupee,
+  Plus,
+  ScanLine,
   TrendingUp,
+  UserCheck,
 } from "lucide-react";
 import {
   getDashboardStats,
@@ -14,6 +17,7 @@ import {
 } from "@/lib/admin/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { StatCard } from "@/components/admin/stat-card";
+import { WelcomeBand } from "@/components/admin/welcome-band";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
 import {
   ChartSkeleton,
@@ -35,12 +39,26 @@ export const dynamic = "force-dynamic";
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Today&apos;s occupancy and revenue at a glance.
-        </p>
-      </div>
+      <WelcomeBand
+        eyebrow={new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Kolkata",
+  })}
+        title="Today at Collabix"
+        subtitle="Occupancy, revenue and the next sessions across the lounge, at a glance."
+      >
+        <Link href="/admin/bookings/new" className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-navy shadow-[0_6px_20px_rgba(200,155,83,0.28)] transition hover:-translate-y-0.5 hover:bg-gold-light">
+          <Plus className="size-4" /> New booking
+        </Link>
+        <Link href="/admin/reception" className="inline-flex items-center gap-2 rounded-md border border-ivory/25 px-4 py-2 text-sm font-medium text-ivory transition hover:border-gold hover:text-white">
+          <UserCheck className="size-4" /> Reception
+        </Link>
+        <Link href="/admin/scan" className="inline-flex items-center gap-2 rounded-md border border-ivory/25 px-4 py-2 text-sm font-medium text-ivory transition hover:border-gold hover:text-white">
+          <ScanLine className="size-4" /> Scan
+        </Link>
+      </WelcomeBand>
 
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardBody />
@@ -143,7 +161,7 @@ async function DashboardBody() {
             <Link
               key={b.id}
               href={`/admin/bookings/${b.id}`}
-              className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+              className="flex items-center justify-between rounded-lg border border-l-2 border-l-transparent p-3 transition-colors hover:border-l-gold hover:bg-accent/60"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{b.customerName}</p>
@@ -153,10 +171,10 @@ async function DashboardBody() {
                 </p>
               </div>
               <div className="flex items-center gap-3 pl-3">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-semibold tabular-nums text-primary">
                   {rupees(b.totalMinor)}
                 </span>
-                <Badge variant="secondary">Confirmed</Badge>
+                <Badge className="border-transparent bg-gold/15 text-[#8a6a32] hover:bg-gold/15">Confirmed</Badge>
               </div>
             </Link>
           ))}
