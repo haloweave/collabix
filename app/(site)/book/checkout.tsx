@@ -338,7 +338,13 @@ export function CheckoutSteps({
   onRestart: () => void;
 }) {
   const label = STEPS[co.step];
-  const { quote, remaining, mmss, busy, payPhase } = co;
+  const { quote, remaining, mmss, busy, payPhase, account } = co;
+  // A signed-in customer whose account has everything sees who they're
+  // booking as instead of the form, unless they choose to edit it.
+  const [editing, setEditing] = useState(false);
+  const known =
+    !!account?.name && !!account.email && !!account.phone && co.phoneVerified &&
+    co.name === account.name && co.email === account.email;
   const timer =
     co.holdExpiresAt && remaining > 0 ? (
       <p className="hold-timer" aria-live="polite">
@@ -350,13 +356,45 @@ export function CheckoutSteps({
 
   return (
     <>
-      {label === "Details" && (
+      {label === "Details" && known && !editing && (
         <>
           <h2>Your workday, at a glance.</h2>
-          <p>
-            We&#39;ll hold your booking and send a one-time code to your
-            phone to confirm — no password needed.
-          </p>
+          <p>You&#39;re signed in, so there&#39;s no code to enter. Check your details and go ahead.</p>
+          <form onSubmit={onSubmitDetails}>
+            <div className="confirm-details">
+              <p>Booking as {co.name}</p>
+              <p>{co.email}</p>
+              <p>{co.phoneE164}</p>
+            </div>
+            <p className="avail-hint">
+              Not right?{" "}
+              <button type="button" className="link-btn" onClick={() => setEditing(true)}>
+                Edit details
+              </button>
+            </p>
+            <div className="step-actions">
+              <button className="btn btn-outline" type="button" onClick={() => co.setStep(0)}>
+                ← Back
+              </button>
+              <button className="btn btn-gold" type="submit" disabled={busy}>
+                {busy ? "Holding your booking…" : "Hold & pay →"}
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {label === "Details" && !(known && !editing) && (
+        <>
+          <h2>Your workday, at a glance.</h2>
+          {co.phoneVerified ? (
+            <p>You&#39;re signed in, so there&#39;s no code to enter.</p>
+          ) : (
+            <p>
+              We&#39;ll hold your booking and send a one-time code to your
+              phone to confirm — no password needed.
+            </p>
+          )}
           <form onSubmit={onSubmitDetails}>
             <div className="field">
               <label htmlFor="booking-name">Full name</label>
@@ -411,7 +449,11 @@ export function CheckoutSteps({
                   co.phone.replace(/\D/g, "").length < 10
                 }
               >
-                {busy ? "Holding your booking…" : "Hold & send code →"}
+                {busy
+                  ? "Holding your booking…"
+                  : co.phoneVerified
+                    ? "Hold & pay →"
+                    : "Hold & send code →"}
               </button>
             </div>
           </form>
@@ -507,8 +549,9 @@ export function CheckoutSteps({
         <div className="confirm">
           <h2>You&#39;re booked in.</h2>
           <p>
-            Thanks, {co.name}. Your booking is confirmed and your account is
-            set up — next time, just verify your number to book.
+            {account
+              ? `Thanks, ${co.name}. Your booking is confirmed and saved to your account.`
+              : `Thanks, ${co.name}. Your booking is confirmed and your account is set up — next time, just verify your number to book.`}
           </p>
           <div className="confirm-details">
             {details}
