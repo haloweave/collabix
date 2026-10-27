@@ -9,6 +9,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { amountInWords } from "./amount-in-words";
 import type { InvoiceDoc } from "./document";
 import { SELLER } from "./seller";
+import { paymentMethodLabel } from "./payment-method";
 
 const hex = (h: string): RGB =>
   rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
@@ -33,20 +34,6 @@ export const inr = (minor: number) =>
 
 const istDay = (d: Date) =>
   new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(d);
-
-const METHOD: Record<string, string> = {
-  upi: "UPI",
-  card: "Card",
-  credit_card: "Credit card",
-  debit_card: "Debit card",
-  netbanking: "Net banking",
-  net_banking: "Net banking",
-  app: "Wallet",
-  wallet: "Wallet",
-};
-
-export const paymentMethodLabel = (m: string | null | undefined) =>
-  m ? (METHOD[m.toLowerCase()] ?? m.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : null;
 
 /** Break text into lines no wider than `width` at the given size. */
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
