@@ -1,7 +1,7 @@
 import "server-only";
 import { sql } from "@/lib/db/client";
 import type { Quote } from "@/lib/domain/booking";
-import { rateForCode } from "@/lib/tariff";
+import { rateForCode, TERM_PLAN_KEYS } from "@/lib/tariff";
 
 // All admin reads live here as parameterised SQL. Money is integer paise; a
 // booking's `quote_snapshot.totalMinor` is identical across its reservations and
@@ -685,67 +685,64 @@ export async function getBookingsInRange(
   }));
 }
 
-export type MembershipPlanRow = {
-  id: string;
-  name: string;
-  priceMinor: number;
-  includedHours: number;
-  overageRateMinor: number;
-  active: boolean;
-  subscribers: number;
+export type MembershipStatus = "active" | "upcoming" | "ended";
+
+/** A membership: one monthly or annual pass (a confirmed term booking of one
+ * desk or cabin), bought online or recorded by staff. */
+export type MembershipRow = {
+  bookingId: string;
+  memberId: string | null;
+  customerName: string;
+  customerEmail: string;
+  planName: string;
+  space: string;
+  months: number;
+  startAt: Date;
+  endAt: Date;
+  totalMinor: number;
+  status: MembershipStatus;
 };
 
-export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
-  const rows = await sql`
-    SELECT mp.id, mp.name, mp.price_minor, mp.included_hours, mp.overage_rate_minor,
-      mp.active,
-      (SELECT count(*)::int FROM member_subscription s
-        WHERE s.plan_id = mp.id AND s.status = 'active') AS subscribers
-    FROM membership_plan mp ORDER BY mp.price_minor`;
-  return rows.map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    name: r.name as string,
-    priceMinor: n(r.price_minor),
-    includedHours: n(r.included_hours),
-    overageRateMinor: n(r.overage_rate_minor),
-    active: Boolean(r.active),
-    subscribers: n(r.subscribers),
-  }));
+function membershipStatus(startAt: Date, endAt: Date, now: Date): MembershipStatus {
+  if (endAt <= now) return "ended";
+  return startAt > now ? "upcoming" : "active";
 }
 
-export type SubscriptionRow = {
-  id: string;
-  memberId: string;
-  memberName: string | null;
-  memberEmail: string | null;
-  planName: string;
-  includedHours: number;
-  hoursUsed: number;
-  priceMinor: number;
-  periodEnd: Date;
-};
-
-export async function listSubscriptions(): Promise<SubscriptionRow[]> {
+/** Memberships, newest term first. Pass a memberId for one member's history. */
+export async function listMemberships(opts: { memberId?: string } = {}): Promise<MembershipRow[]> {
+  const memberId = opts.memberId ?? null;
   const rows = await sql`
-    SELECT s.id, s.member_id, u.name AS member_name, u.email AS member_email,
-      mp.name AS plan_name, mp.included_hours, s.hours_used, mp.price_minor,
-      s.period_end
-    FROM member_subscription s
-    JOIN membership_plan mp ON mp.id = s.plan_id
-    LEFT JOIN "user" u ON u.id = s.member_id
-    WHERE s.status = 'active'
-    ORDER BY s.created_at DESC`;
-  return rows.map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    memberId: r.member_id as string,
-    memberName: (r.member_name as string) ?? null,
-    memberEmail: (r.member_email as string) ?? null,
-    planName: r.plan_name as string,
-    includedHours: n(r.included_hours),
-    hoursUsed: n(r.hours_used),
-    priceMinor: n(r.price_minor),
-    periodEnd: new Date(r.period_end as string),
-  }));
+    SELECT b.id AS booking_id, b.member_id, b.customer_name, b.customer_email,
+      rp.name AS plan_name, res.code AS space, r.start_at, r.end_at,
+      COALESCE((r.quote_snapshot->>'months')::int, 0) AS months,
+      COALESCE((r.quote_snapshot->>'totalMinor')::bigint, 0) AS total_minor
+    FROM reservation r
+    JOIN booking b ON b.id = r.booking_id
+    JOIN rate_plan rp ON rp.id = r.rate_plan_id
+    JOIN resource res ON res.id = r.resource_id
+    WHERE r.status = 'confirmed' AND b.status = 'active'
+      AND rp.key = ANY(${[...TERM_PLAN_KEYS]})
+      AND (${memberId}::text IS NULL OR b.member_id = ${memberId})
+    ORDER BY r.start_at DESC
+    LIMIT 500`;
+  const now = new Date();
+  return rows.map((r: Record<string, unknown>) => {
+    const startAt = new Date(r.start_at as string);
+    const endAt = new Date(r.end_at as string);
+    return {
+      bookingId: r.booking_id as string,
+      memberId: (r.member_id as string) ?? null,
+      customerName: r.customer_name as string,
+      customerEmail: r.customer_email as string,
+      planName: r.plan_name as string,
+      space: r.space as string,
+      months: n(r.months),
+      startAt,
+      endAt,
+      totalMinor: n(r.total_minor),
+      status: membershipStatus(startAt, endAt, now),
+    };
+  });
 }
 
 export type MemberSubscription = {

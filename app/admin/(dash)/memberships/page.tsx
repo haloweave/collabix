@@ -1,145 +1,81 @@
 import Link from "next/link";
+import { BadgeCheck, CalendarClock, Hourglass } from "lucide-react";
 import { requireManager } from "@/lib/admin/auth";
-import { listMembershipPlans, listSubscriptions } from "@/lib/admin/queries";
-import { rupees, istDate } from "@/lib/admin/format";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  MembershipPlanCreate,
-  MembershipPlanEditor,
-} from "@/components/admin/membership-plans";
+import { listMemberships, type MembershipRow, type MembershipStatus } from "@/lib/admin/queries";
+import { MembershipTable } from "@/components/admin/membership-table";
+import { StatCard } from "@/components/admin/stat-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
-export default async function MembershipsPage() {
+const FILTERS: { key: MembershipStatus | "all"; label: string }[] = [
+  { key: "active", label: "Active" },
+  { key: "upcoming", label: "Starts soon" },
+  { key: "ended", label: "Ended" },
+  { key: "all", label: "All" },
+];
+
+const EMPTY: Record<MembershipStatus | "all", string> = {
+  active: "No active memberships.",
+  upcoming: "No memberships starting soon.",
+  ended: "No ended memberships.",
+  all: "No memberships yet. They appear here when someone buys a monthly or annual pass.",
+};
+
+function summarize(rows: MembershipRow[]) {
+  const in30Days = Date.now() + 30 * 86_400_000;
+  const active = rows.filter((m) => m.status === "active");
+  return {
+    active: active.length,
+    endingSoon: active.filter((m) => m.endAt.getTime() <= in30Days).length,
+    upcoming: rows.filter((m) => m.status === "upcoming").length,
+  };
+}
+
+// Memberships are the monthly and annual passes sold on /book/passes: each one
+// holds a desk or cabin for its whole term.
+export default async function MembershipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   await requireManager();
-  const [plans, subs] = await Promise.all([
-    listMembershipPlans(),
-    listSubscriptions(),
-  ]);
+  const sp = await searchParams;
+  const filter = FILTERS.find((f) => f.key === sp.status)?.key ?? "active";
+  const all = await listMemberships();
+  const rows = filter === "all" ? all : all.filter((m) => m.status === filter);
+
+  const { active, endingSoon, upcoming } = summarize(all);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Memberships</h1>
         <p className="text-sm text-muted-foreground">
-          Monthly plans with an included-hours allowance. Assign a plan to a
-          member from their profile.
+          Monthly and annual passes. Each one holds a desk or cabin for its whole term.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Plans</CardTitle>
-          <CardDescription>Monthly fee and included hours.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <MembershipPlanCreate />
-          <div className="divide-y border-t">
-            {plans.length === 0 && (
-              <p className="py-4 text-sm text-muted-foreground">
-                No plans yet. Add one above.
-              </p>
-            )}
-            {plans.map((p) => (
-              <MembershipPlanEditor key={p.id} plan={p} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard title="Active" value={String(active)} hint="Members on a pass today" icon={BadgeCheck} />
+        <StatCard title="Ending in 30 days" value={String(endingSoon)} hint="Due for renewal" icon={Hourglass} />
+        <StatCard title="Starts soon" value={String(upcoming)} hint="Paid, not started yet" icon={CalendarClock} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <Button key={f.key} asChild size="sm" variant={f.key === filter ? "default" : "outline"}>
+            <Link href={f.key === "active" ? "/admin/memberships" : `/admin/memberships?status=${f.key}`}>
+              {f.label}
+            </Link>
+          </Button>
+        ))}
+      </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Active subscriptions</CardTitle>
-          <CardDescription>{subs.length} active.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Mobile: subscription cards */}
-          <div className="divide-y border-t md:hidden">
-            {subs.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No active subscriptions.
-              </p>
-            )}
-            {subs.map((s) => (
-              <div key={s.id} className="flex items-start justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <Link
-                    href={`/admin/members/${s.memberId}`}
-                    className="font-medium hover:underline"
-                  >
-                    {s.memberName ?? s.memberEmail ?? "—"}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {s.planName} · {rupees(s.priceMinor)}/mo · renews{" "}
-                    {istDate(s.periodEnd)}
-                  </p>
-                </div>
-                <span className="shrink-0 text-sm tabular-nums">
-                  {s.hoursUsed}/{s.includedHours}h
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <Table className="hidden md:table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead className="text-center">Usage</TableHead>
-                <TableHead>Renews</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subs.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="py-8 text-center text-sm text-muted-foreground"
-                  >
-                    No active subscriptions.
-                  </TableCell>
-                </TableRow>
-              )}
-              {subs.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>
-                    <Link
-                      href={`/admin/members/${s.memberId}`}
-                      className="font-medium hover:underline"
-                    >
-                      {s.memberName ?? s.memberEmail ?? "—"}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {s.planName}
-                    <span className="text-muted-foreground">
-                      {" "}
-                      · {rupees(s.priceMinor)}/mo
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center text-sm">
-                    {s.hoursUsed}/{s.includedHours}h
-                  </TableCell>
-                  <TableCell className="text-sm">{istDate(s.periodEnd)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="pt-6">
+          <MembershipTable rows={rows} empty={EMPTY[filter]} />
         </CardContent>
       </Card>
     </div>
