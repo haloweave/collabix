@@ -105,7 +105,7 @@ export default async function ReportsPage({
 
 function ReportSummarySkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
       {Array.from({ length: 3 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
@@ -127,34 +127,34 @@ async function ReportSummary({
 }) {
   const report = await dataPromise;
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
             Revenue
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-2xl font-semibold">
+        <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
           {rupees(report.totalRevenueMinor)}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
             Bookings
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-2xl font-semibold">
+        <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
           {report.totalBookings}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
             Seats booked
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-2xl font-semibold">
+        <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
           {report.totalSeats}
         </CardContent>
       </Card>
