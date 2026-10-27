@@ -99,7 +99,7 @@ export function AppSidebar({
             className="h-7 w-auto"
             priority
           />
-          <span className="rounded border border-sidebar-primary/40 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.2em] text-sidebar-primary">
+          <span className="font-mono text-[0.6rem] uppercase leading-none tracking-[0.24em] text-sidebar-primary">
             Admin
           </span>
         </Link>
