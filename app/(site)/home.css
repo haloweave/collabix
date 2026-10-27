@@ -253,6 +253,8 @@
 }
 .collabix-site .scroll-cue .dot { width: 1px; height: 34px; background: linear-gradient(var(--gold), transparent); animation: cue 2.2s var(--ease) infinite; }
 @keyframes cue { 0%,100%{opacity:.3; transform:scaleY(.6)} 50%{opacity:1; transform:scaleY(1)} }
+/* On phones the hero runs past the screen, so the cue would sit on the stats. */
+@media (max-width: 820px) { .collabix-site .scroll-cue { display: none; } }
 
 /* section header block */
 .collabix-site .sec-head { max-width: 640px; margin-bottom: clamp(2.4rem, 5vw, 4rem); }
