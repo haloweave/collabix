@@ -95,6 +95,20 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     };
   }, [step, availKey, setError]);
 
+  // Mobile browsers restore a page from the back/forward cache exactly as it
+  // was left, so someone returning to /book could land on the room they tried
+  // last time. Back on the Book step, start again from the link's product
+  // (Full Day Pass by default).
+  useEffect(() => {
+    function onShow(e: PageTransitionEvent) {
+      if (!e.persisted || step !== 0) return;
+      setChoice(initialChoice(initialProduct));
+      setAvail(null);
+    }
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [step, initialProduct]);
+
   const canContinue =
     label === "Book" && !!win && free != null && (isPass ? free >= choice.people : free >= 1);
 
