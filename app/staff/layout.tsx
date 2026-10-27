@@ -19,7 +19,7 @@ export default async function StaffLayout({
   return (
     <div className="admin-scope min-h-screen">
       <StaffNav />
-      <main className="mx-auto max-w-5xl p-4 md:p-8">{children}</main>
+      <main className="mx-auto max-w-5xl p-4 pb-24 md:p-8">{children}</main>
       <Toaster />
     </div>
   );

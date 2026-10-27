@@ -45,13 +45,6 @@ export default function StaffHome() {
       >
         <StaffHomeBody />
       </Suspense>
-
-      <Link
-        href="/staff/scan"
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gold px-5 py-3 font-semibold text-navy shadow-[0_8px_22px_rgba(200,155,83,0.44)] md:hidden"
-      >
-        <ScanLine className="size-5" /> Scan
-      </Link>
     </div>
   );
 }
