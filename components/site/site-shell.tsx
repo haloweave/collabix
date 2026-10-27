@@ -37,6 +37,8 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button></div>
  </div></header>
  <main id="main-content">{children}</main>
+ {/* Floating call button; left off /book, where the phone total bar sits at the bottom. */}
+ {!path.startsWith("/book") && <a className="call-fab" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444" title="Call +91 96327 71444"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"/></svg></a>}
  <footer className="site-footer">
     <div className="grid-texture"></div>
     <div className="wrap">
