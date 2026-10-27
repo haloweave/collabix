@@ -19,7 +19,6 @@ export default function Page() { return <div className="home">
         <p className="lead hero-sub reveal d2">A premium managed work lounge built for growth-stage founders, enterprise teams and senior professionals. Restrained. Purposeful. Ready when you are.</p>
         <div className="hero-cta reveal d3">
           <a className="btn btn-gold" href="/book">Book a Space <span className="arw">→</span></a>
-          <a className="btn btn-ghost-light" href="#spaces">Explore spaces</a>
         </div>
         <div className="hero-meta reveal d4">
           <div className="item"><div className="k">28</div><div className="l">Shared desks</div></div>
