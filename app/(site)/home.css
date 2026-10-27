@@ -957,6 +957,7 @@
 .collabix-site .book-tabs a:hover {color:var(--navy);}
 .collabix-site .book-tabs a[aria-current="page"] {color:var(--navy);border-bottom-color:var(--gold);}
 .collabix-site .book-tabs .bt-short {display:none;}
+.collabix-site .book-tabs .bt-from {margin-left:.5rem;font-size:.75rem;font-weight:500;color:var(--gold);}
 .collabix-site .booking-panel .filter-label:first-child {margin-top:0;}
 /* Phones: the tabs become one two-part switch, the steps a thin five-part bar
    (the panel's eyebrow already names the step). */
@@ -966,6 +967,8 @@
   .collabix-site .book-tabs a[aria-current="page"] {background:var(--navy);color:var(--ivory);}
   .collabix-site .book-tabs .bt-long {display:none;}
   .collabix-site .book-tabs .bt-short {display:inline;}
+  .collabix-site .book-tabs a {line-height:1.2;}
+  .collabix-site .book-tabs .bt-from {display:block;margin:.1rem 0 0;font-size:.62rem;}
   .collabix-site .booking-progress {flex-wrap:nowrap;align-items:center;gap:4px;margin-bottom:1rem;}
   .collabix-site .booking-progress li {flex:1;height:3px;border-radius:2px;background:var(--line);font-size:0;overflow:hidden;}
   .collabix-site .booking-progress li span {display:none;}
@@ -974,10 +977,6 @@
   .collabix-site .booking-progress li.current {flex:none;height:auto;background:none;overflow:visible;font-size:.72rem;font-weight:600;color:var(--navy);gap:.3rem;padding:0 .2rem;}
   .collabix-site .booking-progress li.current span {display:grid;width:18px;height:18px;font-size:.62rem;border:0;}
 }
-.collabix-site .passes-banner {display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--navy);color:var(--ivory);border-radius:var(--radius);padding:.9rem 1.2rem;margin:0 0 1.6rem;font-size:.9rem;line-height:1.45;transition:background .2s var(--ease);}
-.collabix-site .passes-banner strong {color:var(--gold);}
-.collabix-site .passes-banner .arw {color:var(--gold);font-size:1.2rem;}
-.collabix-site .passes-banner:hover {background:var(--navy-mid);}
 .collabix-site .section-navy .lead { color: rgba(247,245,242,.72); }
 
 /* Header end cluster: theme switch + mobile menu button, pinned top right. */
@@ -1092,8 +1091,6 @@ html[data-theme="light"] .collabix-site .summary-note { color: var(--graphite); 
 html[data-theme="light"] .collabix-site .s-line .sv { color: var(--navy); }
 html[data-theme="light"] .collabix-site .s-line .sv.muted { color: rgba(74,79,88,.6); }
 html[data-theme="light"] .collabix-site .summary .s-total { background: var(--ivory-dark); border-top-color: var(--line); }
-html[data-theme="light"] .collabix-site .passes-banner { background: var(--white); color: var(--ink); border: 1px solid var(--line-gold); }
-html[data-theme="light"] .collabix-site .passes-banner:hover { background: var(--ivory-dark); }
 html[data-theme="light"] .collabix-site .pr-summary { background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow-md); }
 html[data-theme="light"] .collabix-site .pr-sum-main .big, html[data-theme="light"] .collabix-site .pr-sum-item .k { color: var(--navy); }
 html[data-theme="light"] .collabix-site .pr-sum-main .sub, html[data-theme="light"] .collabix-site .pr-sum-item .l { color: var(--graphite); }
@@ -1120,7 +1117,6 @@ html[data-theme="light"] .collabix-site .tabbar .tab.cta .ic { border-color: var
 .collabix-site .step-actions.end {justify-content:flex-end;}
 .collabix-site .booking-panel .confirm-details p {margin:.2rem 0;}
 .collabix-site .summary .s-toggle {display:none;}
-.collabix-site .passes-banner .pb-short {display:none;}
 
 /* Phones: every booking step, tightened. The summary becomes a total bar
    pinned above the tab bar that opens to the breakdown; choices read as
@@ -1144,9 +1140,6 @@ html[data-theme="light"] .collabix-site .tabbar .tab.cta .ic { border-color: var
   .collabix-site .booking-panel h2 {font-size:1.4rem;margin:.5rem 0 1rem;}
   .collabix-site .booking-panel p {margin-bottom:1rem;}
   .collabix-site .booking-panel .filter-label {display:block;margin-top:1.1rem;}
-  .collabix-site .passes-banner {padding:.65rem .9rem;margin-bottom:1rem;font-size:.82rem;}
-  .collabix-site .passes-banner .pb-long {display:none;}
-  .collabix-site .passes-banner .pb-short {display:inline;}
   /* Choices: one row each, name and price on a line, the blurb beneath. */
   .collabix-site .space-pills {flex-direction:column;margin:.4rem 0 .6rem;}
   .collabix-site .space-pills .pill {flex:none;display:grid;grid-template-columns:1fr auto;column-gap:.8rem;row-gap:.1rem;padding:.6rem .85rem;border-right:0;border-bottom:1px solid var(--line);}
