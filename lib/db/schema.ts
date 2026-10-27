@@ -166,6 +166,10 @@ export const booking = pgTable("booking", {
   // issued when the booking is confirmed. Null while only held.
   ticketToken: text("ticket_token").unique(),
   ticketCode: text("ticket_code").unique(),
+  // Tax invoice number (see lib/domain/invoice-number.ts), issued with the
+  // ticket on confirmation: CBX/<FY>/<seq>, consecutive within a financial year.
+  invoiceNo: text("invoice_no").unique(),
+  invoicedAt: timestamp("invoiced_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -206,6 +210,13 @@ export const payment = pgTable(
   },
   (t) => [index("payment_booking_id_idx").on(t.bookingId)],
 );
+
+// Last invoice serial issued per financial year ('26-27' → 14). Incremented
+// inside the confirming transaction, so a rolled-back confirmation leaves no gap.
+export const invoiceCounter = pgTable("invoice_counter", {
+  fy: text("fy").primaryKey(),
+  last: integer("last").notNull(),
+});
 
 // Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
 // member); staff record who they are and who they're here to see.
