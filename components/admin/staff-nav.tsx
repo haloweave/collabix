@@ -52,7 +52,7 @@ export function StaffNav() {
             className="h-7 w-auto"
             priority
           />
-          <span className="hidden border-l border-ivory/20 pl-3 font-mono text-[0.6rem] uppercase tracking-[0.26em] text-gold sm:inline">
+          <span className="font-mono text-[0.6rem] uppercase leading-none tracking-[0.24em] text-gold">
             Staff
           </span>
         </Link>
