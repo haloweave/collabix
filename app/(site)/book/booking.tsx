@@ -165,10 +165,6 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
         <BookingProgress step={step} />
         <div className="booking-layout">
           <div className="booking-panel">
-            <span className="eyebrow">
-              Step {step + 1} · {label}
-            </span>
-
             {error && (
               <p className="booking-error" role="alert">
                 {error}
