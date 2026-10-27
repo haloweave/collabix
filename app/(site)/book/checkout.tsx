@@ -399,20 +399,19 @@ export function CheckoutSteps({
     <>
       {label === "Details" && known && !editing && (
         <>
-          <h2>Your workday, at a glance.</h2>
-          <p>You&#39;re signed in, so there&#39;s no code to enter. Check your details and go ahead.</p>
           <form onSubmit={onSubmitDetails}>
-            <div className="confirm-details">
-              <p>Booking as {co.name}</p>
-              <p>{co.email}</p>
-              <p>{co.phoneE164}</p>
-            </div>
-            <p className="avail-hint">
-              Not right?{" "}
+            <div className="confirm-details booking-as">
+              <div>
+                <p>
+                  <strong>{co.name}</strong>
+                </p>
+                <p>{co.email}</p>
+                <p>{co.phoneE164}</p>
+              </div>
               <button type="button" className="link-btn" onClick={() => setEditing(true)}>
-                Edit details
+                Edit
               </button>
-            </p>
+            </div>
             <div className="step-actions">
               <button className="btn btn-outline" type="button" onClick={() => co.setStep(0)}>
                 ← Back

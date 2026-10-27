@@ -959,6 +959,9 @@
 .collabix-site .book-tabs .bt-short {display:none;}
 .collabix-site .book-tabs .bt-from {margin-left:.5rem;font-size:.75rem;font-weight:500;color:var(--gold);}
 .collabix-site .booking-panel .filter-label:first-child {margin-top:0;}
+.collabix-site .booking-as {display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:0;}
+.collabix-site .booking-as .link-btn {font-size:.85rem;color:var(--graphite);}
+.collabix-site .booking-panel .booking-as p + p {font-size:.88rem;color:var(--graphite);}
 /* Phones: the tabs become one two-part switch, the steps a thin five-part bar
    (the panel's eyebrow already names the step). */
 @media (max-width: 600px) {
