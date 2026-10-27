@@ -615,7 +615,7 @@ export function CheckoutSteps({
 }
 
 /** The navy summary card beside every step. On phones it is a slim total
- * bar pinned above the tab bar, opening to the full breakdown on tap. */
+ * bar pinned to the bottom of the screen, opening to the full breakdown on tap. */
 export function BookingSummary({
   rows,
   shown,

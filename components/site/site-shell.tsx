@@ -67,6 +67,5 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
       </div>
     </div>
   </footer>
- <nav className="tabbar" aria-label="Quick navigation">{[["/","Home"],["/#spaces","Spaces"],["/book","Book"],["/pricing","Pricing"],["/amenities","Amenities"]].map(([href,label])=><a key={href} href={href} className={`tab ${path===href?"active":""}`} aria-current={path===href?"page":undefined}>{label}</a>)}</nav>
  </div>;
 }
