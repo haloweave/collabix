@@ -46,11 +46,11 @@ export default async function MyBookingsPage() {
       {bookings.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-navy/20 bg-white/60 px-6 py-12 text-center">
           <p className="text-lg font-semibold text-navy">No bookings yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-navy/60">
+          <p className="!mx-auto !mt-1 max-w-sm text-sm text-navy/60">
             Grab a day pass or a meeting room and it will show up here, with your
             ticket and invoice.
           </p>
-          <div className="mt-5 flex justify-center gap-3">
+          <div className="!mt-5 flex flex-wrap justify-center gap-3">
             <Link href="/book" className="btn btn-gold">
               Book a desk <span className="arw">→</span>
             </Link>

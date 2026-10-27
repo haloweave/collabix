@@ -48,9 +48,9 @@ export default async function MyInvoicesPage() {
 
       {docs.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-navy/20 bg-white/60 px-6 py-12 text-center">
-          <FileText className="mx-auto size-8 text-gold" aria-hidden />
-          <p className="mt-3 text-lg font-semibold text-navy">No invoices yet</p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-navy/60">
+          <FileText className="!mx-auto size-8 text-gold" aria-hidden />
+          <p className="!mt-3 text-lg font-semibold text-navy">No invoices yet</p>
+          <p className="!mx-auto !mt-1 max-w-sm text-sm text-navy/60">
             An invoice is issued the moment a booking is confirmed, and you can
             download it here any time.
           </p>
