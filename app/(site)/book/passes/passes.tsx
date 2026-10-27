@@ -139,7 +139,6 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
 
             {label === "Book" && (
               <>
-                <h2>A desk or a cabin, for months or years.</h2>
                 <span className="filter-label">How long?</span>
                 <div className="bk-term">
                   <div className="dur-toggle bk-chips">

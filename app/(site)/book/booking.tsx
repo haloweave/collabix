@@ -173,7 +173,6 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
 
             {label === "Book" && (
               <>
-                <h2>Book a desk or a meeting room.</h2>
                 <PassesBanner />
                 <StepChoose
                   choice={choice}
