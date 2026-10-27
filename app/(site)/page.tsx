@@ -32,7 +32,6 @@ export default function Page() { return <div className="home">
         </div>
       </div>
     </div>
-    <div className="scroll-cue"><span>Scroll</span><span className="dot"></span></div>
   </section>
 
   

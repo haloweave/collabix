@@ -250,15 +250,6 @@
 }
 .collabix-site .hero-meta .item .k { font-family: var(--font-mono); font-size: 1.5rem; color: var(--gold); font-weight: 500; }
 .collabix-site .hero-meta .item .l { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(247,245,242,.6); margin-top: .2rem; }
-.collabix-site .scroll-cue {
-  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
-  font-family: var(--font-mono); font-size: .64rem; letter-spacing: .3em; text-transform: uppercase;
-  color: rgba(247,245,242,.5); z-index: 2; display: flex; flex-direction: column; align-items: center; gap: .6rem;
-}
-.collabix-site .scroll-cue .dot { width: 1px; height: 34px; background: linear-gradient(var(--gold), transparent); animation: cue 2.2s var(--ease) infinite; }
-@keyframes cue { 0%,100%{opacity:.3; transform:scaleY(.6)} 50%{opacity:1; transform:scaleY(1)} }
-/* On phones the hero runs past the screen, so the cue would sit on the stats. */
-@media (max-width: 820px) { .collabix-site .scroll-cue { display: none; } }
 
 /* section header block */
 .collabix-site .sec-head { max-width: 640px; margin-bottom: clamp(2.4rem, 5vw, 4rem); }
@@ -1066,8 +1057,7 @@ html[data-theme="light"] .collabix-site .hero .hero-scrim {
 }
 html[data-theme="light"] .collabix-site .hero-sub { color: var(--graphite); }
 html[data-theme="light"] .collabix-site .hero-meta { border-top-color: var(--line); }
-html[data-theme="light"] .collabix-site .hero-meta .item .l,
-html[data-theme="light"] .collabix-site .scroll-cue { color: var(--graphite); }
+html[data-theme="light"] .collabix-site .hero-meta .item .l { color: var(--graphite); }
 
 /* inner-page heroes, navy sections, CTA bands */
 html[data-theme="light"] .collabix-site .page-hero { background: var(--ivory-dark); }
