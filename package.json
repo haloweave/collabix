@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx lib/db/seed.ts",
     "db:seed:owner": "tsx lib/db/seed-owner.ts",
+    "db:seed:login": "tsx lib/db/seed-login.ts",
     "db:tariff": "tsx lib/db/migrate-tariff.ts"
   },
   "dependencies": {
