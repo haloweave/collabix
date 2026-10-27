@@ -938,3 +938,8 @@
 .collabix-site .bk-chips { margin: .4rem 0 .2rem; }
 .collabix-site .bk-chips button { min-width: 72px; }
 .collabix-site .bk-chips button:disabled { opacity: .35; cursor: not-allowed; }
+/* /book tabs: day bookings vs monthly & annual passes. */
+.collabix-site .book-tabs {display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:1.6rem;}
+.collabix-site .book-tabs a {padding:.75rem 1.1rem;font-size:.9rem;font-weight:600;color:var(--graphite);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s var(--ease),border-color .2s var(--ease);}
+.collabix-site .book-tabs a:hover {color:var(--navy);}
+.collabix-site .book-tabs a[aria-current="page"] {color:var(--navy);border-bottom-color:var(--gold);}
