@@ -153,3 +153,18 @@ body {
   border-color: hsl(var(--border));
 }
 
+/* Admin/staff page headings — navy, with the brand's short gold rule. Scoped
+   to the shared `text-2xl` heading so bespoke titles (welcome band) opt out. */
+.admin-scope main h1.text-2xl {
+  color: hsl(var(--primary));
+  font-size: 1.65rem;
+  letter-spacing: -0.02em;
+}
+.admin-scope main h1.text-2xl::after {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 2px;
+  margin: 0.55rem 0 0.5rem;
+  background: #c89b53;
+}
