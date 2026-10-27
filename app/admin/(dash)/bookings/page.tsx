@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { listBookings } from "@/lib/admin/queries";
 import { rupees, istDateTime } from "@/lib/admin/format";
 import { BookingsFilter } from "@/components/admin/bookings-filter";
@@ -132,13 +132,16 @@ async function BookingsRows({
               <TableHead className="text-center">Seats</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-12">
+                <span className="sr-only">Invoice</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bookings.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   No bookings found.
@@ -187,6 +190,19 @@ async function BookingsRows({
                       anyActiveHold={b.anyActiveHold}
                     />
                   </Link>
+                </TableCell>
+                <TableCell className="text-right">
+                  {b.invoiceNo && (
+                    <a
+                      href={`/account/invoices/${b.id}`}
+                      download
+                      title={`Download invoice ${b.invoiceNo}`}
+                      aria-label={`Download invoice ${b.invoiceNo}`}
+                      className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Download className="size-4" />
+                    </a>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

@@ -155,6 +155,7 @@ export type BookingRow = {
   totalMinor: number;
   anyConfirmed: boolean;
   anyActiveHold: boolean;
+  invoiceNo: string | null;
 };
 
 function mapBookingRow(r: Record<string, unknown>): BookingRow {
@@ -171,6 +172,7 @@ function mapBookingRow(r: Record<string, unknown>): BookingRow {
     totalMinor: n(r.total_minor),
     anyConfirmed: Boolean(r.any_confirmed),
     anyActiveHold: Boolean(r.any_active_hold),
+    invoiceNo: (r.invoice_no as string) ?? null,
   };
 }
 
@@ -182,7 +184,7 @@ export async function listBookings(opts: {
   const like = `%${q}%`;
   const status = opts.status ?? "all";
   const rows = await sql`
-    SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at,
+    SELECT b.id, b.customer_name, b.customer_email, b.status, b.created_at, b.invoice_no,
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
@@ -193,7 +195,8 @@ export async function listBookings(opts: {
     FROM booking b
     LEFT JOIN reservation r ON r.booking_id = b.id
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
-    WHERE (${q} = '' OR b.customer_name ILIKE ${like} OR b.customer_email ILIKE ${like})
+    WHERE (${q} = '' OR b.customer_name ILIKE ${like} OR b.customer_email ILIKE ${like}
+      OR b.invoice_no ILIKE ${like})
       AND (${status} = 'all' OR b.status::text = ${status})
     GROUP BY b.id
     ORDER BY b.created_at DESC
