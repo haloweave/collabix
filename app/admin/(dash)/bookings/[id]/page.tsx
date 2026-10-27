@@ -218,8 +218,9 @@ export default async function BookingDetailPage({
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">
-                Subtotal ({quote.hours}h × {quote.seats} seat
-                {quote.seats === 1 ? "" : "s"})
+                {quote.months
+                  ? `Subtotal (${quote.months} month${quote.months === 1 ? "" : "s"})`
+                  : `Subtotal (${quote.hours}h × ${quote.seats} seat${quote.seats === 1 ? "" : "s"})`}
               </span>
               <span>{rupees(quote.subtotalMinor)}</span>
             </div>
