@@ -179,6 +179,10 @@
 
 .collabix-site .nav-toggle { display: none; background: none; border: 0; padding: 8px; }
 .collabix-site .nav-toggle span { display: block; width: 24px; height: 2px; background: var(--ivory); margin: 5px 0; transition: .3s; }
+/* Open menu: the three lines fold into an X, so the same button closes it. */
+.collabix-site .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.collabix-site .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.collabix-site .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* ---------- footer ---------- */
 .collabix-site .site-footer { background: var(--navy); color: rgba(247,245,242,.6); position: relative; }
