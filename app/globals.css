@@ -168,3 +168,17 @@ body {
   margin: 0.55rem 0 0.5rem;
   background: #c89b53;
 }
+
+/* Admin/staff tables: white surface on the ivory canvas, mono column heads. */
+.admin-scope main table {
+  background: hsl(var(--card));
+}
+.admin-scope main thead th {
+  background: hsl(var(--muted) / 0.6);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
