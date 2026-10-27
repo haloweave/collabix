@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MAX_DURATION } from "../domain/booking";
-import { PRODUCT_KEYS } from "../tariff";
+import { PRODUCT_KEYS, TERM_PLAN_KEYS } from "../tariff";
 
 const productKey = z.enum(PRODUCT_KEYS);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
@@ -26,6 +26,22 @@ export const holdBody = z.object({
   customerName: z.string().trim().min(2).max(100),
   customerEmail: z.string().email().max(254),
   idempotencyKey: z.string().max(200).optional(),
+});
+
+// Monthly & annual passes: which counts are valid for the unit is checked by termWindow.
+const term = {
+  planKey: z.enum(TERM_PLAN_KEYS),
+  date,
+  unit: z.enum(["month", "year"]),
+  count: z.coerce.number().int().min(1).max(12),
+};
+
+export const termAvailabilityQuery = z.object(term);
+
+export const termHoldBody = z.object({
+  ...term,
+  customerName: z.string().trim().min(2).max(100),
+  customerEmail: z.string().email().max(254),
 });
 
 export const confirmBody = z.object({
