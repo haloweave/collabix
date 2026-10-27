@@ -1028,9 +1028,14 @@ html[data-theme="light"] .collabix-site .mega { border: 1px solid var(--line); }
 }
 
 /* shared type on formerly-navy surfaces */
-html[data-theme="light"] .collabix-site :is(.hero, .page-hero, .section-navy, .cta-band, .pillar, .summary, .pr-summary) :is(h1, h2, h3, h4) { color: var(--navy); }
+html[data-theme="light"] .collabix-site :is(.hero, .page-hero, .section-navy, .pillar) :is(h1, h2, h3, h4) { color: var(--navy); }
 html[data-theme="light"] .collabix-site .btn-ghost-light { color: var(--navy); border-color: rgba(11,31,58,.22); }
 html[data-theme="light"] .collabix-site .btn-ghost-light:hover { color: var(--navy); border-color: var(--gold); }
+/* Navy accents kept in the light theme: the footer, the call-to-action
+   bands and the summary cards stay navy so the page is not all ivory. */
+html[data-theme="light"] .collabix-site :is(.site-footer, .cta-band, .summary, .pr-summary) .on-navy { display: block; }
+html[data-theme="light"] .collabix-site :is(.site-footer, .cta-band, .summary, .pr-summary) .on-light { display: none; }
+html[data-theme="light"] .collabix-site :is(.cta-band, .site-footer) .btn-ghost-light { color: var(--ivory); border-color: rgba(247,245,242,.3); }
 
 /* home hero — photo washed in ivory instead of navy */
 html[data-theme="light"] .collabix-site .hero { background: var(--ivory); }
@@ -1054,34 +1059,17 @@ html[data-theme="light"] .collabix-site .pillars { background: var(--line); }
 html[data-theme="light"] .collabix-site .pillar { background: var(--white); }
 html[data-theme="light"] .collabix-site .pillar:hover { background: var(--ivory); }
 html[data-theme="light"] .collabix-site .pillar p { color: var(--graphite); }
-html[data-theme="light"] .collabix-site .cta-band { background: var(--ivory-dark); border-block: 1px solid var(--line); }
 html[data-theme="light"] .collabix-site .nf-code { color: rgba(11,31,58,.08); }
 
 /* cards that were navy */
 html[data-theme="light"] .collabix-site .hours-card { background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 html[data-theme="light"] .collabix-site .hours-row { border-bottom-color: var(--line); }
 html[data-theme="light"] .collabix-site .hours-row .d { color: var(--ink); }
-html[data-theme="light"] .collabix-site .summary { background: var(--white); border: 1px solid var(--line); }
-html[data-theme="light"] .collabix-site .summary .s-head { border-bottom-color: var(--line); }
-html[data-theme="light"] .collabix-site .s-line .sk,
-html[data-theme="light"] .collabix-site .summary .s-total .tk,
-html[data-theme="light"] .collabix-site .summary-note { color: var(--graphite); }
-html[data-theme="light"] .collabix-site .s-line .sv { color: var(--navy); }
-html[data-theme="light"] .collabix-site .s-line .sv.muted { color: rgba(74,79,88,.6); }
-html[data-theme="light"] .collabix-site .summary .s-total { background: var(--ivory-dark); border-top-color: var(--line); }
-html[data-theme="light"] .collabix-site .pr-summary { background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow-md); }
-html[data-theme="light"] .collabix-site .pr-sum-main .big, html[data-theme="light"] .collabix-site .pr-sum-item .k { color: var(--navy); }
-html[data-theme="light"] .collabix-site .pr-sum-main .sub, html[data-theme="light"] .collabix-site .pr-sum-item .l { color: var(--graphite); }
-html[data-theme="light"] .collabix-site .pr-sum-grid { border-color: var(--line); }
 html[data-theme="light"] .collabix-site .pr-invoice .total { background: var(--ivory-dark); border-top: 1px solid var(--line); }
 html[data-theme="light"] .collabix-site .pr-invoice .total .amt { color: var(--navy); }
 html[data-theme="light"] .collabix-site .tf-early-banner { color: #9a7438; }
 
 /* footer */
-html[data-theme="light"] .collabix-site .site-footer { background: var(--ivory-dark); color: var(--graphite); border-top: 1px solid var(--line); }
-html[data-theme="light"] .collabix-site .site-footer a { color: var(--graphite); }
-html[data-theme="light"] .collabix-site .site-footer a:hover { color: var(--navy); }
-html[data-theme="light"] .collabix-site .footer-bottom { border-top-color: var(--line); color: rgba(74,79,88,.75); }
 
 .collabix-site .bk-term {display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:.4rem 0 .2rem;}
 .collabix-site .bk-term .bk-chips {margin:0;}
@@ -1102,7 +1090,6 @@ html[data-theme="light"] .collabix-site .footer-bottom { border-top-color: var(-
   .collabix-site .summary .s-total {padding:.75rem 1.1rem;align-items:center;gap:.8rem;}
   .collabix-site .summary .s-total .tv {font-size:1.2rem;margin-left:auto;}
   .collabix-site .summary .s-toggle {display:inline-flex;align-items:center;gap:.35rem;background:none;border:1px solid rgba(247,245,242,.25);border-radius:999px;color:inherit;font-size:.75rem;padding:.3rem .7rem;color:var(--ivory);}
-  html[data-theme="light"] .collabix-site .summary .s-toggle {color:var(--navy);border-color:var(--line);}
 }
 @media (max-width: 600px) {
   .collabix-site .booking-page {padding-top:calc(76px + 14px);padding-bottom:1.5rem;}
