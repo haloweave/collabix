@@ -55,18 +55,18 @@ export default async function BookingDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/admin/bookings" aria-label="Back to bookings">
               <ArrowLeft className="size-4" />
             </Link>
           </Button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight">
               {booking.customerName}
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="break-words text-sm text-muted-foreground">
               {booking.customerEmail} · booked {istDate(booking.createdAt)}
               {booking.ticketToken && (
                 <>
