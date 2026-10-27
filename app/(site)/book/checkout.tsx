@@ -377,7 +377,7 @@ export function CheckoutSteps({
                 ← Back
               </button>
               <button className="btn btn-gold" type="submit" disabled={busy}>
-                {busy ? "Holding your booking…" : "Hold & pay →"}
+                {busy ? "One moment…" : "Continue to pay →"}
               </button>
             </div>
           </form>
@@ -449,11 +449,13 @@ export function CheckoutSteps({
                   co.phone.replace(/\D/g, "").length < 10
                 }
               >
-                {busy
-                  ? "Holding your booking…"
-                  : co.phoneVerified
-                    ? "Hold & pay →"
-                    : "Hold & send code →"}
+                {co.phoneVerified
+                  ? busy
+                    ? "One moment…"
+                    : "Continue to pay →"
+                  : busy
+                    ? "Sending code…"
+                    : "Send code →"}
               </button>
             </div>
           </form>
