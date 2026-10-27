@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { getBooking } from "@/lib/admin/queries";
 import { rupees, istDateTime, istDate } from "@/lib/admin/format";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +68,12 @@ export default async function BookingDetailPage({
             </h1>
             <p className="break-words text-sm text-muted-foreground">
               {booking.customerEmail} · booked {istDate(booking.createdAt)}
+              {booking.invoiceNo && (
+                <>
+                  {" · invoice "}
+                  <span className="font-mono">{booking.invoiceNo}</span>
+                </>
+              )}
               {booking.ticketToken && (
                 <>
                   {" · ticket "}
@@ -79,9 +85,19 @@ export default async function BookingDetailPage({
             </p>
           </div>
         </div>
-        {booking.status === "active" && (
-          <CancelBookingButton bookingId={booking.id} />
-        )}
+        <div className="flex items-center gap-2">
+          {booking.invoiceNo && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/account/invoices/${booking.id}`} download>
+                <Download className="size-4" />
+                Invoice
+              </a>
+            </Button>
+          )}
+          {booking.status === "active" && (
+            <CancelBookingButton bookingId={booking.id} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
