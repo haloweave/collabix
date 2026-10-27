@@ -111,7 +111,6 @@ export async function getDailySeries(days = 14): Promise<DaySeriesPoint[]> {
         (r.quote_snapshot->>'totalMinor')::bigint AS total
       FROM reservation r JOIN booking b ON b.id = r.booking_id
       WHERE r.status = 'confirmed' AND b.status = 'active'
-        AND (r.quote_snapshot->>'membershipHold') IS DISTINCT FROM 'true'
         AND (r.start_at AT TIME ZONE 'Asia/Kolkata')::date
             > (now() AT TIME ZONE 'Asia/Kolkata')::date - ${days}::int
       ORDER BY r.booking_id
