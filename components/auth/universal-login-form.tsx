@@ -6,9 +6,10 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { classifyIdentifier, dashboardFor, type LoginIdentifier } from "@/lib/auth/login-routing";
 
-// One sign-in for members and staff, by mobile number only: an SMS code (the
-// same flow checkout uses). After the code is accepted we read the session's
-// role and go to that person's dashboard.
+// One sign-in for members and staff. A mobile number gets an SMS code (the
+// same flow checkout uses); an email reveals a password field for staff
+// accounts. Once signed in we read the session's role and go to that person's
+// dashboard.
 const linkButton = { background: "none", border: 0, padding: 0, color: "inherit", textDecoration: "underline", cursor: "pointer", font: "inherit" } as const;
 
 export function UniversalLoginForm() {
@@ -16,7 +17,16 @@ export function UniversalLoginForm() {
   const [raw, setRaw] = useState("");
   const [id, setId] = useState<LoginIdentifier | null>(null);
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const isEmail = raw.includes("@");
+
+  async function goToDashboard() {
+    const { data } = await authClient.getSession();
+    const role = (data?.user as { role?: string } | undefined)?.role;
+    router.push(dashboardFor(role));
+    router.refresh();
+  }
 
   async function requestCode(target: LoginIdentifier) {
     setBusy(true);
@@ -38,11 +48,26 @@ export function UniversalLoginForm() {
     }
   }
 
-  async function sendCode(e: React.FormEvent) {
+  async function signInWithPassword(email: string) {
+    setBusy(true);
+    const { error } = await authClient.signIn.email({ email, password });
+    if (error) {
+      toast.error(error.status === 429 ? "Too many attempts. Please wait a minute and try again." : "Wrong email or password.");
+      setBusy(false);
+      return;
+    }
+    await goToDashboard();
+  }
+
+  async function submitFirstStep(e: React.FormEvent) {
     e.preventDefault();
     const parsed = classifyIdentifier(raw);
-    if (!parsed || parsed.kind !== "phone") {
-      toast.error("Enter your 10-digit mobile number.");
+    if (parsed?.kind === "email") {
+      if (password) await signInWithPassword(parsed.value);
+      return;
+    }
+    if (!parsed) {
+      toast.error(isEmail ? "Enter a valid email address." : "Enter your 10-digit mobile number.");
       return;
     }
     await requestCode(parsed);
@@ -59,10 +84,7 @@ export function UniversalLoginForm() {
         body: JSON.stringify({ phoneNumber: id.value, code: code.trim() }),
       });
       if (!r.ok) throw new Error("That code didn't match. Please try again.");
-      const { data } = await authClient.getSession();
-      const role = (data?.user as { role?: string } | undefined)?.role;
-      router.push(dashboardFor(role));
-      router.refresh();
+      await goToDashboard();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not sign you in.");
       setBusy(false);
@@ -71,26 +93,46 @@ export function UniversalLoginForm() {
 
   if (!id) {
     return (
-      <form onSubmit={sendCode} className="login-form">
+      <form onSubmit={submitFirstStep} className="login-form">
         <div className="login-field">
           <label htmlFor="login-id" className="login-label">
-            Mobile number
+            Mobile number or staff email
           </label>
           <input
             id="login-id"
             className="login-input"
-            type="tel"
-            autoComplete="tel"
-            inputMode="tel"
+            type="text"
+            autoComplete="username"
             placeholder="98765 43210"
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
             autoFocus
           />
         </div>
-        <button type="submit" className="login-submit" disabled={busy || !raw.trim()}>
-          {busy ? "Sending code…" : <>Send code <span className="arw">→</span></>}
-        </button>
+        {isEmail && (
+          <div className="login-field">
+            <label htmlFor="login-password" className="login-label">
+              Password
+            </label>
+            <input
+              id="login-password"
+              className="login-input"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        )}
+        {isEmail ? (
+          <button type="submit" className="login-submit" disabled={busy || !raw.trim() || !password}>
+            {busy ? "Signing in…" : <>Sign in <span className="arw">→</span></>}
+          </button>
+        ) : (
+          <button type="submit" className="login-submit" disabled={busy || !raw.trim()}>
+            {busy ? "Sending code…" : <>Send code <span className="arw">→</span></>}
+          </button>
+        )}
       </form>
     );
   }
