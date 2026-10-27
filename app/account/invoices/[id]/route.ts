@@ -1,5 +1,5 @@
 import { getMemberSession } from "@/lib/account/auth";
-import { isStaff } from "@/lib/admin/auth";
+import { isAdminAuthDisabled, isStaff } from "@/lib/admin/auth";
 import { getInvoiceDoc } from "@/lib/account/invoices";
 import { renderInvoicePdf } from "@/lib/invoice/pdf";
 
@@ -7,15 +7,18 @@ import { renderInvoicePdf } from "@/lib/invoice/pdf";
 // download (or inline with ?view=1). Only its customer — or staff — may fetch it.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const me = await getMemberSession();
-  if (!me) return new Response("Sign in to download invoices.", { status: 401 });
+  // The local dev bypass lets the admin panel in without a session; honour it
+  // here too so its invoice buttons work. Never set in production.
+  const staff = isAdminAuthDisabled() || isStaff(me?.role);
+  if (!me && !staff) return new Response("Sign in to download invoices.", { status: 401 });
 
   const { id } = await params;
   const found = await getInvoiceDoc(id);
   const mine =
     found &&
-    (found.memberId === me.id ||
-      (found.email != null && found.email.toLowerCase() === me.email.toLowerCase()) ||
-      isStaff(me.role));
+    (staff ||
+      found.memberId === me?.id ||
+      (found.email != null && found.email.toLowerCase() === me?.email.toLowerCase()));
   // Someone else's id reads the same as a missing one.
   if (!found || !mine) return new Response("Not found", { status: 404 });
 
