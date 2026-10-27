@@ -32,7 +32,7 @@ export function AccountShell({
           <span className="eyebrow">Your account</span>
           <h1>My account</h1>
           {name && (
-            <p className="lead" style={{ marginTop: ".35rem", color: "rgba(247,245,242,.7)" }}>
+            <p className="lead" style={{ marginTop: ".35rem" }}>
               Signed in as {name}
             </p>
           )}

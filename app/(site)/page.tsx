@@ -97,7 +97,7 @@ export default function Page() { return <>
       <div className="sec-head reveal">
         <span className="eyebrow">02 · What Collabix stands for</span>
         <h2 className="section-title">Three ideas, held together.</h2>
-        <p className="lead" style={{"color": "rgba(247,245,242,.72)"}}>The name compounds <em>Collaborate</em> and <em>Matrix</em> — a network of ambitious professionals moving forward together.</p>
+        <p className="lead">The name compounds <em>Collaborate</em> and <em>Matrix</em> — a network of ambitious professionals moving forward together.</p>
       </div>
       <div className="pillars reveal d1">
         <div className="pillar">
