@@ -43,8 +43,6 @@ export default async function StaffMembersPage({
         </p>
       </div>
 
-      <MemberForm />
-
       <Card>
         <CardHeader>
           <CardTitle>Find a member</CardTitle>
@@ -70,6 +68,8 @@ export default async function StaffMembersPage({
           </Suspense>
         </CardContent>
       </Card>
+
+      <MemberForm />
     </div>
   );
 }
@@ -87,8 +87,8 @@ async function StaffMembersTable({
         <TableRow>
           <TableHead>Member</TableHead>
           <TableHead>Role</TableHead>
-          <TableHead className="text-center">Bookings</TableHead>
-          <TableHead>Joined</TableHead>
+          <TableHead className="hidden text-center sm:table-cell">Bookings</TableHead>
+          <TableHead className="hidden sm:table-cell">Joined</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -104,7 +104,10 @@ async function StaffMembersTable({
             <TableCell>
               <Link href={`/admin/members/${m.id}`} className="block">
                 <span className="font-medium">{m.name}</span>
-                <span className="block text-xs text-muted-foreground">{m.email}</span>
+                <span className="block break-all text-xs text-muted-foreground">{m.email}</span>
+                <span className="block text-xs text-muted-foreground sm:hidden">
+                  {m.bookings} bookings · joined {istDate(m.createdAt)}
+                </span>
               </Link>
             </TableCell>
             <TableCell>
@@ -112,8 +115,8 @@ async function StaffMembersTable({
                 {m.role}
               </Badge>
             </TableCell>
-            <TableCell className="text-center text-sm">{m.bookings}</TableCell>
-            <TableCell className="text-sm">{istDate(m.createdAt)}</TableCell>
+            <TableCell className="hidden text-center text-sm sm:table-cell">{m.bookings}</TableCell>
+            <TableCell className="hidden text-sm sm:table-cell">{istDate(m.createdAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
