@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { OfferingIcon } from "@/components/site/offering-icon";
+import ThemeToggle from "@/components/site/theme-toggle";
 import { offeringGroups, offeringHref, offerings } from "@/lib/offerings";
 export default function SiteShell({children, minimal=false, authed=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
@@ -12,7 +13,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  const links=[["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
  return <div className="collabix-site">
  <header className="site-header solid"><div className="wrap bar">
- <Link className="logo" href="/" aria-label="Collabix home"><Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /></Link>
+ <Link className="logo" href="/" aria-label="Collabix home"><Image className="on-navy" width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" /><Image className="on-light" width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/logo-navy.png" alt="" aria-hidden="true" /></Link>
  <nav id="home-navigation" aria-label="Main navigation" className={`nav ${open?"open":""}`}>
  <div className={`nav-drop ${menu?"open":""}`} onMouseLeave={()=>setMenu(false)}>
   <button type="button" className={`navlink nav-drop-btn ${path.startsWith("/spaces/")||path.startsWith("/services/")?"active":""}`} aria-expanded={menu} aria-controls="services-menu" onClick={()=>setMenu(!menu)} onMouseEnter={()=>setMenu(true)}>Spaces &amp; Services <span className="chev" aria-hidden="true">▾</span></button>
@@ -27,7 +28,8 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
  <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
  <a className={`navlink ${path==="/login"||path.startsWith("/account")?"active":""}`} href="/login" onClick={()=>setOpen(false)}>{authed?"My account":"Login"}</a></nav>
- <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button>
+ <div className="bar-end"><ThemeToggle/>
+ <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button></div>
  </div></header>
  <main id="main-content">{children}</main>
  <footer className="site-footer">
@@ -35,7 +37,8 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
     <div className="wrap">
       {!minimal && <div className="footer-top">
         <div>
-          <Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" className="flogo" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" />
+          <Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" className="flogo on-navy" src="/collabix/img/logo-white.png" alt="Collabix — Work Lounge" />
+          <Image width={3088} height={852} sizes="(max-width: 820px) 100vw, 50vw" className="flogo on-light" src="/collabix/img/logo-navy.png" alt="" aria-hidden="true" />
           <p style={{"maxWidth": "300px", "fontSize": ".92rem", "lineHeight": "1.7"}}>A premium managed work lounge in Bengaluru. Where serious work happens.</p>
         </div>
         <div>
