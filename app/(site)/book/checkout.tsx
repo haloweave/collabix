@@ -550,9 +550,8 @@ export function CheckoutSteps({
           <h2>Pay to lock it in.</h2>
           {timer}
           <p>
-            Your number is verified. Pay securely and your booking is
-            confirmed the moment the bank says yes — your e-ticket arrives
-            by email.
+            Your booking is confirmed the moment the bank says yes, and your
+            e-ticket arrives by email.
           </p>
           <div className="confirm-details">
             {details}
@@ -578,8 +577,8 @@ export function CheckoutSteps({
                 : payPhase === "confirming"
                   ? "Confirming your payment…"
                   : quote
-                    ? `Pay ${rupees(quote.totalMinor)} securely →`
-                    : "Pay securely →"}
+                    ? `Pay ${rupees(quote.totalMinor)} →`
+                    : "Pay →"}
             </button>
           </div>
           <p className="avail-hint">
