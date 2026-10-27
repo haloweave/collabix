@@ -1,6 +1,8 @@
 // How a payment method reads on invoices and in the admin. Client-safe.
 
 const METHOD: Record<string, string> = {
+  cash: "Cash",
+  bank_transfer: "Bank transfer",
   upi: "UPI",
   card: "Card",
   credit_card: "Credit card",
