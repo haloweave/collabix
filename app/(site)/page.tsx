@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { bookableProduct, findTermPlan, money, productPriceMinor, termMonthlyMinor, type TermPlanKey } from "@/lib/tariff";
+// Starting prices for the space cards, straight from the tariff.
+const fromMonth = (k: TermPlanKey) => `From ${money(termMonthlyMinor(findTermPlan(k)!) / 100)} / month`;
+const fromHour = `From ${money(productPriceMinor(bookableProduct("meeting-4")!) / 100)} / hour`;
 export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Bengaluru"};
 export default function Page() { return <div className="home">
 
@@ -47,7 +51,7 @@ export default function Page() { return <div className="home">
             <span className="kicker">Flexible</span>
             <h3>Hot Desk</h3>
             <p>A seat in the open lounge — sit anywhere that&#39;s free, plug in and go.</p>
-            <div className="price"><span className="per">Contact us to know pricing</span>
+            <div className="price"><span className="per">{fromMonth("hot-desk")}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -58,7 +62,7 @@ export default function Page() { return <div className="home">
             <span className="kicker">Reserved</span>
             <h3>Dedicated Desk</h3>
             <p>Your own fixed seat with a locker and meeting-room credits — same spot, every day.</p>
-            <div className="price"><span className="per">Contact us to know pricing</span>
+            <div className="price"><span className="per">{fromMonth("dedicated-desk")}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -69,7 +73,7 @@ export default function Page() { return <div className="home">
             <span className="kicker">Private · 4 people</span>
             <h3>Private Cabin</h3>
             <p>An enclosed cabin for a team of four, with standard fit-out — ready to move in.</p>
-            <div className="price"><span className="per">Contact us to know pricing</span>
+            <div className="price"><span className="per">{fromMonth("cabin-base")}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
@@ -80,7 +84,7 @@ export default function Page() { return <div className="home">
             <span className="kicker">4-seater &amp; boardroom</span>
             <h3>Meeting Rooms</h3>
             <p>A 4-seat room with TV and whiteboard, and an 8-seat boardroom with integrated VC.</p>
-            <div className="price"><span className="per">Contact us to know pricing</span>
+            <div className="price"><span className="per">{fromHour}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
