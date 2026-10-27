@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { money } from "@/lib/tariff";
+import { authClient } from "@/lib/auth-client";
 
 // The checkout every /book flow shares once something is chosen: details,
 // phone OTP, Cashfree payment and the confirmation. Each flow supplies its own
@@ -28,6 +29,28 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export type Checkout = ReturnType<typeof useCheckout>;
 
+/** The signed-in customer's details, as far as we know them. Accounts made by
+ * a phone sign-in start with the number as their name and a placeholder email,
+ * so those count as unknown. `phone` is set only once the number is verified. */
+export type Account = { name: string; email: string; phone: string | null };
+
+type SessionUser = {
+  name: string;
+  email: string;
+  phoneNumber?: string | null;
+  phoneNumberVerified?: boolean | null;
+};
+
+function accountFrom(user: SessionUser | undefined): Account | null {
+  if (!user) return null;
+  const phone = user.phoneNumberVerified && user.phoneNumber ? user.phoneNumber : null;
+  return {
+    name: user.name === user.phoneNumber ? "" : user.name,
+    email: user.email.endsWith("@phone.collabix.local") ? "" : user.email,
+    phone,
+  };
+}
+
 export function useCheckout() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -42,6 +65,8 @@ export function useCheckout() {
   const [ticketToken, setTicketToken] = useState<string | null>(null);
   // Pay step: what the button is doing right now, for its label.
   const [payPhase, setPayPhase] = useState<"idle" | "opening" | "confirming">("idle");
+  const { data: session } = authClient.useSession();
+  const account = accountFrom(session?.user);
 
   const phoneE164 =
     phone.replace(/\D/g, "").length === 10
@@ -64,8 +89,24 @@ export function useCheckout() {
     remaining % 60,
   ).padStart(2, "0")}`;
 
+  /** Move between steps. Reaching Details fills in whatever the signed-in
+   * account already knows, without overwriting anything typed. */
+  function goTo(next: number) {
+    if (next === 1 && account) {
+      setName((v) => v || account.name);
+      setEmail((v) => v || account.email);
+      setPhone((v) => v || (account.phone ?? ""));
+    }
+    setStep(next);
+  }
+
+  /** True when the number on the form is the signed-in account's verified one,
+   * so there is nothing left to prove by SMS. */
+  const phoneVerified = !!account?.phone && account.phone === phoneE164;
+
   /** POST the flow's hold request; on success move to Verify and send the
-   * code. A refusal returns the server's error code for the flow to explain. */
+   * code, or straight to Pay when the number is already verified. A refusal
+   * returns the server's error code for the flow to explain. */
   async function hold(url: string, body: object): Promise<{ ok: true } | { ok: false; error: string }> {
     setBusy(true);
     setError(null);
@@ -80,6 +121,10 @@ export function useCheckout() {
       setBookingId(data.bookingId);
       setHoldExpiresAt(data.holdExpiresAt);
       setQuote(data.quote);
+      if (phoneVerified) {
+        setStep(3); // Pay
+        return { ok: true };
+      }
       setStep(2); // Verify
       await sendOtp();
       return { ok: true };
@@ -231,7 +276,9 @@ export function useCheckout() {
 
   return {
     step,
-    setStep,
+    setStep: goTo,
+    account,
+    phoneVerified,
     name,
     setName,
     email,
