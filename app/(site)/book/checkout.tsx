@@ -426,15 +426,6 @@ export function CheckoutSteps({
 
       {label === "Details" && !(known && !editing) && (
         <>
-          <h2>Your workday, at a glance.</h2>
-          {co.phoneVerified ? (
-            <p>You&#39;re signed in, so there&#39;s no code to enter.</p>
-          ) : (
-            <p>
-              We&#39;ll hold your booking and send a one-time code to your
-              phone to confirm — no password needed.
-            </p>
-          )}
           <form onSubmit={onSubmitDetails}>
             <div className="field">
               <label htmlFor="booking-name">Full name</label>
@@ -471,6 +462,11 @@ export function CheckoutSteps({
                 value={co.phone}
                 onChange={(e) => co.setPhone(e.target.value)}
               />
+              <p className="avail-hint">
+                {co.phoneVerified
+                  ? "Your verified number, so there's no code to enter."
+                  : "We'll text a code to confirm. No password needed."}
+              </p>
             </div>
             <div className="step-actions">
               <button
@@ -504,15 +500,10 @@ export function CheckoutSteps({
 
       {label === "Verify" && (
         <>
-          <h2>Confirm it&#39;s you.</h2>
           {timer}
-          <p>
-            We sent a 6-digit code to {co.phoneE164}. It expires in 1 minute —
-            tap Resend code if it runs out.
-          </p>
           <form onSubmit={co.verifyOtp}>
             <div className="field">
-              <label htmlFor="booking-otp">One-time code</label>
+              <label htmlFor="booking-otp">Code sent to {co.phoneE164}</label>
               <input
                 id="booking-otp"
                 inputMode="numeric"
@@ -522,6 +513,7 @@ export function CheckoutSteps({
                 value={co.otp}
                 onChange={(e) => co.setOtp(e.target.value.replace(/\D/g, ""))}
               />
+              <p className="avail-hint">It expires in 1 minute. Tap Resend code if it runs out.</p>
             </div>
             <div className="step-actions">
               <button
