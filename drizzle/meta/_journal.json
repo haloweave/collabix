@@ -99,6 +99,13 @@
       "when": 1793087881757,
       "tag": "0013_billing_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793089648475,
+      "tag": "0014_retire_old_memberships",
+      "breakpoints": true
     }
   ]
 }

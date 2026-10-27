@@ -75,62 +75,6 @@ export const ratePlan = pgTable("rate_plan", {
   active: boolean("active").notNull().default(true),
 });
 
-// Recurring membership plans: a monthly fee that includes an hours allowance.
-// Booking hours draw down the allowance; overage bills at the normal rate.
-export const membershipPlan = pgTable("membership_plan", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  priceMinor: integer("price_minor").notNull(), // monthly fee, paise
-  includedHours: integer("included_hours").notNull().default(0),
-  overageRateMinor: integer("overage_rate_minor").notNull().default(0), // per hour beyond allowance
-  currency: text("currency").notNull().default("INR"),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-// A member's active plan. memberId is a user.id (no cross-schema FK, matching
-// booking.memberId). hoursUsed accrues within the current period.
-export const memberSubscription = pgTable("member_subscription", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  memberId: text("member_id").notNull(),
-  planId: uuid("plan_id")
-    .notNull()
-    .references(() => membershipPlan.id),
-  status: text("status").notNull().default("active"), // active | cancelled
-  startedAt: timestamp("started_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  periodStart: timestamp("period_start", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
-  hoursUsed: integer("hours_used").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-// Member invoices (monthly statements). Line items are stored as JSON snapshots
-// so an invoice never changes when plans/rates later change.
-export const invoice = pgTable("invoice", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  memberId: text("member_id").notNull(),
-  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
-  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
-  status: text("status").notNull().default("draft"), // draft | sent | paid | void
-  lineItems: jsonb("line_items").notNull(), // [{ label, amountMinor }]
-  subtotalMinor: integer("subtotal_minor").notNull(),
-  taxMinor: integer("tax_minor").notNull(),
-  totalMinor: integer("total_minor").notNull(),
-  paymentRef: text("payment_ref"), // gateway id or manual note
-  paidAt: timestamp("paid_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
 // Staff discount codes, applied to a booking total at checkout.
 export const coupon = pgTable("coupon", {
   id: uuid("id").primaryKey().defaultRandom(),
