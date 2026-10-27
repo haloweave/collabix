@@ -51,11 +51,13 @@ export function InventoryRow({ resource }: { resource: InventoryResource }) {
     });
   }
 
+  // One line per seat, even on a phone: the kind and the "Seats" label drop
+  // away and Save appears only once the capacity has been changed.
   return (
-    <div className="flex flex-wrap items-center gap-3 py-2.5">
-      <div className="flex min-w-[120px] flex-1 items-center gap-2">
-        <span className="font-medium">{resource.code}</span>
-        <Badge variant="outline" className="text-xs capitalize">
+    <div className="flex items-center gap-2 py-2 sm:flex-wrap sm:gap-3 sm:py-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[120px]">
+        <span className="font-medium whitespace-nowrap">{resource.code}</span>
+        <Badge variant="outline" className="hidden text-xs capitalize sm:inline-flex">
           {resource.kind}
         </Badge>
         {!resource.enabled && (
@@ -66,11 +68,12 @@ export function InventoryRow({ resource }: { resource: InventoryResource }) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground">Seats</span>
+        <span className="hidden text-xs text-muted-foreground sm:inline">Seats</span>
         <Input
           type="number"
           min={1}
-          className="h-8 w-16"
+          aria-label={`Seats at ${resource.code}`}
+          className="h-8 w-14 sm:w-16"
           value={capacity}
           onChange={(e) => setCapacity(e.target.value)}
         />
@@ -78,6 +81,7 @@ export function InventoryRow({ resource }: { resource: InventoryResource }) {
           type="button"
           size="sm"
           variant="ghost"
+          className={capacityDirty ? "" : "hidden sm:inline-flex"}
           onClick={saveCapacity}
           disabled={!capacityDirty || savePending}
         >
@@ -88,6 +92,7 @@ export function InventoryRow({ resource }: { resource: InventoryResource }) {
       <Button
         type="button"
         size="sm"
+        className="w-[6.5rem] sm:w-auto"
         variant={resource.enabled ? "secondary" : "default"}
         onClick={toggleEnabled}
         disabled={togglePending}
