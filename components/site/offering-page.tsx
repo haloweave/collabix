@@ -47,7 +47,11 @@ export default function OfferingPage({ o }: { o: Offering }) {
 
         <div className="of-ask">
           <h2>Pricing</h2>
-          <p>Contact us to know the price. Call <a href="tel:+919632771444">+91 96327 71444</a> or write to <a href={mail(o)}>connect@collabix.co.in</a>.</p>
+          {o.book ? (
+            <p>Every plan and price is on our <a href="/pricing">pricing page</a>, and booking online shows your full total, GST included, before you pay.</p>
+          ) : (
+            <p>Contact us to know the price. Call <a href="tel:+919632771444">+91 96327 71444</a> or write to <a href={mail(o)}>connect@collabix.co.in</a>.</p>
+          )}
         </div>
       </div>
     </section>
