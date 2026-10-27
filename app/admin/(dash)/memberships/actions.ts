@@ -8,16 +8,19 @@ import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { termHoldBody } from "@/lib/api/validation";
 import { confirmBooking, holdTerm } from "@/lib/domain/reservations";
+import { recordDeskPayment, type DeskMethod } from "@/lib/domain/desk-payment";
 import { toIndianMobile } from "@/lib/sms";
 
-export type PaidBy = "cash" | "upi" | "card" | "bank_transfer";
+export type PaidBy = DeskMethod;
 
 const PASS_ERRORS: Record<string, string> = {
   seat_unavailable: "No desk or cabin of that plan is free for the whole term.",
   unknown_plan: "That plan isn't on sale.",
 };
 
-export type RecordPassResult = { ok: true; bookingId: string } | { ok: false; error: string };
+export type RecordPassResult =
+  | { ok: true; bookingId: string }
+  | { ok: false; error: string; bookingId?: string };
 
 // A monthly or annual pass sold at the front desk: the same plans, prices and
 // desk/cabin assignment as /book/passes, confirmed straight away because the
@@ -34,7 +37,7 @@ export async function recordPass(input: {
   paidBy: PaidBy;
   reference?: string;
 }): Promise<RecordPassResult> {
-  await requireStaff();
+  const staff = await requireStaff();
 
   const parsed = termHoldBody.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the plan, start date, term and customer details." };
@@ -60,6 +63,14 @@ export async function recordPass(input: {
   }
   const confirmed = await confirmBooking(db, { bookingId: held.bookingId, memberId: member?.id });
   if (!confirmed.ok) return { ok: false, error: "That desk or cabin was just taken. Please try again." };
+  // The money was taken in person: record it like a desk payment on any booking,
+  // so the invoice and every "is it paid?" check show it as paid.
+  const paid = await recordDeskPayment(db, {
+    bookingId: held.bookingId,
+    method: input.paidBy,
+    reference: input.reference,
+    recordedBy: staff.id,
+  });
 
   await logAudit({
     action: "membership.record",
@@ -72,9 +83,17 @@ export async function recordPass(input: {
       totalMinor: held.quote.totalMinor,
       paidBy: input.paidBy,
       reference: input.reference?.trim() || null,
+      paymentRecorded: paid.ok,
     },
   });
   revalidatePath("/admin/memberships");
   if (member) revalidatePath(`/admin/members/${member.id}`);
+  if (!paid.ok) {
+    return {
+      ok: false,
+      error: "Membership recorded, but the payment wasn't. Mark it paid from the booking page.",
+      bookingId: held.bookingId,
+    };
+  }
   return { ok: true, bookingId: held.bookingId };
 }
