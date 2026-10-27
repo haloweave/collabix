@@ -10,14 +10,18 @@ import { messageCentralConfigured, sendVerification, validateVerification } from
 
 const mcKey = (phone: string) => `message-central:${phone}`;
 
-// Passwordless auth. Sign-in and checkout verify a mobile number by SMS code:
+// Members sign in passwordless; staff may also use an email + password.
+// Sign-in and checkout verify a mobile number by SMS code:
 // Message Central VerifyNow when configured (lib/message-central.ts), else
 // Fast2SMS (lib/sms.ts). The email-OTP plugin stays for staff tooling but the
-// public login only offers mobile.
+// public login offers mobile codes and staff passwords only.
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
+  // Email + password sign-in for staff accounts only. Nobody can sign up with a
+  // password: credentials are created by the seed script (lib/db/seed-login.ts).
+  emailAndPassword: { enabled: true, disableSignUp: true },
   // Every code is a paid SMS: at most 3 send requests per address per 10 minutes.
   rateLimit: {
     customRules: { "/phone-number/send-otp": { window: 600, max: 3 } },
