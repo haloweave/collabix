@@ -1,5 +1,10 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
+import { OfferingIcon } from "@/components/site/offering-icon";
+import { offeringHref, offerings } from "@/lib/offerings";
+// Menu items the space cards above don't already cover.
+const BEYOND = ["day-pass", "virtual-office", "gst-accounting", "company-registration", "websites-apps"];
 export const metadata: Metadata = {title: "Collabix \u00b7 Amenities"};
 export default function Page() { return <>
 
@@ -26,19 +31,22 @@ export default function Page() { return <>
         <article className="amen-card reveal">
           <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/hero.jpg" alt="Open work lounge" /></div>
           <div className="txt"><span className="num">01</span><h3>Open Work Lounge</h3>
-            <p>28 shared desks on a calm, ivory-toned floor — hot desks and dedicated seats, natural light, low hum, room to think.</p></div>
+            <p>28 shared desks on a calm, ivory-toned floor — hot desks and dedicated seats, natural light, low hum, room to think.</p>
+            <Link className="link-arw amen-link" href="/spaces/hot-desk">Hot desk &amp; dedicated desk plans <span className="arw">→</span></Link></div>
         </article>
 
         <article className="amen-card reveal d1">
           <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/cabin.jpg" alt="Private cabins" /></div>
           <div className="txt"><span className="num">02</span><h3>Private Cabins</h3>
-            <p>Four enclosed cabins, each for a team of four — standard fit-out, ready to occupy, with meeting credits and guest passes on Pro and Enterprise plans.</p></div>
+            <p>Four enclosed cabins, each for a team of four — standard fit-out, ready to occupy, with meeting credits and guest passes on Pro and Enterprise plans.</p>
+            <Link className="link-arw amen-link" href="/spaces/private-cabin">Cabin plans <span className="arw">→</span></Link></div>
         </article>
 
         <article className="amen-card reveal d2">
           <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="Meeting rooms" /></div>
           <div className="txt"><span className="num">03</span><h3>Meeting &amp; Boardrooms</h3>
-            <p>A compact 4-seat meeting room with TV and whiteboard, and an 8-seat boardroom with integrated VC and an interactive panel — bookable by the hour.</p></div>
+            <p>A compact 4-seat meeting room with TV and whiteboard, and an 8-seat boardroom with integrated VC and an interactive panel — bookable by the hour.</p>
+            <Link className="link-arw amen-link" href="/spaces/meeting-rooms">Book a room <span className="arw">→</span></Link></div>
         </article>
 
         <article className="amen-card reveal">
@@ -103,17 +111,30 @@ export default function Page() { return <>
 
         <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="9" cy="8" r="3"></circle><path d="M3 20a6 6 0 0112 0M17 8v6M14 11h6"></path></svg></span>
           <div><h4>Guest Passes</h4><p>Bring a guest in on Dedicated Desk Pro and Cabin Enterprise plans.</p></div></div>
-
-        <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"></path></svg></span>
-          <div><h4>Virtual Office</h4><p>A Banaswadi business address with GST NOC, mail handling and name-board display.</p></div></div>
-
-        <div className="feat"><span className="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"></path></svg></span>
-          <div><h4>Happy to Help Service Desk</h4><p>GST registration and filing, Udyam registration and company / LLP incorporation.</p></div></div>
       </div>
     </div>
   </section>
 
   
+  <section className="pad-sm section-ivory">
+    <div className="wrap">
+      <div className="sec-head reveal">
+        <span className="eyebrow">Beyond the desk</span>
+        <h2 className="section-title"><span className="thin">Passes, an address </span>and a helping hand.</h2>
+      </div>
+      <div className="of-related five reveal d1">
+        {BEYOND.map((slug) => offerings.find((o) => o.slug === slug)!).map((o) => (
+          <a key={o.slug} className="of-related-card" href={offeringHref(o)}>
+            <span className="ic"><OfferingIcon d={o.icon} /></span>
+            <h3>{o.title}</h3>
+            <p>{o.blurb}</p>
+            <span className="link-arw">Learn more <span className="arw">→</span></span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
   <section className="pad section-ivory">
     <div className="wrap">
       <div className="loc">
