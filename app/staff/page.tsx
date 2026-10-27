@@ -7,8 +7,8 @@ import {
   getTodayVisitors,
 } from "@/lib/admin/queries";
 import { rupees } from "@/lib/admin/format";
-import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/admin/stat-card";
+import { WelcomeBand } from "@/components/admin/welcome-band";
 import { ReceptionBoard } from "@/components/admin/reception-board";
 import { StatGridSkeleton, CardSkeleton } from "@/components/admin/skeletons";
 
@@ -17,20 +17,23 @@ export const dynamic = "force-dynamic";
 export default function StaffHome() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Front desk</h1>
-          <p className="text-sm text-muted-foreground">
-            Check people in, sign visitors, and book on the spot.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/staff/book">
-            <Plus className="size-4" />
-            New booking
-          </Link>
-        </Button>
-      </div>
+      <WelcomeBand
+        eyebrow={new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Kolkata",
+  })}
+        title="Front desk"
+        subtitle="Check people in, sign visitors, and book on the spot."
+      >
+        <Link href="/staff/book" className="inline-flex items-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-navy shadow-[0_6px_20px_rgba(200,155,83,0.28)] transition hover:-translate-y-0.5 hover:bg-gold-light">
+          <Plus className="size-4" /> New booking
+        </Link>
+        <Link href="/staff/scan" className="inline-flex items-center gap-2 rounded-md border border-ivory/25 px-4 py-2 text-sm font-medium text-ivory transition hover:border-gold hover:text-white">
+          <ScanLine className="size-4" /> Scan ticket
+        </Link>
+      </WelcomeBand>
 
       <Suspense
         fallback={
@@ -45,7 +48,7 @@ export default function StaffHome() {
 
       <Link
         href="/staff/scan"
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg md:hidden"
+        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-gold px-5 py-3 font-semibold text-navy shadow-[0_8px_22px_rgba(200,155,83,0.44)] md:hidden"
       >
         <ScanLine className="size-5" /> Scan
       </Link>
