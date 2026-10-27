@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, CalendarClock, Hourglass } from "lucide-react";
+import { BadgeCheck, CalendarClock, Hourglass, Plus } from "lucide-react";
 import { requireManager } from "@/lib/admin/auth";
 import { listMemberships, type MembershipRow, type MembershipStatus } from "@/lib/admin/queries";
 import { MembershipTable } from "@/components/admin/membership-table";
@@ -50,11 +50,19 @@ export default async function MembershipsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Memberships</h1>
-        <p className="text-sm text-muted-foreground">
-          Monthly and annual passes. Each one holds a desk or cabin for its whole term.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Memberships</h1>
+          <p className="text-sm text-muted-foreground">
+            Monthly and annual passes. Each one holds a desk or cabin for its whole term.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/memberships/new">
+            <Plus className="size-4" />
+            Record a membership
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
