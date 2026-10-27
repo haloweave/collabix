@@ -86,6 +86,32 @@ describe("backfill migration", () => {
   });
 });
 
+describe("invoice billing snapshot", () => {
+  test("freezes the customer's business details at confirmation", async () => {
+    const userId = "snapshot-test-user";
+    await ctx.db.delete(schema.billingProfile).where(eq(schema.billingProfile.userId, userId));
+    await ctx.db.insert(schema.billingProfile).values({ userId, companyName: "Acme LLP", gstin: "29AAWFC6805H1ZX", address: "Bengaluru" });
+    const held = await holdReservation(ctx.db, {
+      productKey: "meeting-4", date: "2026-12-01", start: 9, duration: 2,
+      customerName: "Test Guest", customerEmail: "guest@example.com",
+    });
+    if (!held.ok) throw new Error(held.error);
+    await confirmBooking(ctx.db, { bookingId: held.bookingId, memberId: userId });
+
+    // A later profile edit must not rewrite the issued invoice.
+    await ctx.db.update(schema.billingProfile).set({ companyName: "Renamed Pvt Ltd" }).where(eq(schema.billingProfile.userId, userId));
+    const [b] = await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, held.bookingId));
+    expect(b.billingSnapshot).toEqual({ companyName: "Acme LLP", gstin: "29AAWFC6805H1ZX", address: "Bengaluru" });
+    await ctx.db.delete(schema.billingProfile).where(eq(schema.billingProfile.userId, userId));
+  });
+
+  test("a customer without business details gets a personal invoice", async () => {
+    const { bookingId } = await bookConfirmed(ctx.db);
+    const [b] = await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, bookingId));
+    expect(b.billingSnapshot).toBeNull();
+  });
+});
+
 describe("invoice backfill migration", () => {
   test("numbers existing confirmed bookings in settlement order and seeds the counter", async () => {
     const a = await bookConfirmed(ctx.db, { start: 9 });

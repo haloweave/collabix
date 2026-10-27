@@ -66,7 +66,7 @@ export function BillingForm({ initial }: { initial: BillingDetails }) {
         <Button type="submit" disabled={pending || !dirty}>
           {pending ? "Saving…" : "Save billing details"}
         </Button>
-        <span className="text-xs text-muted-foreground">Optional. Leave blank for personal invoices.</span>
+        <span className="text-xs text-muted-foreground">Optional. Printed on invoices for bookings confirmed after you save; earlier invoices stay as issued.</span>
       </div>
     </form>
   );

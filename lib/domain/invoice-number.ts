@@ -19,11 +19,25 @@ export function formatInvoiceNo(fy: string, seq: number): string {
   return `CBX/${fy}/${String(seq).padStart(4, "0")}`;
 }
 
+export type BillingSnapshot = { companyName: string | null; gstin: string | null; address: string | null };
+
+/** The customer's business details as they stand now, or null if they have none. */
+async function billingSnapshot(tx: Tx, memberId: string | null): Promise<BillingSnapshot | null> {
+  if (!memberId) return null;
+  const [bp] = await tx
+    .select()
+    .from(schema.billingProfile)
+    .where(eq(schema.billingProfile.userId, memberId));
+  if (!bp || !(bp.companyName || bp.gstin || bp.address)) return null;
+  return { companyName: bp.companyName, gstin: bp.gstin, address: bp.address };
+}
+
 /**
- * Give a confirmed booking its invoice number. Idempotent: an existing number
- * is returned unchanged. The counter row is locked by the upsert until the
- * caller's transaction ends, so concurrent confirmations take turns and a
- * rollback releases the serial unused.
+ * Give a confirmed booking its invoice number, freezing the buyer's business
+ * details alongside it. Idempotent: an existing number is returned unchanged.
+ * The counter row is locked by the upsert until the caller's transaction ends,
+ * so concurrent confirmations take turns and a rollback releases the serial
+ * unused.
  */
 export async function issueInvoiceNo(
   tx: Tx,
@@ -31,7 +45,7 @@ export async function issueInvoiceNo(
   now = new Date(),
 ): Promise<string> {
   const [cur] = await tx
-    .select({ no: schema.booking.invoiceNo })
+    .select({ no: schema.booking.invoiceNo, memberId: schema.booking.memberId })
     .from(schema.booking)
     .where(eq(schema.booking.id, bookingId));
   if (!cur) throw new Error(`issueInvoiceNo: booking ${bookingId} not found`);
@@ -49,7 +63,7 @@ export async function issueInvoiceNo(
   const no = formatInvoiceNo(fy, last);
   await tx
     .update(schema.booking)
-    .set({ invoiceNo: no, invoicedAt: now })
+    .set({ invoiceNo: no, invoicedAt: now, billingSnapshot: await billingSnapshot(tx, cur.memberId) })
     .where(eq(schema.booking.id, bookingId));
   return no;
 }

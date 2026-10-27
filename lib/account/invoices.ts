@@ -2,6 +2,7 @@ import "server-only";
 import { sql } from "@/lib/db/client";
 import { bookingInvoice, type InvoiceBuyer, type InvoiceDoc } from "@/lib/invoice/document";
 import { ticketWhen } from "@/lib/domain/ticket-display";
+import type { BillingSnapshot } from "@/lib/domain/invoice-number";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const n = (v: unknown) => Number(v ?? 0);
@@ -10,22 +11,24 @@ const date = (v: unknown) => (v == null ? null : new Date(v as string));
 /** Who a document belongs to, for the download route's access check. */
 export type Owned<T> = { doc: T; memberId: string | null; email: string | null };
 
+/** The buyer as invoiced: business details come from the snapshot frozen at issue. */
 function buyerOf(r: Record<string, unknown>, name: string, email: string): InvoiceBuyer {
+  const billing = (r.billing_snapshot as BillingSnapshot | null) ?? null;
   return {
     name,
     email,
     phone: (r.phone_number as string) ?? null,
-    companyName: (r.company_name as string) ?? null,
-    gstin: (r.gstin as string) ?? null,
-    address: (r.address as string) ?? null,
+    companyName: billing?.companyName ?? null,
+    gstin: billing?.gstin ?? null,
+    address: billing?.address ?? null,
   };
 }
 
 async function bookingDoc(id: string): Promise<Owned<InvoiceDoc> | null> {
   const [r] = await sql`
     SELECT b.id, b.status, b.member_id, b.customer_name, b.customer_email,
-      b.ticket_code, b.invoice_no, b.invoiced_at,
-      u.phone_number, bp.company_name, bp.gstin, bp.address,
+      b.ticket_code, b.invoice_no, b.invoiced_at, b.billing_snapshot,
+      u.phone_number,
       min(r.start_at) AS start_at, max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
       (array_agg(DISTINCT rp.name))[1] AS plan,
@@ -35,14 +38,12 @@ async function bookingDoc(id: string): Promise<Owned<InvoiceDoc> | null> {
     JOIN reservation r ON r.booking_id = b.id
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
     LEFT JOIN "user" u ON u.id = b.member_id
-    LEFT JOIN billing_profile bp ON bp.user_id = b.member_id
     LEFT JOIN LATERAL (
       SELECT payment_method, cf_payment_id, paid_at FROM payment
       WHERE booking_id = b.id AND status = 'paid' ORDER BY paid_at LIMIT 1
     ) p ON true
     WHERE b.id = ${id} AND b.invoice_no IS NOT NULL
-    GROUP BY b.id, u.phone_number, bp.company_name, bp.gstin, bp.address,
-      p.payment_method, p.cf_payment_id, p.paid_at`;
+    GROUP BY b.id, u.phone_number, p.payment_method, p.cf_payment_id, p.paid_at`;
   if (!r) return null;
   const startAt = new Date(r.start_at as string);
   const endAt = new Date(r.end_at as string);
