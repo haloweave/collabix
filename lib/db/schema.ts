@@ -218,6 +218,18 @@ export const invoiceCounter = pgTable("invoice_counter", {
   last: integer("last").notNull(),
 });
 
+// A customer's business details, printed as the buyer on their tax invoices
+// so they can claim input tax credit. One row per auth user.
+export const billingProfile = pgTable("billing_profile", {
+  userId: text("user_id").primaryKey(),
+  companyName: text("company_name"),
+  gstin: text("gstin"),
+  address: text("address"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
 // member); staff record who they are and who they're here to see.
 export const visitor = pgTable("visitor", {
