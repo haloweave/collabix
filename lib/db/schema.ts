@@ -114,6 +114,10 @@ export const booking = pgTable("booking", {
   // ticket on confirmation: CBX/<FY>/<seq>, consecutive within a financial year.
   invoiceNo: text("invoice_no").unique(),
   invoicedAt: timestamp("invoiced_at", { withTimezone: true }),
+  // The buyer's business details (company, GSTIN, address) as they stood when
+  // the invoice was issued, so later profile edits never rewrite it. Null for
+  // a personal invoice.
+  billingSnapshot: jsonb("billing_snapshot"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
