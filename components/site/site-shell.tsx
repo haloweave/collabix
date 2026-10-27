@@ -5,11 +5,16 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { OfferingIcon } from "@/components/site/offering-icon";
 import ThemeToggle from "@/components/site/theme-toggle";
+import { authClient } from "@/lib/auth-client";
 import { offeringGroups, offeringHref, offerings } from "@/lib/offerings";
 export default function SiteShell({children, minimal=false, authed=false}: {children: React.ReactNode; minimal?: boolean; authed?: boolean}) {
  const [open,setOpen]=useState(false);
  const [menu,setMenu]=useState(false);
  const path=usePathname();
+ // Resolved client-side so the marketing pages can stay static; the account
+ // portal passes `authed` since it already knows.
+ const {data:session}=authClient.useSession();
+ const signedIn=authed||Boolean(session);
  const links=[["/amenities","Amenities"],["/pricing","Pricing"],["/#location","Location"]];
  return <div className="collabix-site">
  <header className="site-header solid"><div className="wrap bar">
@@ -27,7 +32,7 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
  </div>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
  <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
- <a className={`navlink ${path==="/login"||path.startsWith("/account")?"active":""}`} href="/login" onClick={()=>setOpen(false)}>{authed?"My account":"Login"}</a></nav>
+ <a className={`navlink ${path==="/login"||path.startsWith("/account")?"active":""}`} href="/login" onClick={()=>setOpen(false)}>{signedIn?"My account":"Login"}</a></nav>
  <div className="bar-end"><ThemeToggle/>
  <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button></div>
  </div></header>
