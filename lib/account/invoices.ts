@@ -39,7 +39,8 @@ async function bookingDoc(id: string): Promise<Owned<InvoiceDoc> | null> {
     LEFT JOIN rate_plan rp ON rp.id = r.rate_plan_id
     LEFT JOIN "user" u ON u.id = b.member_id
     LEFT JOIN LATERAL (
-      SELECT payment_method, cf_payment_id, paid_at FROM payment
+      -- A desk payment keeps the staff-entered reference in raw.
+      SELECT payment_method, coalesce(cf_payment_id, raw->>'reference') AS cf_payment_id, paid_at FROM payment
       WHERE booking_id = b.id AND status = 'paid' ORDER BY paid_at LIMIT 1
     ) p ON true
     WHERE b.id = ${id} AND b.invoice_no IS NOT NULL
