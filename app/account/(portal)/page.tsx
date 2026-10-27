@@ -1,92 +1,94 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/account/auth";
 import { getMyBookings } from "@/lib/account/queries";
-import { rupees, istDateTime } from "@/lib/admin/format";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { CancelMyBooking } from "@/components/account/cancel-my-booking";
+import { BookingCard, NextVisit } from "@/components/account/booking-card";
 
 export const dynamic = "force-dynamic";
+
+function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="flex items-baseline gap-2 text-xs font-semibold uppercase tracking-[0.16em] !text-navy/50">
+        {title}
+        <span className="font-mono text-gold">{count}</span>
+      </h2>
+      <div className="space-y-2.5">{children}</div>
+    </section>
+  );
+}
 
 export default async function MyBookingsPage() {
   const member = await requireMember();
   const bookings = await getMyBookings(member.id, member.email);
-  const upcoming = bookings.filter((b) => b.cancellable || (b.confirmed && b.status === "active" && b.startAt && b.startAt > new Date()));
-  const past = bookings.filter((b) => !upcoming.includes(b));
 
-  function Row({ b }: { b: (typeof bookings)[number] }) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-        <div className="min-w-0">
-          <p className="font-medium">
-            {b.plan ?? "Booking"}{" "}
-            <span className="font-normal text-muted-foreground">
-              · {b.seats} seat{b.seats === 1 ? "" : "s"}
-            </span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {b.startAt ? istDateTime(b.startAt) : "—"} · {rupees(b.totalMinor)}
-            {b.confirmed && (b.paid ? " · Paid" : " · Pay at desk")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {b.ticketToken && b.status === "active" && b.confirmed && (
-            <Link href={`/t/${b.ticketToken}`} className="text-sm font-medium underline underline-offset-4">
-              Ticket
-            </Link>
-          )}
-          {b.status === "cancelled" ? (
-            <Badge variant="destructive">Cancelled</Badge>
-          ) : (
-            <Badge>Confirmed</Badge>
-          )}
-          {b.cancellable && <CancelMyBooking bookingId={b.id} />}
-        </div>
-      </div>
-    );
-  }
+  const live = bookings.filter((b) => b.stage === "today" || b.stage === "upcoming" || b.stage === "in-progress");
+  const next = live[0];
+  const comingUp = [
+    ...bookings.filter((b) => b.stage === "awaiting-payment"),
+    ...live.slice(1),
+  ];
+  const history = bookings
+    .filter((b) => b.stage === "completed" || b.stage === "cancelled")
+    .reverse();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">My bookings</h1>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-navy">My bookings</h1>
+          <p className="text-sm text-navy/60">Tickets, invoices and everything you have booked.</p>
+        </div>
         <Link href="/book" className="btn btn-gold">
           Book again <span className="arw">→</span>
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {upcoming.length === 0 && (
-            <p className="text-sm text-muted-foreground">No upcoming bookings.</p>
+      {bookings.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-navy/20 bg-white/60 px-6 py-12 text-center">
+          <p className="text-lg font-semibold text-navy">No bookings yet</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-navy/60">
+            Grab a day pass or a meeting room and it will show up here, with your
+            ticket and invoice.
+          </p>
+          <div className="mt-5 flex justify-center gap-3">
+            <Link href="/book" className="btn btn-gold">
+              Book a desk <span className="arw">→</span>
+            </Link>
+            <Link href="/pricing" className="btn btn-ghost">
+              See pricing
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          {next ? (
+            <NextVisit b={next} />
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-navy/10 bg-white px-5 py-4">
+              <p className="text-sm text-navy/70">Nothing coming up. Your next desk is a couple of taps away.</p>
+              <Link href="/book" className="text-sm font-semibold text-navy underline decoration-gold underline-offset-4">
+                Book a visit
+              </Link>
+            </div>
           )}
-          {upcoming.map((b) => (
-            <Row key={b.id} b={b} />
-          ))}
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Past & cancelled</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {past.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nothing here yet.</p>
+          {comingUp.length > 0 && (
+            <Section title="Coming up" count={comingUp.length}>
+              {comingUp.map((b) => (
+                <BookingCard key={b.id} b={b} />
+              ))}
+            </Section>
           )}
-          {past.map((b) => (
-            <Row key={b.id} b={b} />
-          ))}
-        </CardContent>
-      </Card>
+
+          {history.length > 0 && (
+            <Section title="History" count={history.length}>
+              {history.map((b) => (
+                <BookingCard key={b.id} b={b} />
+              ))}
+            </Section>
+          )}
+        </>
+      )}
     </div>
   );
 }
