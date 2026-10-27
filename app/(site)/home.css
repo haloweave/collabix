@@ -947,3 +947,4 @@
 .collabix-site .passes-banner strong {color:var(--gold);}
 .collabix-site .passes-banner .arw {color:var(--gold);font-size:1.2rem;}
 .collabix-site .passes-banner:hover {background:var(--navy-mid);}
+.collabix-site .bk-length {max-width:220px;margin:1.4rem 0 .4rem;}

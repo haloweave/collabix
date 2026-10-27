@@ -25,6 +25,9 @@ const longDate = (iso: string) =>
 // The last day of a term, from its exclusive end date.
 const dayBefore = (iso: string) => new Date(Date.parse(`${iso}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
 
+/** A monthly pass opens on six months; an annual one on a year. */
+const DEFAULT_MONTHS = 6;
+
 const termLabel = (unit: TermUnit, count: number) =>
   `${count} ${unit}${count === 1 ? "" : "s"}`;
 
@@ -37,7 +40,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
     planKey: findTermPlan(initialPlan ?? "")?.key ?? "hot-desk",
     unit: "month",
-    count: 1,
+    count: DEFAULT_MONTHS,
     date: istDay(),
   }));
   const co = useCheckout();
@@ -76,8 +79,8 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   function update(next: Partial<Choice>) {
     setChoice((prev) => {
       const merged = { ...prev, ...next };
-      // Switching between months and years keeps the count only if it fits.
-      if (next.unit) merged.count = Math.min(merged.count, next.unit === "year" ? MAX_YEARS : MAX_MONTHS);
+      // Switching between months and years starts from that unit's default.
+      if (next.unit && next.unit !== prev.unit) merged.count = next.unit === "year" ? 1 : DEFAULT_MONTHS;
       return merged;
     });
   }
@@ -175,19 +178,19 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                   ))}
                 </div>
 
-                <span className="filter-label">How long?</span>
-                <div className="dur-toggle bk-chips">
-                  {Array.from({ length: choice.unit === "year" ? MAX_YEARS : MAX_MONTHS }, (_, i) => i + 1).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={choice.count === n ? "sel" : ""}
-                      aria-pressed={choice.count === n}
-                      onClick={() => update({ count: n })}
-                    >
-                      {termLabel(choice.unit, n)}
-                    </button>
-                  ))}
+                <div className="field bk-length">
+                  <label htmlFor="pass-length">How long?</label>
+                  <select
+                    id="pass-length"
+                    value={choice.count}
+                    onChange={(e) => update({ count: Number(e.target.value) })}
+                  >
+                    {Array.from({ length: choice.unit === "year" ? MAX_YEARS : MAX_MONTHS }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {termLabel(choice.unit, n)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {choice.unit === "month" && (
                   <p className="avail-hint">Staying 12 months or more? Switch to Annual.</p>
