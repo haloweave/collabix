@@ -25,8 +25,9 @@ export function PassesBanner() {
   return (
     <Link href="/book/passes" className="passes-banner">
       <span>
-        <strong>Get monthly or annual passes.</strong> Your own desk or a private cabin
-        for months or years, from {money(from / 100)}/month.
+        <strong>Get monthly or annual passes.</strong>{" "}
+        <span className="pb-long">Your own desk or a private cabin for months or years, from</span>
+        <span className="pb-short">From</span> {money(from / 100)}/month.
       </span>
       <span className="arw" aria-hidden="true">→</span>
     </Link>
