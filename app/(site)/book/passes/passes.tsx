@@ -36,6 +36,8 @@ const GROUPS = [
   { space: "cabin", title: "Private cabins · 4 people" },
 ] as const;
 
+const AVAIL_ERROR = "Could not load availability. Please try again.";
+
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
     planKey: findTermPlan(initialPlan ?? "")?.key ?? "hot-desk",
@@ -61,12 +63,18 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
     let cancelled = false;
     const [p, date, unit, count] = availKey.split("|");
     fetch(`/api/passes/availability?plan=${p}&date=${date}&unit=${unit}&count=${count}`)
-      .then((r) => (r.ok ? r.json() : { free: 0 }))
+      // A failed lookup is an error, never "nothing free".
+      .then((r) => {
+        if (!r.ok) throw new Error(`availability ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
-        if (!cancelled) setAvail({ key: availKey, free: d.free ?? 0 });
+        if (cancelled) return;
+        setAvail({ key: availKey, free: d.free ?? 0 });
+        setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load availability. Please try again.");
+        if (!cancelled) setError(AVAIL_ERROR);
       });
     return () => {
       cancelled = true;

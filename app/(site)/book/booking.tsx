@@ -42,6 +42,8 @@ function initialChoice(key?: string): Choice {
   return { productKey: product.key, duration: 1, people: 1, ...firstOpening(product, 1) };
 }
 
+const AVAIL_ERROR = "Could not load availability. Please try again.";
+
 export default function Booking({ initialProduct }: { initialProduct?: string }) {
   const [choice, setChoice] = useState<Choice>(() => initialChoice(initialProduct));
   const co = useCheckout();
@@ -75,12 +77,18 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     let cancelled = false;
     const [key, date, start, duration] = availKey.split("|");
     fetch(`/api/availability?product=${key}&date=${date}&start=${start}&duration=${duration}`)
-      .then((r) => (r.ok ? r.json() : { resources: [] }))
+      // A failed lookup is an error, never "nothing free".
+      .then((r) => {
+        if (!r.ok) throw new Error(`availability ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
-        if (!cancelled) setAvail({ key: availKey, slots: d.resources ?? [] });
+        if (cancelled) return;
+        setAvail({ key: availKey, slots: d.resources ?? [] });
+        setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load availability. Please try again.");
+        if (!cancelled) setError(AVAIL_ERROR);
       });
     return () => {
       cancelled = true;
