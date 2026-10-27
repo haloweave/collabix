@@ -4,11 +4,12 @@
 // is the source of truth for exclusion. These functions layer server-authoritative
 // validation, pricing, and the expiry sweep on top.
 
-import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, like, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
 import { priceBooking, productWindow, toUtcWindow, type Quote, type WindowInput } from "./booking";
-import { bookableProduct, type BookableProduct } from "../tariff";
+import { bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
+import { priceTerm, termWindow, type TermInput, type TermWindow } from "./term";
 import { autoAssignDesks, type Slot } from "../floorplan";
 import { getSettings } from "../settings";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
@@ -242,6 +243,99 @@ export async function holdReservation(
         )
         .returning({ id: schema.reservation.id });
       return { bookingId: b.id, reservationIds: rows.map((r) => r.id) };
+    });
+    return { ok: true, ...result, holdExpiresAt, quote };
+  } catch (e) {
+    if (isOverlapViolation(e)) return { ok: false, error: "seat_unavailable" };
+    throw e;
+  }
+}
+
+/* ---------- Monthly & annual passes ---------- */
+
+export type TermAvailabilityResult =
+  | { ok: true; window: TermWindow; free: number }
+  | { ok: false; error: string };
+
+/** The desks (any shared desk) or cabins (C-xx) a term plan can take, each
+ * marked free only if nothing overlaps any part of the term. */
+async function termSlots(db: Db, plan: TermPlan, window: TermWindow): Promise<Slot[]> {
+  const resources = await db
+    .select()
+    .from(schema.resource)
+    .where(
+      and(
+        eq(schema.resource.enabled, true),
+        plan.space === "desk"
+          ? eq(schema.resource.kind, "desk")
+          : and(eq(schema.resource.kind, "room"), like(schema.resource.code, "C-%")),
+      ),
+    )
+    .orderBy(schema.resource.code);
+  const taken = await takenResourceIds(db, window.startAt, window.endAt);
+  return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
+}
+
+export async function getTermAvailability(
+  db: Db,
+  input: TermInput & { planKey: string },
+  now = new Date(),
+): Promise<TermAvailabilityResult> {
+  await sweepExpiredHolds(db);
+  const plan = findTermPlan(input.planKey);
+  if (!plan) return { ok: false, error: "unknown_plan" };
+  const w = termWindow(input, now);
+  if (!w.ok) return w;
+  const slots = await termSlots(db, plan, w.window);
+  return { ok: true, window: w.window, free: slots.filter((s) => s.available).length };
+}
+
+export type TermHoldInput = TermInput & {
+  planKey: string;
+  customerName: string;
+  customerEmail: string;
+  holdMinutes?: number;
+};
+
+/** Hold one desk or cabin for a whole term, priced from the tariff. Paid and
+ * confirmed through the same flow as any booking (lib/domain/payments.ts). */
+export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): Promise<HoldResult> {
+  await sweepExpiredHolds(db);
+  const plan = findTermPlan(input.planKey);
+  if (!plan) return { ok: false, error: "unknown_plan" };
+  const w = termWindow(input, now);
+  if (!w.ok) return { ok: false, error: w.error };
+  const ratePlan = await getPlan(db, plan.key);
+  if (!ratePlan || !ratePlan.active) return { ok: false, error: "unknown_plan" };
+
+  const free = (await termSlots(db, plan, w.window)).filter((s) => s.available);
+  const code =
+    plan.space === "desk" ? autoAssignDesks(free.map((s) => s.code), 1)[0] : free[0]?.code;
+  const resourceId = free.find((s) => s.code === code)?.resourceId;
+  if (!resourceId) return { ok: false, error: "seat_unavailable" };
+
+  const quote = priceTerm(plan, input, now);
+  const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [b] = await tx
+        .insert(schema.booking)
+        .values({ customerName: input.customerName, customerEmail: input.customerEmail })
+        .returning({ id: schema.booking.id });
+      const [r] = await tx
+        .insert(schema.reservation)
+        .values({
+          bookingId: b.id,
+          resourceId,
+          ratePlanId: ratePlan.id,
+          startAt: w.window.startAt,
+          endAt: w.window.endAt,
+          status: "held",
+          holdExpiresAt,
+          quoteSnapshot: quote,
+        })
+        .returning({ id: schema.reservation.id });
+      return { bookingId: b.id, reservationIds: [r.id] };
     });
     return { ok: true, ...result, holdExpiresAt, quote };
   } catch (e) {
