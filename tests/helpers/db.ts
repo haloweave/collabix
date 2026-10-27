@@ -28,6 +28,6 @@ export async function migrateDb(db: TestDb) {
 /** Wipe bookings/reservations between tests; inventory + rate plans persist. */
 export async function resetBookings(db: TestDb) {
   await db.execute(
-    drizzleSql`TRUNCATE TABLE "reservation", "booking" RESTART IDENTITY CASCADE`,
+    drizzleSql`TRUNCATE TABLE "reservation", "booking", "invoice_counter" RESTART IDENTITY CASCADE`,
   );
 }

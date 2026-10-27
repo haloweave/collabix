@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import * as schema from "../lib/db/schema";
 import { confirmBooking, holdReservation, issueTicket } from "../lib/domain/reservations";
 import { getTicketView } from "../lib/domain/ticket-view";
+import { financialYear, issueInvoiceNo } from "../lib/domain/invoice-number";
 import { ticketIcs } from "../lib/domain/ticket-ics";
 import { bookConfirmed, insertMultiDay, setupSeededDb } from "./helpers/tickets";
 
@@ -41,6 +42,32 @@ describe("issuing tickets", () => {
   });
 });
 
+describe("invoice numbers", () => {
+  test("confirmation numbers bookings consecutively within the financial year", async () => {
+    const a = await bookConfirmed(ctx.db, { start: 9 });
+    const b = await bookConfirmed(ctx.db, { start: 13 });
+    const [ra, rb] = await Promise.all(
+      [a, b].map(async ({ bookingId }) => {
+        const [row] = await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, bookingId));
+        return row;
+      }),
+    );
+    const fy = financialYear(new Date());
+    expect(ra.invoiceNo).toBe(`CBX/${fy}/0001`);
+    expect(rb.invoiceNo).toBe(`CBX/${fy}/0002`);
+    expect(ra.invoicedAt).toBeInstanceOf(Date);
+  });
+
+  test("re-confirming keeps the number and does not advance the counter", async () => {
+    const { bookingId } = await bookConfirmed(ctx.db);
+    await confirmBooking(ctx.db, { bookingId });
+    const again = await ctx.db.transaction((tx) => issueInvoiceNo(tx, bookingId));
+    expect(again).toBe(`CBX/${financialYear(new Date())}/0001`);
+    const [counter] = await ctx.db.select().from(schema.invoiceCounter);
+    expect(counter.last).toBe(1);
+  });
+});
+
 describe("backfill migration", () => {
   test("gives existing confirmed bookings a ticket and skips cancelled ones", async () => {
     const a = await bookConfirmed(ctx.db, { start: 9 });
@@ -56,6 +83,30 @@ describe("backfill migration", () => {
     expect(ta.token).toMatch(TOKEN);
     expect(ta.code).toMatch(CODE);
     expect(await ticketOf(c.bookingId)).toEqual({ token: null, code: null });
+  });
+});
+
+describe("invoice backfill migration", () => {
+  test("numbers existing confirmed bookings in settlement order and seeds the counter", async () => {
+    const a = await bookConfirmed(ctx.db, { start: 9 });
+    const b = await bookConfirmed(ctx.db, { start: 13 });
+    // Simulate rows confirmed before invoice numbers existed; b settled first.
+    await ctx.db.update(schema.booking).set({ invoiceNo: null, invoicedAt: null });
+    await ctx.db.delete(schema.invoiceCounter);
+    await ctx.db.update(schema.booking).set({ createdAt: new Date(Date.now() - 60_000) }).where(eq(schema.booking.id, b.bookingId));
+
+    const file = readdirSync("./drizzle").find((f) => f.endsWith("_booking_invoice.sql"))!;
+    const sql = readFileSync(`./drizzle/${file}`, "utf8");
+    await ctx.client.unsafe(sql.slice(sql.indexOf("-- Backfill")));
+
+    const fy = financialYear(new Date());
+    const no = async (id: string) =>
+      (await ctx.db.select().from(schema.booking).where(eq(schema.booking.id, id)))[0].invoiceNo;
+    expect(await no(b.bookingId)).toBe(`CBX/${fy}/0001`);
+    expect(await no(a.bookingId)).toBe(`CBX/${fy}/0002`);
+    // The next live confirmation carries on from the backfilled serials.
+    const c = await bookConfirmed(ctx.db, { start: 16 });
+    expect(await no(c.bookingId)).toBe(`CBX/${fy}/0003`);
   });
 });
 

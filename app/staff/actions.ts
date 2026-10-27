@@ -7,6 +7,7 @@ import * as schema from "@/lib/db/schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { issueTicket } from "@/lib/domain/reservations";
+import { issueInvoiceNo } from "@/lib/domain/invoice-number";
 import { registryKeyFor } from "@/lib/floorplan";
 
 // ── Coupons ────────────────────────────────────────────────────────────────
@@ -118,6 +119,7 @@ export async function createExtendedBooking(input: {
         })),
       );
       await issueTicket(tx, b.id);
+      await issueInvoiceNo(tx, b.id);
       return b.id;
     });
 

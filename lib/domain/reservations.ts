@@ -13,6 +13,7 @@ import { priceTerm, termWindow, type TermInput, type TermWindow } from "./term";
 import { autoAssignDesks, type Slot } from "../floorplan";
 import { getSettings } from "../settings";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
+import { issueInvoiceNo } from "./invoice-number";
 
 export type Db = PostgresJsDatabase<typeof schema>;
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -426,6 +427,8 @@ async function confirmInTx(
     // The ticket is issued with confirmation — once Cashfree lands, confirmation
     // happens only after payment, so "has a ticket" means "paid".
     const ticket = await issueTicket(tx, input.bookingId);
+    // The tax invoice is raised at the same moment, numbered in confirmation order.
+    await issueInvoiceNo(tx, input.bookingId);
     return { ok: true as const, ticketToken: ticket.token, newlyConfirmed: held.length > 0 };
   });
 }
