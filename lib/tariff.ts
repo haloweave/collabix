@@ -185,9 +185,78 @@ export function productPriceMinor(p: BookableProduct, now = new Date()): number 
   return earlyBirdOpen(now) && p.earlyBirdMinor != null ? p.earlyBirdMinor : p.priceMinor;
 }
 
-/** The rate_plan rows reservations reference: one per bookable product, plus
- * two never-sold rows for member holds and extended bookings. Prices are
- * recorded for reference only; quotes always come from BOOKABLE. */
+/* ---------- Monthly & annual passes ----------
+ * Desks and cabins sold online for a term of whole months or years, priced
+ * from the same tariff rows: the monthly rate (Early Bird while open) per
+ * month, or the Annual column per year. Each holds one desk or one cabin for
+ * the whole term. */
+
+export type TermPlanKey =
+  | "hot-desk"
+  | "dedicated-desk"
+  | "dedicated-desk-pro"
+  | "cabin-base"
+  | "cabin-pro"
+  | "cabin-enterprise";
+export const TERM_PLAN_KEYS = [
+  "hot-desk",
+  "dedicated-desk",
+  "dedicated-desk-pro",
+  "cabin-base",
+  "cabin-pro",
+  "cabin-enterprise",
+] as const satisfies readonly [TermPlanKey, ...TermPlanKey[]];
+
+export type TermPlan = {
+  key: TermPlanKey;
+  name: string;
+  blurb: string;
+  /** What the term holds: one shared desk, or one private cabin. */
+  space: "desk" | "cabin";
+  /** People the space seats. */
+  seats: number;
+  monthlyMinor: number;
+  earlyBirdMinor: number | null;
+  annualMinor: number;
+};
+
+function termPlan(key: TermPlanKey, sectionId: "desks" | "cabins", rowName: string): TermPlan {
+  const row = tariffRow(sectionId, rowName);
+  if (row.annual == null) throw new Error(`tariff row has no annual price: ${rowName}`);
+  return {
+    key,
+    name: row.name,
+    blurb: row.includes,
+    space: sectionId === "desks" ? "desk" : "cabin",
+    seats: sectionId === "desks" ? 1 : 4,
+    monthlyMinor: row.standard * 100,
+    earlyBirdMinor: row.earlyBird != null ? row.earlyBird * 100 : null,
+    annualMinor: row.annual * 100,
+  };
+}
+
+export const TERM_PLANS: readonly TermPlan[] = [
+  termPlan("hot-desk", "desks", "Hot Desk Flexi"),
+  termPlan("dedicated-desk", "desks", "Dedicated Desk"),
+  termPlan("dedicated-desk-pro", "desks", "Dedicated Desk Pro"),
+  termPlan("cabin-base", "cabins", "Cabin · Base"),
+  termPlan("cabin-pro", "cabins", "Cabin · Pro"),
+  termPlan("cabin-enterprise", "cabins", "Cabin · Enterprise"),
+];
+
+export function findTermPlan(key: string): TermPlan | undefined {
+  return TERM_PLANS.find((p) => p.key === key);
+}
+
+/** The monthly rate that applies now: Early Bird while the offer is open. */
+export function termMonthlyMinor(p: TermPlan, now = new Date()): number {
+  return earlyBirdOpen(now) && p.earlyBirdMinor != null ? p.earlyBirdMinor : p.monthlyMinor;
+}
+
+/** The rate_plan rows reservations reference: one per bookable product and
+ * term plan, plus two never-sold rows for member holds and extended bookings.
+ * Prices are recorded for reference only; quotes always come from BOOKABLE
+ * and TERM_PLANS. */
 export const REGISTRY_PLANS: {
   key: string;
   name: string;
@@ -200,6 +269,13 @@ export const REGISTRY_PLANS: {
     name: p.name,
     appliesToKind: p.kind === "pass" ? ("desk" as const) : ("room" as const),
     rateMinor: p.priceMinor,
+    active: true,
+  })),
+  ...TERM_PLANS.map((p) => ({
+    key: p.key,
+    name: p.name,
+    appliesToKind: p.space === "desk" ? ("desk" as const) : ("room" as const),
+    rateMinor: p.monthlyMinor,
     active: true,
   })),
   { key: "desk-membership", name: "Desk (membership)", appliesToKind: "desk", rateMinor: 0, active: false },
