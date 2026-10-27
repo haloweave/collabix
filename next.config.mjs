@@ -9,6 +9,10 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // The invoice PDF reads its fonts and logo from disk at request time.
+  outputFileTracingIncludes: {
+    "/account/invoices/[id]": ["./lib/invoice/fonts/*.ttf", "./public/logo-navy.png"],
+  },
   // The site used to live under /home while / showed a coming-soon page.
   async redirects() {
     return [
