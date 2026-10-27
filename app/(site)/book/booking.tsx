@@ -148,7 +148,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const whoWhere = isPass
     ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · any shared desk`
     : product.name;
-  const heldWord = isPass && choice.people > 1 ? "Desks held" : "Booking held";
+  const holding = !isPass ? "your room" : choice.people > 1 ? "your desks" : "your desk";
 
   return (
     <section className="pad section-ivory booking-page">
@@ -191,7 +191,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
             <CheckoutSteps
               co={co}
               onSubmitDetails={submitDetails}
-              heldWord={heldWord}
+              holding={holding}
               onRestart={restart}
               details={
                 <>

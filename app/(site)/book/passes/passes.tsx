@@ -226,7 +226,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
             <CheckoutSteps
               co={co}
               onSubmitDetails={submitDetails}
-              heldWord={plan.space === "desk" ? "Desk held" : "Cabin held"}
+              holding={plan.space === "desk" ? "your desk" : "your cabin"}
               onRestart={restart}
               details={
                 <>

@@ -58,6 +58,8 @@ export function useCheckout() {
   const [phone, setPhone] = useState("");
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null);
+  // Seconds the hold had when it was taken: the full turn of the timer ring.
+  const [holdSeconds, setHoldSeconds] = useState(0);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
@@ -120,6 +122,7 @@ export function useCheckout() {
       if (!res.ok) return { ok: false, error: typeof data.error === "string" ? data.error : "invalid" };
       setBookingId(data.bookingId);
       setHoldExpiresAt(data.holdExpiresAt);
+      setHoldSeconds(Math.max(1, Math.round((new Date(data.holdExpiresAt).getTime() - Date.now()) / 1000)));
       setQuote(data.quote);
       if (phoneVerified) {
         setStep(3); // Pay
@@ -267,6 +270,7 @@ export function useCheckout() {
     setPhone("");
     setBookingId(null);
     setHoldExpiresAt(null);
+    setHoldSeconds(0);
     setQuote(null);
     setOtp("");
     setError(null);
@@ -287,6 +291,7 @@ export function useCheckout() {
     setPhone,
     phoneE164,
     holdExpiresAt,
+    holdSeconds,
     quote,
     otp,
     setOtp,
@@ -322,37 +327,73 @@ export function BookingProgress({ step }: { step: number }) {
   );
 }
 
+/** The quiet countdown while a seat is held: a gold ring that drains with the
+ * hold, and what to do before it runs out. `holding` names the thing held,
+ * e.g. "your desk". */
+function HoldTimer({ co, holding }: { co: Checkout; holding: string }) {
+  const { remaining, mmss, holdSeconds } = co;
+  const r = 15;
+  const circ = 2 * Math.PI * r;
+  const left = holdSeconds > 0 ? Math.min(1, remaining / holdSeconds) : 0;
+  const expired = !co.holdExpiresAt || remaining === 0;
+  const tone = expired ? "expired" : remaining <= 120 ? "low" : "";
+  return (
+    <div className={`hold-timer ${tone}`}>
+      <svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true">
+        <circle className="track" cx="18" cy="18" r={r} />
+        <circle
+          className="ring"
+          cx="18"
+          cy="18"
+          r={r}
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - left)}
+        />
+      </svg>
+      {expired ? (
+        <div className="ht-text" role="status">
+          <strong>Your hold has ended.</strong>
+          <span>Start over to pick your dates again.</span>
+        </div>
+      ) : (
+        <>
+          <div className="ht-text">
+            <strong>Holding {holding}</strong>
+            <span>Complete payment to confirm it.</span>
+          </div>
+          <span className="ht-time" role="timer" aria-label={`${Math.ceil(remaining / 60)} minutes left`}>
+            {mmss}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Steps 2–5: Details, Verify, Pay and Done. `details` is what was booked,
  * shown on the Pay and Done steps. */
 export function CheckoutSteps({
   co,
   onSubmitDetails,
-  heldWord,
+  holding,
   details,
   onRestart,
 }: {
   co: Checkout;
   onSubmitDetails: (e: React.FormEvent) => void;
-  heldWord: string;
+  holding: string;
   details: ReactNode;
   onRestart: () => void;
 }) {
   const label = STEPS[co.step];
-  const { quote, remaining, mmss, busy, payPhase, account } = co;
+  const { quote, remaining, busy, payPhase, account } = co;
   // A signed-in customer whose account has everything sees who they're
   // booking as instead of the form, unless they choose to edit it.
   const [editing, setEditing] = useState(false);
   const known =
     !!account?.name && !!account.email && !!account.phone && co.phoneVerified &&
     co.name === account.name && co.email === account.email;
-  const timer =
-    co.holdExpiresAt && remaining > 0 ? (
-      <p className="hold-timer" aria-live="polite">
-        {heldWord} for <strong>{mmss}</strong>
-      </p>
-    ) : (
-      <p className="hold-timer expired">Your hold has expired.</p>
-    );
+  const timer = <HoldTimer co={co} holding={holding} />;
 
   return (
     <>
