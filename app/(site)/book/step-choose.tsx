@@ -59,7 +59,7 @@ export default function StepChoose({
             <span className="pd">{p.blurb}</span>
             <span className="pp">
               {money(productPriceMinor(p, now) / 100)}
-              <span className="per">{p.unit === "person" ? (p.key === "day-full" ? "/ person / day" : "/ person") : "/ hour"}</span>
+              <span className="per">{p.unit === "person" ? (p.key === "day-full" ? " / person / day" : " / person") : " / hour"}</span>
             </span>
           </button>
         ))}
