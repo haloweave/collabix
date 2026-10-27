@@ -63,7 +63,7 @@ async function CouponsTable() {
           <TableRow>
             <TableHead>Code</TableHead>
             <TableHead>Discount</TableHead>
-            <TableHead>Expires</TableHead>
+            <TableHead className="hidden sm:table-cell">Expires</TableHead>
             <TableHead className="text-right">Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -77,11 +77,16 @@ async function CouponsTable() {
           )}
           {coupons.map((c) => (
             <TableRow key={c.id}>
-              <TableCell className="font-mono font-medium">{c.code}</TableCell>
+              <TableCell className="font-mono font-medium">
+                {c.code}
+                <span className="block font-sans text-xs font-normal text-muted-foreground sm:hidden">
+                  {c.expiresAt ? `Expires ${istDate(c.expiresAt)}` : "No expiry"}
+                </span>
+              </TableCell>
               <TableCell>
                 <CouponBadge coupon={c} />
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                 {c.expiresAt ? istDate(c.expiresAt) : "—"}
               </TableCell>
               <TableCell className="text-right">
