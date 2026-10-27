@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, CalendarClock, Hourglass, Plus } from "lucide-react";
-import { requireManager } from "@/lib/admin/auth";
+import { requireStaff } from "@/lib/admin/auth";
 import { listMemberships, type MembershipRow, type MembershipStatus } from "@/lib/admin/queries";
 import { MembershipTable } from "@/components/admin/membership-table";
 import { StatCard } from "@/components/admin/stat-card";
@@ -40,7 +40,7 @@ export default async function MembershipsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireManager();
+  await requireStaff();
   const sp = await searchParams;
   const filter = FILTERS.find((f) => f.key === sp.status)?.key ?? "active";
   const all = await listMemberships();

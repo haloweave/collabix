@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { requireManager } from "@/lib/admin/auth";
+import { requireStaff } from "@/lib/admin/auth";
 import { Button } from "@/components/ui/button";
 import { RecordPassForm } from "@/components/admin/record-pass-form";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const istToday = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
 
 export default async function NewMembershipPage() {
-  await requireManager();
+  await requireStaff();
   const today = istToday();
 
   return (

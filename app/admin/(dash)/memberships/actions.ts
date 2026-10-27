@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import * as authSchema from "@/lib/db/auth-schema";
-import { requireManager } from "@/lib/admin/auth";
+import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { termHoldBody } from "@/lib/api/validation";
 import { confirmBooking, holdTerm } from "@/lib/domain/reservations";
@@ -34,7 +34,7 @@ export async function recordPass(input: {
   paidBy: PaidBy;
   reference?: string;
 }): Promise<RecordPassResult> {
-  await requireManager();
+  await requireStaff();
 
   const parsed = termHoldBody.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the plan, start date, term and customer details." };
