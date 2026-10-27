@@ -44,7 +44,7 @@ export default function Page() { return <div className="home">
         <Link className="space-card reveal" href="/spaces/hot-desk">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/openoffice.jpg" alt="Open-plan hot desk area" /></div>
           <div className="body">
-            <span className="kicker">Flexible · 1 person</span>
+            <span className="kicker">Flexible</span>
             <h3>Hot Desk</h3>
             <p>A seat in the open lounge — sit anywhere that&#39;s free, plug in and go.</p>
             <div className="price"><span className="per">Contact us to know pricing</span>
@@ -55,7 +55,7 @@ export default function Page() { return <div className="home">
         <Link className="space-card reveal d1" href="/spaces/dedicated-desk">
           <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/desk.jpg" alt="Dedicated desk with storage" /></div>
           <div className="body">
-            <span className="kicker">Reserved · 1 person</span>
+            <span className="kicker">Reserved</span>
             <h3>Dedicated Desk</h3>
             <p>Your own fixed seat with a locker and meeting-room credits — same spot, every day.</p>
             <div className="price"><span className="per">Contact us to know pricing</span>
