@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { bookableProduct, type BookableProduct } from "@/lib/tariff";
 import { priceBooking, productWindow, type WindowInput } from "@/lib/domain/booking";
 import StepChoose, { type Choice } from "./step-choose";
-import { BookTabs } from "./book-tabs";
+import { BookTabs, PassesBanner } from "./book-tabs";
 import { BookingProgress, BookingSummary, CheckoutSteps, STEPS, rupees, useCheckout } from "./checkout";
 
 type Slot = { resourceId: string; code: string; available: boolean };
@@ -170,6 +170,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
             {label === "Book" && (
               <>
                 <h2>Book a desk or a meeting room.</h2>
+                <PassesBanner />
                 <StepChoose
                   choice={choice}
                   onChange={updateChoice}

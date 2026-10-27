@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TERM_PLANS, money, termMonthlyMinor } from "@/lib/tariff";
 
 /** The two ways to book: by the day or hour, or for whole months and years. */
 export function BookTabs({ current }: { current: "day" | "term" }) {
@@ -14,5 +15,19 @@ export function BookTabs({ current }: { current: "day" | "term" }) {
         </Link>
       ))}
     </nav>
+  );
+}
+
+/** Points day bookers at the monthly and annual passes. */
+export function PassesBanner() {
+  const from = Math.min(...TERM_PLANS.map((p) => termMonthlyMinor(p)));
+  return (
+    <Link href="/book/passes" className="passes-banner">
+      <span>
+        <strong>Get monthly or annual passes.</strong> Your own desk or a private cabin
+        for months or years, from {money(from / 100)}/month.
+      </span>
+      <span className="arw" aria-hidden="true">→</span>
+    </Link>
   );
 }
