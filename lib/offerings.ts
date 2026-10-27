@@ -1,9 +1,8 @@
 /** The Spaces & Services menu and the page behind each item. Workspaces and
  * flexible access live under /spaces/[slug], business services under
- * /services/[slug]. Prices live only on /pricing; these pages ask people to
- * get in touch instead. */
-
-import type { ProductKey } from "./tariff";
+ * /services/[slug]. Prices live only on /pricing. Anything sold online gets a
+ * Book now button straight to its booking page; the rest ask people to get in
+ * touch. */
 
 export type OfferingGroup = "workspaces" | "flexible" | "services";
 
@@ -20,11 +19,9 @@ export type Offering = {
   lead: string;
   photo?: { src: string; alt: string };
   highlights: { title: string; text: string }[];
-  /** "book" sends people to /book; "enquire" to a call or email. Only tariff
-   * products sold online get "book". */
-  cta: "book" | "enquire";
-  /** The /book product a "book" button opens on. */
-  bookProduct?: ProductKey;
+  /** Where Book now goes, with this offering already selected. Without it the
+   * page offers a call or an email instead. */
+  book?: string;
 };
 
 export const offeringGroups: { id: OfferingGroup; label: string }[] = [
@@ -52,7 +49,7 @@ export const offerings: Offering[] = [
       { title: "Open 24/7", text: "Open around the clock, every day, so you can work whenever suits you." },
       { title: "Room to grow", text: "Move up to a dedicated desk or a cabin whenever you're ready." },
     ],
-    cta: "enquire",
+    book: "/book/passes?plan=hot-desk",
   },
   {
     slug: "dedicated-desk",
@@ -72,7 +69,7 @@ export const offerings: Offering[] = [
       { title: "Guest pass on Pro", text: "Bring a guest in on the Dedicated Desk Pro plan." },
       { title: "Ergonomic seating", text: "Task chairs specified for full working days." },
     ],
-    cta: "enquire",
+    book: "/book/passes?plan=dedicated-desk",
   },
   {
     slug: "private-cabin",
@@ -92,7 +89,7 @@ export const offerings: Offering[] = [
       { title: "30 pages of prints", text: "Printing included on every cabin plan." },
       { title: "Front desk", text: "A staffed reception to greet your visitors and handle your mail." },
     ],
-    cta: "enquire",
+    book: "/book/passes?plan=cabin-base",
   },
   {
     slug: "day-pass",
@@ -110,8 +107,7 @@ export const offerings: Offering[] = [
       { title: "Corporate bundles", text: "Packs of 6, 8 or 10 accesses that anyone on your team can use, any time, with meeting credits." },
       { title: "Everything in the lounge", text: "Wi-Fi, the café and every shared desk." },
     ],
-    cta: "book",
-    bookProduct: "day-full",
+    book: "/book?product=day-full",
   },
   {
     slug: "meeting-rooms",
@@ -129,8 +125,7 @@ export const offerings: Offering[] = [
       { title: "By the hour", text: "Book only the time you need, online in about a minute." },
       { title: "Use your credits", text: "Member plans include credits. 1 credit is 1 hour of room time." },
     ],
-    cta: "book",
-    bookProduct: "meeting-4",
+    book: "/book?product=meeting-4",
   },
   {
     slug: "virtual-office",
@@ -150,7 +145,6 @@ export const offerings: Offering[] = [
       { title: "Meeting credits", text: "2 or 4 hours of meeting-room time a month for when you need to meet in person." },
       { title: "GST and registration help", text: "Need the registration done too? Our service desk can handle it." },
     ],
-    cta: "enquire",
   },
   {
     slug: "gst-accounting",
@@ -169,7 +163,6 @@ export const offerings: Offering[] = [
       { title: "CA support", text: "Help with income tax returns, compliance and notices from qualified CAs." },
       { title: "Pairs with Virtual Office", text: "No office yet? Use our Banaswadi address and GST NOC to register." },
     ],
-    cta: "enquire",
   },
   {
     slug: "company-registration",
@@ -186,7 +179,6 @@ export const offerings: Offering[] = [
       { title: "Registered office", text: "Use the Collabix address as your registered office with a Virtual Office plan." },
       { title: "GST from day one", text: "Add GST registration and monthly filing alongside your incorporation." },
     ],
-    cta: "enquire",
   },
   {
     slug: "websites-apps",
@@ -205,7 +197,6 @@ export const offerings: Offering[] = [
       { title: "Found on Google", text: "SEO basics and a Google Business listing so people can find you." },
       { title: "Care after launch", text: "Updates, fixes and changes once you're live." },
     ],
-    cta: "enquire",
   },
 ];
 

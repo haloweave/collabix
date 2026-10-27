@@ -7,8 +7,8 @@ const mail = (o: Offering) => `mailto:connect@collabix.co.in?subject=${encodeURI
 
 function Ctas({ o, light = false }: { o: Offering; light?: boolean }) {
   const ghost = light ? "btn-ghost-light" : "btn-ghost";
-  return o.cta === "book"
-    ? <><a className="btn btn-gold" href={o.bookProduct ? `/book?product=${o.bookProduct}` : "/book"}>Book now <span className="arw">→</span></a><a className={`btn ${ghost}`} href="tel:+919632771444">Call +91 96327 71444</a></>
+  return o.book
+    ? <><a className="btn btn-gold" href={o.book}>Book now <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>
     : <><a className="btn btn-gold" href="tel:+919632771444">Call +91 96327 71444 <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>;
 }
 
@@ -56,7 +56,7 @@ export default function OfferingPage({ o }: { o: Offering }) {
       <div className="grid-texture"></div>
       <div className="wrap">
         <div className="inner">
-          <h2>{o.cta === "book" ? <>Reserve your {o.title.toLowerCase()} at <span className="gold-line">Collabix</span>.</> : <>Talk to us about <span className="gold-line">{o.title}</span>.</>}</h2>
+          <h2>{o.book ? <>Reserve your {o.title.toLowerCase()} at <span className="gold-line">Collabix</span>.</> : <>Talk to us about <span className="gold-line">{o.title}</span>.</>}</h2>
           <div className="of-cta"><Ctas o={o} light /></div>
         </div>
       </div>
