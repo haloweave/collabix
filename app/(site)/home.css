@@ -45,7 +45,10 @@
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* clip, not hidden: hidden makes this a scroll container and breaks every
+     position: sticky inside it (the booking summary). */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 .collabix-site img { display: block; max-width: 100%; height: auto; }
 .collabix-site a { color: inherit; text-decoration: none; }
