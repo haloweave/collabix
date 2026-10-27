@@ -2,20 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import {
-  getMember,
-  getMemberSubscription,
-  getMemberHolds,
-  getMemberInvoices,
-  listActivePlans,
-} from "@/lib/admin/queries";
+import { getMember, listMemberships } from "@/lib/admin/queries";
 import { getSessionUser, isManager } from "@/lib/admin/auth";
 import { rupees, istDateTime, istDate } from "@/lib/admin/format";
 import { MemberEditor } from "@/components/admin/member-editor";
-import { MembershipControls } from "@/components/admin/membership-controls";
-import { LongTermHoldCard } from "@/components/admin/long-term-hold-card";
-import { GenerateStatementButton } from "@/components/admin/generate-statement-button";
-import { InvoiceActions } from "@/components/admin/invoice-actions";
+import { MembershipTable } from "@/components/admin/membership-table";
 import { CardSkeleton } from "@/components/admin/skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,8 +35,8 @@ export default async function MemberDetailPage({
 }) {
   const { id } = await params;
   // Load the member record (and resolve 404) before any Suspense boundary so a
-  // missing member still yields a real HTTP 404. The heavier membership /
-  // holds / invoices data streams in below.
+  // missing member still yields a real HTTP 404. Their memberships stream in
+  // below.
   const member = await getMember(id);
   if (!member) notFound();
   const viewer = await getSessionUser();
@@ -107,16 +98,8 @@ export default async function MemberDetailPage({
         </Card>
       </div>
 
-      <Suspense
-        fallback={
-          <div className="space-y-6">
-            <CardSkeleton lines={2} />
-            <CardSkeleton lines={2} />
-            {canManageRoles && <CardSkeleton lines={3} />}
-          </div>
-        }
-      >
-        <MemberMembership memberId={member.id} canManageRoles={canManageRoles} />
+      <Suspense fallback={<CardSkeleton lines={2} />}>
+        <MemberMemberships memberId={member.id} />
       </Suspense>
 
       <MemberEditor
@@ -216,62 +199,20 @@ export default async function MemberDetailPage({
   );
 }
 
-async function MemberMembership({
-  memberId,
-  canManageRoles,
-}: {
-  memberId: string;
-  canManageRoles: boolean;
-}) {
-  const [subscription, activePlans, holds, invoices] = await Promise.all([
-    getMemberSubscription(memberId),
-    listActivePlans(),
-    getMemberHolds(memberId),
-    canManageRoles ? getMemberInvoices(memberId) : Promise.resolve([]),
-  ]);
-
+async function MemberMemberships({ memberId }: { memberId: string }) {
+  const rows = await listMemberships({ memberId });
   return (
-    <>
-      <MembershipControls
-        memberId={memberId}
-        subscription={subscription}
-        plans={activePlans}
-      />
-
-      <LongTermHoldCard memberId={memberId} holds={holds} />
-
-      {canManageRoles && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Invoices</CardTitle>
-            <GenerateStatementButton memberId={memberId} />
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {invoices.length === 0 && (
-              <p className="text-sm text-muted-foreground">No invoices yet.</p>
-            )}
-            {invoices.map((inv) => (
-              <div
-                key={inv.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    {rupees(inv.totalMinor)}{" "}
-                    <span className="font-normal capitalize text-muted-foreground">
-                      · {inv.status}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {istDate(inv.periodStart)} – {istDate(inv.periodEnd)}
-                  </p>
-                </div>
-                <InvoiceActions id={inv.id} status={inv.status} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>Memberships</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <MembershipTable
+          rows={rows}
+          showMember={false}
+          empty="No monthly or annual pass yet."
+        />
+      </CardContent>
+    </Card>
   );
 }

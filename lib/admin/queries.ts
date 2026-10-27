@@ -828,55 +828,6 @@ export async function listInvoices(): Promise<InvoiceRow[]> {
   return rows.map(mapInvoice);
 }
 
-export async function getMemberInvoices(memberId: string): Promise<InvoiceRow[]> {
-  const rows = await sql`
-    SELECT i.*, NULL AS member_name FROM invoice i
-    WHERE i.member_id = ${memberId} ORDER BY i.created_at DESC`;
-  return rows.map(mapInvoice);
-}
-
-/** Active plans for the assignment dropdown. */
-export async function listActivePlans(): Promise<
-  { id: string; name: string; priceMinor: number; includedHours: number }[]
-> {
-  const rows = await sql`
-    SELECT id, name, price_minor, included_hours FROM membership_plan
-    WHERE active = true ORDER BY price_minor`;
-  return rows.map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    name: r.name as string,
-    priceMinor: n(r.price_minor),
-    includedHours: n(r.included_hours),
-  }));
-}
-
-export type HoldRow = {
-  bookingId: string;
-  startAt: Date;
-  endAt: Date;
-  codes: string[];
-};
-
-/** A member's active long-term holds (membershipHold reservations, not expired). */
-export async function getMemberHolds(memberId: string): Promise<HoldRow[]> {
-  const rows = await sql`
-    SELECT b.id AS booking_id, min(r.start_at) AS start_at, max(r.end_at) AS end_at,
-      array_agg(res.code ORDER BY res.code) AS codes
-    FROM booking b
-    JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
-    JOIN resource res ON res.id = r.resource_id
-    WHERE b.member_id = ${memberId} AND b.status = 'active'
-      AND r.quote_snapshot->>'membershipHold' = 'true' AND r.end_at > now()
-    GROUP BY b.id
-    ORDER BY min(r.start_at)`;
-  return rows.map((r: Record<string, unknown>) => ({
-    bookingId: r.booking_id as string,
-    startAt: new Date(r.start_at as string),
-    endAt: new Date(r.end_at as string),
-    codes: (r.codes as string[]) ?? [],
-  }));
-}
-
 /** Per-code hourly hint (paise) for extended-booking price suggestions, from
  * the tariff (see rateForCode). */
 export async function getResourceRates(): Promise<Record<string, number>> {
