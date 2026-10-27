@@ -631,7 +631,8 @@ export function CheckoutSteps({
   );
 }
 
-/** The navy summary card beside every step. */
+/** The navy summary card beside every step. On phones it is a slim total
+ * bar pinned above the tab bar, opening to the full breakdown on tap. */
 export function BookingSummary({
   rows,
   shown,
@@ -642,13 +643,14 @@ export function BookingSummary({
   shown: Quote | null;
   final: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <aside className="summary" aria-label="Booking summary">
+    <aside className={`summary ${open ? "open" : ""}`} aria-label="Booking summary">
       <div className="s-head">
         <span className="eyebrow">Your workday</span>
         <h3>Booking summary</h3>
       </div>
-      <div className="s-body">
+      <div className="s-body" id="summary-breakdown">
         {[...rows, ["GST (18%)", shown ? rupees(shown.taxMinor) : "—"] as [string, ReactNode]].map(([k, v]) => (
           <div className="s-line" key={k}>
             <span className="sk">{k}</span>
@@ -659,6 +661,16 @@ export function BookingSummary({
       <div className="s-total">
         <span className="tk">{final ? "Total" : "Estimate"}</span>
         <span className="tv">{shown ? rupees(shown.totalMinor) : "—"}</span>
+        <button
+          type="button"
+          className="s-toggle"
+          aria-expanded={open}
+          aria-controls="summary-breakdown"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Hide" : "Details"}
+          <span aria-hidden="true">{open ? "▾" : "▴"}</span>
+        </button>
       </div>
       <p className="summary-note">
         Prices are from the Collabix tariff, including 18% GST. Pay
