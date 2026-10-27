@@ -850,6 +850,19 @@
 .collabix-site .account-hero {padding-top:calc(76px + 20px);padding-bottom:22px;}
 .collabix-site .account-hero h1 {font-size:clamp(1.5rem,4.5vw,2.1rem);margin:.3rem 0 0;}
 .collabix-site .account-hero .lead {font-size:.92rem;}
+/* Account: a slim signed-in line and a section switch instead of a hero. */
+.collabix-site .account-page {padding-top:calc(76px + clamp(16px,3vw,32px));padding-bottom:clamp(40px,6vw,72px);}
+.collabix-site .account-bar {display:flex;align-items:baseline;justify-content:space-between;gap:1rem;padding-bottom:.8rem;font-size:.88rem;color:var(--graphite);}
+.collabix-site .account-bar strong {color:var(--navy);font-weight:600;}
+.collabix-site .account-bar .link-btn {font-size:.85rem;white-space:nowrap;}
+.collabix-site .account-tabs {display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:999px;width:max-content;max-width:100%;}
+.collabix-site .account-tabs a {padding:.45rem 1.1rem;border-radius:999px;font-size:.85rem;font-weight:600;color:var(--graphite);transition:color .2s var(--ease),background .2s var(--ease);}
+.collabix-site .account-tabs a:hover {color:var(--navy);}
+.collabix-site .account-tabs a[aria-current="page"] {background:var(--navy);color:var(--ivory);}
+@media (max-width: 600px) {
+  .collabix-site .account-tabs {width:100%;}
+  .collabix-site .account-tabs a {flex:1;text-align:center;padding:.45rem .4rem;font-size:.8rem;}
+}
 /* Sticky footer: keep the footer pinned to the bottom on short pages (e.g. the
    account portal) instead of floating mid-screen. */
 .collabix-site {display:flex;flex-direction:column;}

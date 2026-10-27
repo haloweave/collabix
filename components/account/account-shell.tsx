@@ -24,55 +24,46 @@ export function AccountShell({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  function signOut() {
+    startTransition(async () => {
+      await authClient.signOut().catch(() => {});
+      router.push("/login");
+      router.refresh();
+    });
+  }
+
+  // One compact header instead of a hero: who is signed in (and the way out)
+  // on a single line, then the three sections as a switch. Each page keeps
+  // its own title.
   return (
     <SiteShell minimal authed>
-      <section className="page-hero account-hero">
-        <div className="glow" />
+      <section className="section-ivory account-page">
         <div className="wrap">
-          <span className="eyebrow">Your account</span>
-          <h1>My account</h1>
-          {name && (
-            <p className="lead" style={{ marginTop: ".35rem" }}>
-              Signed in as {name}
+          <div className="account-bar">
+            <p>
+              {name ? (
+                <>
+                  Signed in as <strong>{name}</strong>
+                </>
+              ) : (
+                "Your account"
+              )}
             </p>
-          )}
-        </div>
-      </section>
-
-      <section className="pad-sm section-ivory">
-        <div className="wrap">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-navy/10 pb-4">
-            <nav className="flex items-center gap-5 sm:gap-7" aria-label="Account">
-              {LINKS.map(([href, label]) => {
-                const active =
-                  href === "/account" ? path === href : path.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    aria-current={active ? "page" : undefined}
-                    className={`text-sm font-medium transition-colors ${
-                      active ? "text-gold" : "text-navy/60 hover:text-navy"
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <button
-              className="btn btn-navy"
-              disabled={pending}
-              onClick={() => startTransition(async () => {
-                  await authClient.signOut().catch(() => {});
-                  router.push("/login");
-                  router.refresh();
-                })}
-            >
+            <button type="button" className="link-btn" disabled={pending} onClick={signOut}>
               {pending ? "Signing out…" : "Sign out"}
             </button>
           </div>
-          <div className="portal-scope pt-8">{children}</div>
+          <nav className="account-tabs" aria-label="Account">
+            {LINKS.map(([href, label]) => {
+              const active = href === "/account" ? path === href : path.startsWith(href);
+              return (
+                <Link key={href} href={href} aria-current={active ? "page" : undefined}>
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="portal-scope pt-6">{children}</div>
         </div>
       </section>
     </SiteShell>
