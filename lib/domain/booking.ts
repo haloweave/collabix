@@ -80,6 +80,8 @@ export type Quote = {
   rateMinor: number;
   hours: number;
   seats: number;
+  /** Monthly & annual passes: the term in months (hours is then 0). */
+  months?: number;
   lines: QuoteLine[];
   subtotalMinor: number;
   taxMinor: number;
