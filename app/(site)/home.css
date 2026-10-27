@@ -1113,3 +1113,4 @@ html[data-theme="light"] .collabix-site .tabbar .tab.cta .ic { border-color: var
 .collabix-site .bk-term .bk-chips {margin:0;}
 .collabix-site .bk-length {padding:.6rem 2rem .6rem .9rem;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--ivory);color:var(--navy);font:inherit;font-size:.85rem;font-weight:600;}
 .collabix-site .bk-length:focus {outline:none;border-color:var(--gold);}
+.collabix-site .step-actions.end {justify-content:flex-end;}

@@ -210,10 +210,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
             />
 
             {label === "Book" && (
-              <div className="step-actions">
-                <button className="btn btn-outline" disabled onClick={() => {}}>
-                  ← Back
-                </button>
+              <div className="step-actions end">
                 <button
                   className="btn btn-gold"
                   disabled={!canContinue}
