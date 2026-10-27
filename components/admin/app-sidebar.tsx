@@ -58,7 +58,7 @@ const GROUPS = ["Front desk", "Operations", "Management"];
 
 // Active item: lifted navy, gold icon, and a gold bar on the left edge.
 const ITEM =
-  "relative h-9 text-sidebar-foreground [&>svg]:text-sidebar-foreground/55 hover:[&>svg]:text-sidebar-primary data-[active=true]:[&>svg]:text-sidebar-primary before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r before:bg-sidebar-primary before:opacity-0 data-[active=true]:before:opacity-100";
+  "relative h-8 text-sidebar-foreground [&>svg]:text-sidebar-foreground/55 hover:[&>svg]:text-sidebar-primary data-[active=true]:[&>svg]:text-sidebar-primary before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r before:bg-sidebar-primary before:opacity-0 data-[active=true]:before:opacity-100";
 
 function initials(name: string) {
   return name
@@ -87,32 +87,33 @@ export function AppSidebar({
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
-        <Link href="/admin" aria-label="Collabix admin home" className="block">
+      {/* Logo and an "Admin" badge on one line, so the menu starts high. */}
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
+        <Link href="/admin" aria-label="Collabix admin home" className="flex items-center gap-2.5">
           <Image
             src="/collabix/img/logo-white.png"
             alt="Collabix — Work Lounge"
             width={3088}
             height={852}
-            sizes="160px"
-            className="h-8 w-auto"
+            sizes="140px"
+            className="h-7 w-auto"
             priority
           />
+          <span className="rounded border border-sidebar-primary/40 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase leading-none tracking-[0.2em] text-sidebar-primary">
+            Admin
+          </span>
         </Link>
-        <span className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.28em] text-sidebar-primary">
-          Admin console
-        </span>
       </SidebarHeader>
 
-      <SidebarContent className="py-2">
+      <SidebarContent className="gap-0 py-1">
         {GROUPS.map((group) => {
           const items = NAV.filter(
             (item) => item.group === group && (!item.managerOnly || isManager),
           );
           if (items.length === 0) return null;
           return (
-            <SidebarGroup key={group}>
-              <SidebarGroupLabel className="font-mono text-[0.6rem] uppercase tracking-[0.22em] text-sidebar-foreground/45">
+            <SidebarGroup key={group} className="py-1">
+              <SidebarGroupLabel className="h-6 font-mono text-[0.6rem] uppercase tracking-[0.22em] text-sidebar-foreground/45">
                 {group}
               </SidebarGroupLabel>
               <SidebarMenu>
