@@ -251,6 +251,10 @@ export type BookingDetail = {
 
 export type BookingPayment = {
   status: "created" | "paid" | "failed" | "expired" | "refund_due";
+  /** 'cashfree' online, or 'desk' when staff recorded it (lib/domain/desk-payment.ts). */
+  provider: string;
+  /** Staff-entered reference for a desk payment. */
+  reference: string | null;
   orderId: string;
   cfPaymentId: string | null;
   method: string | null;
@@ -271,7 +275,8 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     WHERE r.booking_id = ${id}
     ORDER BY res.code`;
   const [pay] = await sql`
-    SELECT status, order_id, cf_payment_id, payment_method, amount_minor, paid_at, created_at
+    SELECT status, provider, raw->>'reference' AS reference, order_id, cf_payment_id,
+           payment_method, amount_minor, paid_at, created_at
     FROM payment WHERE booking_id = ${id}
     ORDER BY (status = 'paid') DESC, created_at DESC LIMIT 1`;
   return {
@@ -287,6 +292,8 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     payment: pay
       ? {
           status: pay.status as BookingPayment["status"],
+          provider: pay.provider as string,
+          reference: (pay.reference as string) ?? null,
           orderId: pay.order_id as string,
           cfPaymentId: (pay.cf_payment_id as string) ?? null,
           method: (pay.payment_method as string) ?? null,

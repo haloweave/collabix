@@ -21,6 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CancelBookingButton } from "@/components/admin/cancel-booking-button";
+import { DeskPaymentButton, UndoDeskPayment } from "@/components/admin/desk-payment-button";
+import { paymentMethodLabel } from "@/lib/invoice/payment-method";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,14 @@ export default async function BookingDetailPage({
 
   // Every reservation carries the same booking-wide quote; use the first.
   const quote = booking.reservations[0]?.quote;
+  const paidAtDesk = booking.payment?.status === "paid" && booking.payment.provider === "desk";
+  // Staff can record a desk payment once the booking is confirmed and nothing
+  // has been paid online yet.
+  const canMarkPaid =
+    booking.status === "active" &&
+    booking.payment?.status !== "paid" &&
+    booking.reservations.some((r) => r.status === "confirmed") &&
+    Boolean(quote?.totalMinor);
 
   return (
     <div className="space-y-6">
@@ -145,19 +155,27 @@ export default async function BookingDetailPage({
             {booking.payment ? (
               <>
                 <Badge variant={PAY_LABEL[booking.payment.status]?.variant ?? "outline"}>
-                  {PAY_LABEL[booking.payment.status]?.text ?? booking.payment.status}
+                  {paidAtDesk ? "Paid at desk" : (PAY_LABEL[booking.payment.status]?.text ?? booking.payment.status)}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
                   {rupees(booking.payment.amountMinor)}
-                  {booking.payment.method ? ` · ${booking.payment.method.toUpperCase()}` : ""}
+                  {booking.payment.method ? ` · ${paymentMethodLabel(booking.payment.method)}` : ""}
                   {booking.payment.paidAt ? ` · ${istDateTime(booking.payment.paidAt)}` : ""}
                 </p>
                 <p className="font-mono text-[11px] text-muted-foreground break-all">
-                  {booking.payment.cfPaymentId ?? booking.payment.orderId}
+                  {paidAtDesk
+                    ? booking.payment.reference
+                    : (booking.payment.cfPaymentId ?? booking.payment.orderId)}
                 </p>
+                {paidAtDesk && <UndoDeskPayment bookingId={booking.id} />}
               </>
             ) : (
               <Badge variant="outline">Pay at desk</Badge>
+            )}
+            {canMarkPaid && quote && (
+              <div>
+                <DeskPaymentButton bookingId={booking.id} amount={rupees(quote.totalMinor)} />
+              </div>
             )}
           </CardContent>
         </Card>

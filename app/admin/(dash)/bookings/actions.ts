@@ -11,6 +11,7 @@ import {
   confirmBooking,
   holdReservation,
 } from "@/lib/domain/reservations";
+import { recordDeskPayment, removeDeskPayment } from "@/lib/domain/desk-payment";
 
 // Cancel a whole booking: mark it cancelled and release every held/confirmed
 // reservation under it (status='cancelled' drops out of the no-overlap
@@ -100,4 +101,45 @@ export async function createWalkIn(input: {
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   return { ok: true, bookingId: held.bookingId };
+}
+
+const DESK_PAYMENT_ERRORS: Record<string, string> = {
+  not_found: "This booking is cancelled or no longer exists.",
+  not_confirmed: "Only a confirmed booking can be marked paid.",
+  already_paid: "This booking is already paid.",
+  no_amount: "This booking has no amount to collect.",
+  bad_method: "Pick how the customer paid.",
+};
+
+// Front desk took the money (cash, UPI to the counter QR, card machine or a
+// bank transfer): record it so the booking and its invoice read "Paid".
+export async function markPaidAtDesk(input: {
+  bookingId: string;
+  method: string;
+  reference?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await requireStaff();
+  const res = await recordDeskPayment(db, { ...input, recordedBy: staff.id });
+  if (!res.ok) return { ok: false, error: DESK_PAYMENT_ERRORS[res.error] ?? "Could not record the payment." };
+
+  await logAudit({
+    action: "booking.paid_at_desk",
+    targetType: "booking",
+    targetId: input.bookingId,
+    detail: { method: input.method, reference: input.reference?.trim() || null, amountMinor: res.amountMinor },
+  });
+  revalidatePath("/admin/bookings");
+  revalidatePath(`/admin/bookings/${input.bookingId}`);
+  return { ok: true };
+}
+
+/** Take back a desk payment recorded by mistake. */
+export async function undoDeskPayment(bookingId: string): Promise<{ ok: boolean }> {
+  await requireStaff();
+  const removed = await removeDeskPayment(db, bookingId);
+  if (removed) {
+    await logAudit({ action: "booking.desk_payment_removed", targetType: "booking", targetId: bookingId });
+    revalidatePath(`/admin/bookings/${bookingId}`);
+  }
+  return { ok: removed };
 }
