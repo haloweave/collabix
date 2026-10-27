@@ -66,6 +66,7 @@ export function RecordPassForm({ today }: { today: string }) {
       });
       if (!res.ok) {
         toast.error(res.error);
+        if (res.bookingId) router.push(`/admin/bookings/${res.bookingId}`);
         return;
       }
       toast.success("Membership recorded.");
