@@ -1,21 +1,25 @@
 import { requireMember } from "@/lib/account/auth";
+import { getBillingProfile } from "@/lib/account/billing";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { ProfileForm } from "@/components/account/profile-form";
+import { BillingForm } from "@/components/account/billing-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const member = await requireMember();
+  const billing = await getBillingProfile(member.id);
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">Your account details.</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-navy">Profile</h1>
+        <p className="text-sm text-navy/60">Your account and billing details.</p>
       </div>
       <Card>
         <CardHeader>
@@ -33,6 +37,18 @@ export default async function ProfilePage() {
               <span>{member.email}</span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Business details for invoices</CardTitle>
+          <CardDescription>
+            Booking for a company? Add its GSTIN and we&apos;ll print it on your
+            tax invoices so you can claim the GST back.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BillingForm initial={billing} />
         </CardContent>
       </Card>
     </div>

@@ -7,6 +7,7 @@ import { db, sql } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import * as authSchema from "@/lib/db/auth-schema";
 import { getMemberSession } from "@/lib/account/auth";
+import { isValidGstin, normalizeGstin } from "@/lib/invoice/gstin";
 
 export async function updateOwnProfile(name: string) {
   const m = await getMemberSession();
@@ -18,6 +19,32 @@ export async function updateOwnProfile(name: string) {
     .set({ name: clean, updatedAt: new Date() })
     .where(eq(authSchema.user.id, m.id));
   revalidatePath("/account/profile");
+}
+
+/** Save (or clear) the business details printed on the customer's invoices. */
+export async function updateBillingProfile(input: {
+  companyName: string;
+  gstin: string;
+  address: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const m = await getMemberSession();
+  if (!m) return { ok: false, error: "Not signed in." };
+
+  const companyName = input.companyName.trim().slice(0, 120) || null;
+  const address = input.address.trim().slice(0, 300) || null;
+  const gstin = normalizeGstin(input.gstin) || null;
+  if (gstin && !isValidGstin(gstin))
+    return { ok: false, error: "That GSTIN doesn't look right. Check it against your certificate." };
+  if (gstin && !companyName)
+    return { ok: false, error: "Add the registered business name that goes with this GSTIN." };
+
+  const values = { companyName, gstin, address, updatedAt: new Date() };
+  await db
+    .insert(schema.billingProfile)
+    .values({ userId: m.id, ...values })
+    .onConflictDoUpdate({ target: schema.billingProfile.userId, set: values });
+  revalidatePath("/account/profile");
+  return { ok: true };
 }
 
 export async function cancelOwnBooking(
