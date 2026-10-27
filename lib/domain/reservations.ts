@@ -113,6 +113,12 @@ async function productSlots(db: Db, product: BookableProduct, window: WindowInpu
     )
     .orderBy(schema.resource.code);
 
+  const taken = await takenResourceIds(db, startAt, endAt);
+  return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
+}
+
+/** Resources with a held or confirmed reservation overlapping [startAt, endAt). */
+async function takenResourceIds(db: Db, startAt: Date, endAt: Date): Promise<Set<string>> {
   const overlapping = await db
     .select({ resourceId: schema.reservation.resourceId })
     .from(schema.reservation)
@@ -123,8 +129,7 @@ async function productSlots(db: Db, product: BookableProduct, window: WindowInpu
         gt(schema.reservation.endAt, startAt),
       ),
     );
-  const taken = new Set(overlapping.map((r) => r.resourceId));
-  return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
+  return new Set(overlapping.map((r) => r.resourceId));
 }
 
 export async function getAvailability(
