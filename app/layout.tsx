@@ -33,13 +33,20 @@ export const viewport: Viewport = {
   themeColor: "#0B1F3A",
 };
 
+// Applies the saved site theme before first paint so a light-theme visitor
+// never sees a navy flash. Key/value must match components/site/theme-toggle.tsx.
+const themeScript = `(function(){try{if(localStorage.getItem("collabix-theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}})()`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="font-sans">{children}</body>
     </html>
   );
