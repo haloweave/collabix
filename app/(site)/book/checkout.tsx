@@ -317,7 +317,7 @@ export function BookingProgress({ step }: { step: number }) {
         <li
           key={s}
           aria-current={i === step ? "step" : undefined}
-          className={i === step ? "current" : ""}
+          className={i === step ? "current" : i < step ? "done" : ""}
         >
           <span>{i + 1}</span>
           {s}

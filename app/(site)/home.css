@@ -953,6 +953,20 @@
 .collabix-site .book-tabs a {padding:.75rem 1.1rem;font-size:.9rem;font-weight:600;color:var(--graphite);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s var(--ease),border-color .2s var(--ease);}
 .collabix-site .book-tabs a:hover {color:var(--navy);}
 .collabix-site .book-tabs a[aria-current="page"] {color:var(--navy);border-bottom-color:var(--gold);}
+.collabix-site .book-tabs .bt-short {display:none;}
+/* Phones: the tabs become one two-part switch, the steps a thin five-part bar
+   (the panel's eyebrow already names the step). */
+@media (max-width: 600px) {
+  .collabix-site .book-tabs {flex-wrap:nowrap;border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:1rem;}
+  .collabix-site .book-tabs a {flex:1;text-align:center;padding:.5rem .6rem;font-size:.8rem;border:0;margin:0;border-radius:999px;}
+  .collabix-site .book-tabs a[aria-current="page"] {background:var(--navy);color:var(--ivory);}
+  .collabix-site .book-tabs .bt-long {display:none;}
+  .collabix-site .book-tabs .bt-short {display:inline;}
+  .collabix-site .booking-progress {flex-wrap:nowrap;gap:4px;margin-bottom:1rem;}
+  .collabix-site .booking-progress li {flex:1;height:3px;border-radius:2px;background:var(--line);font-size:0;overflow:hidden;}
+  .collabix-site .booking-progress li span {display:none;}
+  .collabix-site .booking-progress li.done, .collabix-site .booking-progress li.current {background:var(--gold);}
+}
 .collabix-site .passes-banner {display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--navy);color:var(--ivory);border-radius:var(--radius);padding:.9rem 1.2rem;margin:0 0 1.6rem;font-size:.9rem;line-height:1.45;transition:background .2s var(--ease);}
 .collabix-site .passes-banner strong {color:var(--gold);}
 .collabix-site .passes-banner .arw {color:var(--gold);font-size:1.2rem;}

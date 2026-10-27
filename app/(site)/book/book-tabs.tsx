@@ -4,14 +4,15 @@ import { TERM_PLANS, money, termMonthlyMinor } from "@/lib/tariff";
 /** The two ways to book: by the day or hour, or for whole months and years. */
 export function BookTabs({ current }: { current: "day" | "term" }) {
   const tabs = [
-    { id: "day", href: "/book", label: "Day passes & meeting rooms" },
-    { id: "term", href: "/book/passes", label: "Monthly & annual passes" },
+    { id: "day", href: "/book", label: "Day passes & meeting rooms", short: "Day & hourly" },
+    { id: "term", href: "/book/passes", label: "Monthly & annual passes", short: "Monthly & annual" },
   ] as const;
   return (
     <nav className="book-tabs" aria-label="Booking type">
       {tabs.map((t) => (
         <Link key={t.id} href={t.href} aria-current={t.id === current ? "page" : undefined}>
-          {t.label}
+          <span className="bt-long">{t.label}</span>
+          <span className="bt-short" aria-hidden="true">{t.short}</span>
         </Link>
       ))}
     </nav>
