@@ -904,6 +904,16 @@
 .collabix-site .of-related-card h3 { font-size: 1.15rem; }
 .collabix-site .of-related-card p { font-size: .88rem; flex: 1; }
 .collabix-site .of-related.five { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+/* Phones: each card is one compact row, icon beside the text; the whole card
+   is the link, so the "Learn more" line goes. */
+@media (max-width: 600px) {
+  .collabix-site .of-related { gap: .6rem; }
+  .collabix-site .of-related-card { display: grid; grid-template-columns: auto 1fr; column-gap: .9rem; row-gap: .15rem; padding: .9rem 1rem; }
+  .collabix-site .of-related-card .ic { grid-row: span 2; align-self: start; }
+  .collabix-site .of-related-card h3 { font-size: 1rem; }
+  .collabix-site .of-related-card p { font-size: .84rem; }
+  .collabix-site .of-related-card .link-arw { display: none; }
+}
 @media (max-width: 820px) {
   .collabix-site .of-intro { grid-template-columns: 1fr; }
   .collabix-site .of-photo { position: static; }
