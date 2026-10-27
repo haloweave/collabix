@@ -1109,4 +1109,7 @@ html[data-theme="light"] .collabix-site .tabbar { background: rgba(247,245,242,.
 html[data-theme="light"] .collabix-site .tabbar .tab { color: rgba(74,79,88,.8); }
 html[data-theme="light"] .collabix-site .tabbar .tab.active { color: var(--navy); }
 html[data-theme="light"] .collabix-site .tabbar .tab.cta .ic { border-color: var(--ivory); }
-.collabix-site .bk-length {max-width:220px;margin:1.4rem 0 .4rem;}
+.collabix-site .bk-term {display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:.4rem 0 .2rem;}
+.collabix-site .bk-term .bk-chips {margin:0;}
+.collabix-site .bk-length {padding:.6rem 2rem .6rem .9rem;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--ivory);color:var(--navy);font:inherit;font-size:.85rem;font-weight:600;}
+.collabix-site .bk-length:focus {outline:none;border-color:var(--gold);}

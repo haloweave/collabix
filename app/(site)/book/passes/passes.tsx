@@ -144,6 +144,38 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
             {label === "Book" && (
               <>
                 <h2>A desk or a cabin, for months or years.</h2>
+                <span className="filter-label">How long?</span>
+                <div className="bk-term">
+                  <div className="dur-toggle bk-chips">
+                    {(["month", "year"] as const).map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        className={choice.unit === u ? "sel" : ""}
+                        aria-pressed={choice.unit === u}
+                        onClick={() => update({ unit: u })}
+                      >
+                        {u === "month" ? "Monthly" : "Annual"}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    className="bk-length"
+                    aria-label="Length of the pass"
+                    value={choice.count}
+                    onChange={(e) => update({ count: Number(e.target.value) })}
+                  >
+                    {Array.from({ length: choice.unit === "year" ? MAX_YEARS : MAX_MONTHS }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {termLabel(choice.unit, n)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {choice.unit === "month" && (
+                  <p className="avail-hint">Staying 12 months or more? Switch to Annual.</p>
+                )}
+
                 {GROUPS.map((g) => (
                   <div key={g.space}>
                     <span className="filter-label">{g.title}</span>
@@ -159,50 +191,16 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                           <span className="pn">{p.name}</span>
                           <span className="pd">{p.blurb}</span>
                           <span className="pp">
-                            {money(termMonthlyMinor(p) / 100)}
-                            <span className="per"> / month</span>
-                            {" · "}
-                            {money(p.annualMinor / 100)}
-                            <span className="per"> / year</span>
+                            {choice.unit === "year"
+                              ? money(p.annualMinor / 100)
+                              : money(termMonthlyMinor(p) / 100)}
+                            <span className="per"> / {choice.unit}</span>
                           </span>
                         </button>
                       ))}
                     </div>
                   </div>
                 ))}
-
-                <span className="filter-label">Monthly or annual?</span>
-                <div className="dur-toggle bk-chips">
-                  {(["month", "year"] as const).map((u) => (
-                    <button
-                      key={u}
-                      type="button"
-                      className={choice.unit === u ? "sel" : ""}
-                      aria-pressed={choice.unit === u}
-                      onClick={() => update({ unit: u })}
-                    >
-                      {u === "month" ? "Monthly" : "Annual"}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="field bk-length">
-                  <label htmlFor="pass-length">How long?</label>
-                  <select
-                    id="pass-length"
-                    value={choice.count}
-                    onChange={(e) => update({ count: Number(e.target.value) })}
-                  >
-                    {Array.from({ length: choice.unit === "year" ? MAX_YEARS : MAX_MONTHS }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>
-                        {termLabel(choice.unit, n)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {choice.unit === "month" && (
-                  <p className="avail-hint">Staying 12 months or more? Switch to Annual.</p>
-                )}
 
                 <span className="filter-label">Starting</span>
                 <DateStrip
