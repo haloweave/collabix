@@ -214,7 +214,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                   <p className="avail-hint" role="status">
                     {free === 0
                       ? `No ${spaceWord}s are free for the whole of ${dates}. Try another start date or a shorter term.`
-                      : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for ${dates}.`}
+                      : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for the whole term.`}
                   </p>
                 )}
                 <p className="avail-hint">
