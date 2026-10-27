@@ -41,7 +41,7 @@ export function AccountShell({
 
       <section className="pad-sm section-ivory">
         <div className="wrap">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-navy/10 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-navy/10 pb-4">
             <nav className="flex items-center gap-5 sm:gap-7" aria-label="Account">
               {LINKS.map(([href, label]) => {
                 const active =
@@ -72,7 +72,7 @@ export function AccountShell({
               {pending ? "Signing out…" : "Sign out"}
             </button>
           </div>
-          <div className="portal-scope">{children}</div>
+          <div className="portal-scope pt-8">{children}</div>
         </div>
       </section>
     </SiteShell>
