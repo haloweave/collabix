@@ -1007,6 +1007,8 @@
 .collabix-site .theme-toggle svg { grid-area: 1 / 1; }
 .collabix-site .theme-toggle .ic-moon, .collabix-site .on-light { display: none; }
 @media (max-width: 820px) { .collabix-site .bar-end { margin-left: auto; } }
+.collabix-site .bar-end .nav-book {margin-right:.5rem;--pad-y:.75em;padding-inline:1.4em;}
+@media (max-width: 820px) { .collabix-site .bar-end .nav-book {--pad-y:.6em;padding-inline:1em;font-size:.8rem;margin-right:.2rem;} }
 
 /* Homepage type scale — a notch larger than the inner pages. */
 .collabix-site .home .lead { font-size: clamp(1.12rem, 1.7vw, 1.32rem); }

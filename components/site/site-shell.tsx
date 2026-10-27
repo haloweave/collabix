@@ -31,9 +31,9 @@ export default function SiteShell({children, minimal=false, authed=false}: {chil
   </div>)}</div>
  </div>
  {links.map(([href,label])=><a key={href} className={`navlink ${path===href?"active":""}`} href={href} onClick={()=>setOpen(false)}>{label}</a>)}
- <a className="btn btn-gold" href="tel:+919632771444" aria-label="Call Collabix on +91 96327 71444">Call +91 96327 71444</a>
  <a className={`navlink ${path==="/login"||path.startsWith("/account")?"active":""}`} href="/login" onClick={()=>setOpen(false)}>{signedIn?"My account":"Login"}</a></nav>
- <div className="bar-end"><ThemeToggle/>
+ {/* Book now sits outside the collapsible nav, so phones keep it in the bar. */}
+ <div className="bar-end"><a className={`btn btn-gold nav-book ${path.startsWith("/book")?"active":""}`} href="/book" onClick={()=>setOpen(false)}>Book now</a><ThemeToggle/>
  <button className="nav-toggle" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} aria-controls="home-navigation" onClick={()=>setOpen(!open)}><span/><span/><span/></button></div>
  </div></header>
  <main id="main-content">{children}</main>
