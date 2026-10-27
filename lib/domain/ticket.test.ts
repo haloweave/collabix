@@ -185,6 +185,11 @@ describe("display copy", () => {
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"] })).toBe("1 seat · M-01");
   });
 
+  test("monthly and annual passes show the plan and the space it holds", () => {
+    expect(ticketSeats({ seats: 1, resourceCodes: ["D-07"], planKey: "dedicated-desk" })).toBe("Dedicated Desk · D-07");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["C-02"], planKey: "cabin-pro" })).toBe("Cabin · Pro · C-02");
+  });
+
   test("day passes say any shared desk; rooms show the room's name", () => {
     expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"], planKey: "day-full" }))
       .toBe("2 people · Any shared desk");

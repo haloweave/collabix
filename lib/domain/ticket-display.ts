@@ -4,7 +4,7 @@
 
 import { istDate, istTime, rupees } from "../admin/format";
 import { isMultiDay } from "./ticket";
-import { bookableProduct } from "../tariff";
+import { bookableProduct, findTermPlan } from "../tariff";
 
 export const PAY_AT_DESK = "Pay at desk";
 export const PAID = "Paid";
@@ -30,5 +30,8 @@ export function ticketSeats(v: { seats: number; resourceCodes: string[]; planKey
   // A day pass is any free shared desk, so no desk number is printed.
   if (product?.kind === "pass") return `${v.seats} ${v.seats === 1 ? "person" : "people"} · Any shared desk`;
   if (product?.kind === "room") return product.name;
+  // A monthly or annual pass: the plan and the desk or cabin it holds.
+  const term = v.planKey ? findTermPlan(v.planKey) : undefined;
+  if (term) return `${term.name} · ${v.resourceCodes.join(", ")}`;
   return `${v.seats} seat${v.seats === 1 ? "" : "s"} · ${v.resourceCodes.join(", ")}`;
 }
