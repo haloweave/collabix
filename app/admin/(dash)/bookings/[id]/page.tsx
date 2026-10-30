@@ -258,6 +258,12 @@ export default async function BookingDetailPage({
               </span>
               <span>{rupees(quote.subtotalMinor)}</span>
             </div>
+            {quote.discount && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Coupon {quote.discount.code}</span>
+                <span>− {rupees(quote.discount.amountMinor)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax</span>
               <span>{rupees(quote.taxMinor)}</span>
