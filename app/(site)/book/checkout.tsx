@@ -251,7 +251,7 @@ export function useCheckout() {
             ? "Your hold expired. Please start again."
             : data.error === "payments_not_configured"
               ? "Online payment isn't available right now. Please try again later."
-              : "We couldn't start the payment. Please try again.",
+              : "We couldn't start the payment. Try again, or pay by UPI QR below.",
         );
         return;
       }
