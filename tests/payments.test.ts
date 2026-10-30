@@ -47,6 +47,18 @@ describe("beginPayment", () => {
     expect(rows[0].status).toBe("created");
   });
 
+  test("charges the discounted total when the hold has a coupon", async () => {
+    await ctx.db.insert(schema.coupon).values({ code: "PAYTEN", kind: "percent", value: 10 }).onConflictDoNothing();
+    const gw = new FakeGateway();
+    const held = await holdReservation(ctx.db, { productKey: "meeting-4", ...slot, ...guest, couponCode: "payten" });
+    if (!held.ok) throw new Error(held.error);
+    expect(held.quote.discount?.code).toBe("PAYTEN");
+    const r = await begin(gw, held.bookingId);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.amountMinor).toBe(held.quote.totalMinor);
+    expect(gw.orders.get(r.orderId)!.input.amountRupees).toBe(held.quote.totalMinor / 100);
+  });
+
   test("a second call reuses the unexpired order instead of creating another", async () => {
     const gw = new FakeGateway();
     const held = await holdOne();
