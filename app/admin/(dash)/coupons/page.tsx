@@ -31,8 +31,9 @@ export default function CouponsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Coupons</h1>
         <p className="text-sm text-muted-foreground">
-          Create discount codes, then apply them by code when booking for a
-          customer.
+          Create discount codes. Customers enter them at online checkout, and
+          staff can add them when booking for a customer. The discount comes off
+          the price before GST.
         </p>
       </div>
 
