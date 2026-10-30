@@ -78,9 +78,8 @@ export const tariff: TariffSection[] = [
     title: "Virtual Office",
     unit: "month",
     rows: [
-      { name: "Address Only", includes: "Business address + mail notification", standard: 1100, earlyBird: 999, annual: 13200 },
-      { name: "Address + GST", includes: "Business address + GST NOC + 2 credits + mail notification / pouch*", standard: 2000, earlyBird: 1799, annual: 24000 },
-      { name: "Virtual Pro", includes: "Business address + GST NOC + display + 4 credits + mail notification / pouch*", standard: 3300, earlyBird: 2999, annual: 39600 },
+      { name: "Address + GST", includes: "Business address + GST NOC", standard: 1000, earlyBird: 1000, annual: 12000 },
+      { name: "Virtual Pro", includes: "Business address + GST NOC + display + 4 credits + mail notification / pouch*", standard: 2500, earlyBird: 2300, annual: 30000 },
     ],
     note: "Annual plans: 15% off. Minimum 1-year lock-in.",
   },
