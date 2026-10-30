@@ -513,8 +513,8 @@
 .collabix-site .coupon-row { display: flex; gap: .6rem; }
 .collabix-site .coupon-row input { flex: 1; min-width: 0; text-transform: uppercase; }
 .collabix-site .coupon-row .btn { flex: none; }
-.collabix-site .upi-pay { margin-top: 1.8rem; padding-top: 1.6rem; border-top: 1px solid var(--line); text-align: center; }
-.collabix-site .upi-pay .upi-or { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--graphite); margin-bottom: 1rem; }
+.collabix-site .upi-pay { margin-bottom: 1.4rem; text-align: center; }
+.collabix-site .pay-fallback { margin-top: .8rem; font-size: .9rem; color: var(--navy); }
 .collabix-site .upi-pay img { display: block; margin: 0 auto 1rem; width: 220px; max-width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--line); }
 .collabix-site .upi-pay p { margin-bottom: .6rem; }
 .collabix-site .upi-pay .upi-id code { font-family: var(--font-mono); font-size: .9rem; }

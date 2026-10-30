@@ -526,7 +526,6 @@ function UpiPay({ co, summary, amount }: { co: Checkout; summary: string; amount
 
   return (
     <div className="upi-pay">
-      <p className="upi-or">Or pay directly by UPI</p>
       {/* eslint-disable-next-line @next/next/no-img-element -- static QR image */}
       <img src="/collabix/img/upi-qr.jpg" alt={`UPI QR code for ${UPI_NAME}, ${UPI_ID}`} width={220} height={310} />
       <p>
@@ -577,6 +576,8 @@ export function CheckoutSteps({
   // A signed-in customer whose account has everything sees who they're
   // booking as instead of the form, unless they choose to edit it.
   const [editing, setEditing] = useState(false);
+  // Pay step: Cashfree online, or our UPI QR confirmed by staff by hand.
+  const [method, setMethod] = useState<"online" | "upi">("online");
   const known =
     !!account?.name && !!account.email && !!account.phone && co.phoneVerified &&
     co.name === account.name && co.email === account.email;
@@ -729,35 +730,86 @@ export function CheckoutSteps({
         <>
           {timer}
           <div className="confirm-details">{details}</div>
-          <div className="step-actions">
+          <span className="filter-label">How would you like to pay?</span>
+          <div className="space-pills pay-methods" role="radiogroup" aria-label="Payment method">
             <button
-              className="btn btn-outline"
               type="button"
-              onClick={onRestart}
-              disabled={busy}
+              role="radio"
+              aria-checked={method === "online"}
+              className={`pill ${method === "online" ? "sel" : ""}`}
+              onClick={() => setMethod("online")}
             >
-              Start over
+              <span className="pn">Pay online</span>
+              <span className="pd">UPI, cards or net banking through Cashfree. Confirmed instantly.</span>
             </button>
             <button
-              className="btn btn-gold"
               type="button"
-              onClick={co.startPayment}
-              disabled={busy || remaining === 0 || !quote}
+              role="radio"
+              aria-checked={method === "upi"}
+              className={`pill ${method === "upi" ? "sel" : ""}`}
+              onClick={() => setMethod("upi")}
             >
-              {payPhase === "opening"
-                ? "Opening secure checkout…"
-                : payPhase === "confirming"
-                  ? "Confirming your payment…"
-                  : quote
-                    ? `Pay ${rupees(quote.totalMinor)} →`
-                    : "Pay →"}
+              <span className="pn">Pay by UPI QR</span>
+              <span className="pd">Scan our QR, then send us the screenshot. We confirm it for you.</span>
             </button>
           </div>
-          <p className="avail-hint">
-            Secure payment by Cashfree · UPI, cards, net banking. Your
-            e-ticket arrives by email.
-          </p>
-          {quote && <UpiPay co={co} summary={summary} amount={quote.totalMinor} />}
+
+          {method === "online" && (
+            <>
+              <div className="step-actions">
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={onRestart}
+                  disabled={busy}
+                >
+                  Start over
+                </button>
+                <button
+                  className="btn btn-gold"
+                  type="button"
+                  onClick={co.startPayment}
+                  disabled={busy || remaining === 0 || !quote}
+                >
+                  {payPhase === "opening"
+                    ? "Opening secure checkout…"
+                    : payPhase === "confirming"
+                      ? "Confirming your payment…"
+                      : quote
+                        ? `Pay ${rupees(quote.totalMinor)} →`
+                        : "Pay →"}
+                </button>
+              </div>
+              <p className="avail-hint">
+                Secure payment by Cashfree · UPI, cards, net banking. Your
+                e-ticket arrives by email.
+              </p>
+              {co.error && !busy && remaining > 0 && (
+                <p className="pay-fallback">
+                  Payment not going through?{" "}
+                  <button type="button" className="link-btn" onClick={() => setMethod("upi")}>
+                    Pay by UPI QR instead
+                  </button>
+                </p>
+              )}
+            </>
+          )}
+
+          {method === "upi" && (
+            <>
+              {quote && <UpiPay co={co} summary={summary} amount={quote.totalMinor} />}
+              <div className="step-actions">
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={onRestart}
+                  disabled={busy}
+                >
+                  Start over
+                </button>
+              </div>
+            </>
+          )}
         </>
       )}
 
