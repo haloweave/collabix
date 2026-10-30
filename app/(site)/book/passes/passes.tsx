@@ -229,6 +229,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
               onSubmitDetails={submitDetails}
               holding={plan.space === "desk" ? "your desk" : "your cabin"}
               onRestart={restart}
+              summary={`${plan.name} · ${termLabel(choice.unit, choice.count)} · ${dates}`}
               details={
                 <>
                   <p>{plan.name} · {termLabel(choice.unit, choice.count)}</p>
