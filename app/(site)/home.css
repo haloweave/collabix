@@ -509,6 +509,11 @@
 .collabix-site .err { color: #8a2f2f; font-size: .78rem; margin-top: .4rem; display: none; }
 .collabix-site .field.invalid input { border-color: #b45; }
 .collabix-site .field.invalid .err { display: block; }
+.collabix-site .coupon-toggle { margin: -.25rem 0 1.15rem; font-size: .9rem; color: var(--graphite); }
+.collabix-site .coupon-row { display: flex; gap: .6rem; }
+.collabix-site .coupon-row input { flex: 1; min-width: 0; text-transform: uppercase; }
+.collabix-site .coupon-row .btn { flex: none; }
+.collabix-site .coupon-applied { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: .92rem; }
 
 /* ============================================================
    RESPONSIVE

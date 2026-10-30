@@ -4,7 +4,7 @@ import { TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlanKey } f
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerm, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
-import { BookingProgress, BookingSummary, CheckoutSteps, STEPS, rupees, useCheckout } from "../checkout";
+import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "../checkout";
 
 type Choice = { planKey: TermPlanKey; unit: TermUnit; count: number; date: string };
 
@@ -52,7 +52,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const plan = findTermPlan(choice.planKey)!;
   const w = termWindow(choice, new Date());
   const win = w.ok ? w.window : null;
-  const shown = quote ?? priceTerm(plan, choice);
+  const shown = quote ?? co.withCoupon(priceTerm(plan, choice));
 
   // Free desks or cabins for the whole term, tagged with the term it was fetched for.
   const [avail, setAvail] = useState<{ key: string; free: number } | null>(null);
@@ -111,7 +111,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
       setError(`That ${spaceWord} was just taken for those dates. Please pick another start date.`);
       setStep(0);
     } else {
-      setError("We couldn't hold your pass. Please check your details.");
+      setError(COUPON_ERRORS[held.error] ?? "We couldn't hold your pass. Please check your details.");
     }
   }
 

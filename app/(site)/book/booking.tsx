@@ -4,7 +4,7 @@ import { bookableProduct, type BookableProduct } from "@/lib/tariff";
 import { priceBooking, productWindow, type WindowInput } from "@/lib/domain/booking";
 import StepChoose, { type Choice } from "./step-choose";
 import { BookTabs } from "./book-tabs";
-import { BookingProgress, BookingSummary, CheckoutSteps, STEPS, rupees, useCheckout } from "./checkout";
+import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "./checkout";
 
 type Slot = { resourceId: string; code: string; available: boolean };
 
@@ -61,7 +61,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const win = w.ok ? w.window : null;
   // Instant on-device estimate from the tariff; the server re-prices on hold
   // and that held quote is what's charged.
-  const estimate = win ? priceBooking(product, win, choice.people) : null;
+  const estimate = co.withCoupon(win ? priceBooking(product, win, choice.people) : null);
   const shown = quote ?? estimate;
   const shownWin = heldWin ?? win;
 
@@ -156,7 +156,11 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       setHeldWin(fresh.window);
       return;
     }
-    setError(holdErrors[held.error] ?? "We couldn't hold your booking. Please check your details.");
+    setError(
+      holdErrors[held.error] ??
+        COUPON_ERRORS[held.error] ??
+        "We couldn't hold your booking. Please check your details.",
+    );
     if (holdErrors[held.error]) setStep(0);
   }
 

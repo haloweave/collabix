@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { money } from "@/lib/tariff";
+import { applyCoupon, type Coupon } from "@/lib/domain/coupon";
 import { authClient } from "@/lib/auth-client";
 
 // The checkout every /book flow shares once something is chosen: details,
@@ -9,7 +10,19 @@ import { authClient } from "@/lib/auth-client";
 // booking/payment machinery underneath.
 
 export type QuoteLine = { label: string; qty: number; unitMinor: number; amountMinor: number };
-export type Quote = { lines: QuoteLine[]; subtotalMinor: number; taxMinor: number; totalMinor: number };
+export type Quote = {
+  lines: QuoteLine[];
+  subtotalMinor: number;
+  discount?: { code: string; amountMinor: number };
+  taxMinor: number;
+  totalMinor: number;
+};
+
+/** What to tell the guest when the hold refuses their discount code. */
+export const COUPON_ERRORS: Record<string, string> = {
+  invalid_coupon: "That coupon code isn't valid any more. Remove it or try another.",
+  coupon_covers_total: "That coupon can't be used for an online booking. Please call us to book.",
+};
 
 // Steps: Book(0) · Details(1) · Verify(2) · Pay(3) · Done(4)
 export const STEPS = ["Book", "Details", "Verify", "Pay", "Done"];
@@ -67,6 +80,11 @@ export function useCheckout() {
   const [ticketToken, setTicketToken] = useState<string | null>(null);
   // Pay step: what the button is doing right now, for its label.
   const [payPhase, setPayPhase] = useState<"idle" | "opening" | "confirming">("idle");
+  // Discount code: what's typed, and the coupon once the server has accepted it.
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const { data: session } = authClient.useSession();
   const account = accountFrom(session?.user);
 
@@ -102,6 +120,40 @@ export function useCheckout() {
     setStep(next);
   }
 
+  /** Check the typed code with the server and, if it's active, apply it. */
+  async function applyCouponCode() {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError(null);
+    try {
+      const r = await fetch(`/api/coupons?code=${encodeURIComponent(code)}`);
+      if (!r.ok) {
+        setCouponError(r.status === 404 ? "That code isn't valid or has expired." : "Couldn't check that code. Please try again.");
+        return;
+      }
+      setCoupon(await r.json());
+    } catch {
+      setCouponError("Couldn't check that code. Please try again.");
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
+  function removeCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  }
+
+  /** An on-device estimate with the applied coupon, matching what the hold
+   * will charge. */
+  function withCoupon<Q extends Quote>(q: Q): Q;
+  function withCoupon<Q extends Quote>(q: Q | null): Q | null;
+  function withCoupon<Q extends Quote>(q: Q | null): Q | null {
+    return q && coupon ? applyCoupon(q, coupon) : q;
+  }
+
   /** True when the number on the form is the signed-in account's verified one,
    * so there is nothing left to prove by SMS. */
   const phoneVerified = !!account?.phone && account.phone === phoneE164;
@@ -116,10 +168,14 @@ export function useCheckout() {
       const res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(coupon ? { ...body, couponCode: coupon.code } : body),
       });
       const data = await res.json();
-      if (!res.ok) return { ok: false, error: typeof data.error === "string" ? data.error : "invalid" };
+      if (!res.ok) {
+        const error = typeof data.error === "string" ? data.error : "invalid";
+        if (error === "invalid_coupon") setCoupon(null);
+        return { ok: false, error };
+      }
       setBookingId(data.bookingId);
       setHoldExpiresAt(data.holdExpiresAt);
       setHoldSeconds(Math.max(1, Math.round((new Date(data.holdExpiresAt).getTime() - Date.now()) / 1000)));
@@ -276,11 +332,13 @@ export function useCheckout() {
     setError(null);
     setTicketToken(null);
     setPayPhase("idle");
+    removeCoupon();
   }
 
   return {
     step,
     setStep: goTo,
+
     account,
     phoneVerified,
     name,
@@ -300,6 +358,14 @@ export function useCheckout() {
     setError,
     ticketToken,
     payPhase,
+    couponInput,
+    setCouponInput,
+    coupon,
+    couponError,
+    couponBusy,
+    applyCouponCode,
+    removeCoupon,
+    withCoupon,
     remaining,
     mmss,
     hold,
@@ -370,6 +436,65 @@ function HoldTimer({ co, holding }: { co: Checkout; holding: string }) {
   );
 }
 
+/** "Have a coupon?" on the Details step: a code checked on Apply, then shown
+ * as applied with the amount off. Lives inside the details form, so Enter
+ * applies the code instead of submitting. */
+function CouponField({ co }: { co: Checkout }) {
+  const [open, setOpen] = useState(false);
+  if (co.coupon) {
+    return (
+      <div className="field coupon-applied">
+        <p>
+          Coupon <strong>{co.coupon.code}</strong> applied:{" "}
+          {co.coupon.kind === "percent" ? `${co.coupon.value}% off` : `${rupees(co.coupon.value)} off`}
+        </p>
+        <button type="button" className="link-btn" onClick={co.removeCoupon}>
+          Remove
+        </button>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <p className="coupon-toggle">
+        <button type="button" className="link-btn" onClick={() => setOpen(true)}>
+          Have a coupon code?
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className={`field ${co.couponError ? "invalid" : ""}`}>
+      <label htmlFor="booking-coupon">Coupon code</label>
+      <div className="coupon-row">
+        <input
+          id="booking-coupon"
+          autoComplete="off"
+          autoCapitalize="characters"
+          maxLength={40}
+          value={co.couponInput}
+          onChange={(e) => co.setCouponInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              co.applyCouponCode();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={co.applyCouponCode}
+          disabled={co.couponBusy || !co.couponInput.trim()}
+        >
+          {co.couponBusy ? "Checking…" : "Apply"}
+        </button>
+      </div>
+      {co.couponError && <p className="err">{co.couponError}</p>}
+    </div>
+  );
+}
+
 /** Steps 2–5: Details, Verify, Pay and Done. `details` is what was booked,
  * shown on the Pay and Done steps. */
 export function CheckoutSteps({
@@ -412,6 +537,7 @@ export function CheckoutSteps({
                 Edit
               </button>
             </div>
+            <CouponField co={co} />
             <div className="step-actions">
               <button className="btn btn-outline" type="button" onClick={() => co.setStep(0)}>
                 ← Back
@@ -468,6 +594,7 @@ export function CheckoutSteps({
                   : "We'll text a code to confirm. No password needed."}
               </p>
             </div>
+            <CouponField co={co} />
             <div className="step-actions">
               <button
                 className="btn btn-outline"
@@ -633,7 +760,13 @@ export function BookingSummary({
         <h3>Booking summary</h3>
       </div>
       <div className="s-body" id="summary-breakdown">
-        {[...rows, ["GST (18%)", shown ? rupees(shown.taxMinor) : "—"] as [string, ReactNode]].map(([k, v]) => (
+        {[
+          ...rows,
+          ...(shown?.discount
+            ? [[`Coupon ${shown.discount.code}`, `− ${rupees(shown.discount.amountMinor)}`] as [string, ReactNode]]
+            : []),
+          ["GST (18%)", shown ? rupees(shown.taxMinor) : "—"] as [string, ReactNode],
+        ].map(([k, v]) => (
           <div className="s-line" key={k}>
             <span className="sk">{k}</span>
             <span className="sv">{v}</span>
