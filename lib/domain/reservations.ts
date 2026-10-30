@@ -4,10 +4,11 @@
 // is the source of truth for exclusion. These functions layer server-authoritative
 // validation, pricing, and the expiry sweep on top.
 
-import { and, eq, gt, inArray, like, lt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, like, lt, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
 import { priceBooking, productWindow, toUtcWindow, type Quote, type WindowInput } from "./booking";
+import { applyCoupon, normalizeCouponCode, type Coupon } from "./coupon";
 import { bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
 import { priceTerm, termWindow, type TermInput, type TermWindow } from "./term";
 import { autoAssignDesks, type Slot } from "../floorplan";
@@ -36,6 +37,8 @@ export type HoldInput = {
   customerEmail: string;
   idempotencyKey?: string;
   holdMinutes?: number;
+  /** A discount code from the admin dashboard; refused if not active. */
+  couponCode?: string;
 };
 
 export type HoldResult =
@@ -61,6 +64,39 @@ function isOverlapViolation(e: unknown): boolean {
     err?.cause?.code === "23P01" ||
     /reservation_no_overlap|exclusion/i.test(String(err?.message ?? ""))
   );
+}
+
+/** An active, unexpired coupon by code, or null. */
+export async function findActiveCoupon(db: Db, code: string): Promise<Coupon | null> {
+  const c = normalizeCouponCode(code);
+  if (!c) return null;
+  const [row] = await db
+    .select()
+    .from(schema.coupon)
+    .where(
+      and(
+        sql`upper(${schema.coupon.code}) = ${c}`,
+        eq(schema.coupon.active, true),
+        or(isNull(schema.coupon.expiresAt), gt(schema.coupon.expiresAt, sql`now()`)),
+      ),
+    )
+    .limit(1);
+  return row ? { code: row.code, kind: row.kind as Coupon["kind"], value: row.value } : null;
+}
+
+/** The quote with the booking's coupon, if any. A coupon that would leave
+ * nothing to pay is refused: every booking still has an amount to collect. */
+async function withCoupon(
+  db: Db,
+  quote: Quote,
+  code: string | undefined,
+): Promise<{ ok: true; quote: Quote } | { ok: false; error: string }> {
+  if (!code?.trim()) return { ok: true, quote };
+  const coupon = await findActiveCoupon(db, code);
+  if (!coupon) return { ok: false, error: "invalid_coupon" };
+  const discounted = applyCoupon(quote, coupon);
+  if (discounted.totalMinor < 100) return { ok: false, error: "coupon_covers_total" };
+  return { ok: true, quote: discounted };
 }
 
 async function getPlan(db: Db, key: string) {
@@ -212,7 +248,9 @@ export async function holdReservation(
     }
   }
 
-  const quote = priceBooking(product, window, people, now);
+  const priced = await withCoupon(db, priceBooking(product, window, people, now), input.couponCode);
+  if (!priced.ok) return priced;
+  const quote = priced.quote;
   const { startAt, endAt } = toUtcWindow(window);
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
 
@@ -296,6 +334,7 @@ export type TermHoldInput = TermInput & {
   customerName: string;
   customerEmail: string;
   holdMinutes?: number;
+  couponCode?: string;
 };
 
 /** Hold one desk or cabin for a whole term, priced from the tariff. Paid and
@@ -315,7 +354,9 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
   const resourceId = free.find((s) => s.code === code)?.resourceId;
   if (!resourceId) return { ok: false, error: "seat_unavailable" };
 
-  const quote = priceTerm(plan, input, now);
+  const priced = await withCoupon(db, priceTerm(plan, input, now), input.couponCode);
+  if (!priced.ok) return priced;
+  const quote = priced.quote;
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
   try {
     const result = await db.transaction(async (tx) => {

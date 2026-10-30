@@ -11,6 +11,8 @@ const duration = z.coerce.number().int().min(1).max(MAX_DURATION).optional();
 // Per-request people cap for passes — bounds abuse; the 28 desks cap it anyway.
 export const MAX_SEATS = 20;
 const people = z.coerce.number().int().min(1).max(MAX_SEATS).default(1);
+// Optional discount code; whether it is active is checked when the seat is held.
+const couponCode = z.string().trim().max(40).optional();
 
 export const availabilityQuery = z.object({ productKey, date, start, duration });
 
@@ -26,6 +28,7 @@ export const holdBody = z.object({
   customerName: z.string().trim().min(2).max(100),
   customerEmail: z.string().email().max(254),
   idempotencyKey: z.string().max(200).optional(),
+  couponCode,
 });
 
 // Monthly & annual passes: which counts are valid for the unit is checked by termWindow.
@@ -42,7 +45,10 @@ export const termHoldBody = z.object({
   ...term,
   customerName: z.string().trim().min(2).max(100),
   customerEmail: z.string().email().max(254),
+  couponCode,
 });
+
+export const couponQuery = z.object({ code: z.string().trim().min(1).max(40) });
 
 export const confirmBody = z.object({
   bookingId: z.string().uuid(),
