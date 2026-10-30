@@ -176,6 +176,10 @@ export async function renderInvoicePdf(doc: InvoiceDoc): Promise<Uint8Array> {
     y -= strong ? 18 : 15;
   };
   const totalsTop = y;
+  if (doc.discount) {
+    totalRow("Subtotal", inr(doc.subtotalMinor + doc.discount.amountMinor));
+    totalRow(`Discount (${doc.discount.code})`, `- ${inr(doc.discount.amountMinor)}`);
+  }
   totalRow("Taxable value", inr(doc.subtotalMinor));
   totalRow(`CGST @ ${doc.halfRatePercent}%`, inr(doc.cgstMinor));
   totalRow(`SGST @ ${doc.halfRatePercent}%`, inr(doc.sgstMinor));

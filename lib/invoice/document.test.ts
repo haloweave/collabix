@@ -66,6 +66,25 @@ describe("bookingInvoice", () => {
     expect(doc.lines).toEqual([expect.objectContaining({ description: "Half Day Pass", amountMinor: 1000 })]);
   });
 
+  test("shows a coupon and charges GST on what is left", () => {
+    // 2 × ₹199 = ₹398, less 10% (₹39.80) = ₹358.20, plus 18% GST.
+    const doc = bookingInvoice(
+      source({
+        quote: {
+          lines: [{ label: "Half Day Pass", qty: 2, unitMinor: 19900, amountMinor: 39800 }],
+          subtotalMinor: 39800,
+          discount: { code: "TEN", amountMinor: 3980 },
+          taxMinor: 6448,
+          totalMinor: 42268,
+        },
+      }),
+    );
+    expect(doc.lines).toEqual([expect.objectContaining({ description: "Half Day Pass", amountMinor: 39800 })]);
+    expect(doc.discount).toEqual({ code: "TEN", amountMinor: 3980 });
+    expect(doc.subtotalMinor).toBe(35820);
+    expect(doc.subtotalMinor + doc.cgstMinor + doc.sgstMinor).toBe(doc.totalMinor);
+  });
+
   test("flags a cancelled booking", () => {
     expect(bookingInvoice(source({ status: "cancelled" })).cancelled).toBe(true);
   });

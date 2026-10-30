@@ -29,6 +29,9 @@ export type InvoiceDoc = {
   /** Label/value pairs printed beside the buyer (booking ref, period, …). */
   facts: [string, string][];
   lines: InvoiceLine[];
+  /** A coupon taken off the lines; subtotalMinor is what is left. */
+  discount?: { code: string; amountMinor: number };
+  /** Taxable value: the lines, less any discount. */
   subtotalMinor: number;
   /** Rate per half (CGST and SGST each), e.g. 9. */
   halfRatePercent: number;
@@ -81,7 +84,10 @@ export function bookingInvoice(src: BookingInvoiceSource): InvoiceDoc {
     subtotalMinor = Math.round(totalMinor / (1 + GST_RATE));
     taxMinor = totalMinor - subtotalMinor;
   }
-  if (!totalMinor) totalMinor = subtotalMinor + taxMinor;
+  const d = q.discount as { code?: unknown; amountMinor?: unknown } | undefined;
+  const discount =
+    d && typeof d.code === "string" && num(d.amountMinor) > 0 ? { code: d.code, amountMinor: num(d.amountMinor) } : undefined;
+  if (!totalMinor) totalMinor = subtotalMinor - (discount?.amountMinor ?? 0) + taxMinor;
 
   const snapshot = Array.isArray(q.lines) ? q.lines.filter(isSnapshotLine) : [];
   const fromSnapshot = snapshot.length > 0 && snapshot.reduce((s, l) => s + l.amountMinor, 0) === subtotalMinor;
@@ -116,7 +122,8 @@ export function bookingInvoice(src: BookingInvoiceSource): InvoiceDoc {
     buyer: src.buyer,
     facts,
     lines,
-    subtotalMinor,
+    ...(discount ? { discount } : {}),
+    subtotalMinor: subtotalMinor - (discount?.amountMinor ?? 0),
     halfRatePercent: (GST_RATE * 100) / 2,
     ...splitGst(taxMinor),
     totalMinor,
