@@ -83,7 +83,10 @@ export type Quote = {
   /** Monthly & annual passes: the term in months (hours is then 0). */
   months?: number;
   lines: QuoteLine[];
+  /** The price before any discount: the lines summed. */
   subtotalMinor: number;
+  /** A coupon taken off the subtotal before GST (lib/domain/coupon.ts). */
+  discount?: { code: string; amountMinor: number };
   taxMinor: number;
   totalMinor: number;
 };
