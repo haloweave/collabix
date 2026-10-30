@@ -791,38 +791,6 @@ export async function listCoupons(): Promise<CouponRow[]> {
   }));
 }
 
-/** An active, unexpired coupon by code (case-insensitive), or null. */
-export async function getActiveCoupon(code: string): Promise<CouponRow | null> {
-  const c = code.trim().toUpperCase();
-  if (!c) return null;
-  const [r] = await sql`
-    SELECT id, code, kind, value, active, expires_at FROM coupon
-    WHERE upper(code) = ${c} AND active = true
-      AND (expires_at IS NULL OR expires_at > now())
-    LIMIT 1`;
-  if (!r) return null;
-  return {
-    id: r.id as string,
-    code: r.code as string,
-    kind: r.kind as "percent" | "flat",
-    value: n(r.value),
-    active: Boolean(r.active),
-    expiresAt: r.expires_at ? new Date(r.expires_at as string) : null,
-  };
-}
-
-/** Discount (in paise) a coupon applies to a total, clamped to the total. */
-export function couponDiscount(
-  coupon: { kind: "percent" | "flat"; value: number },
-  totalMinor: number,
-): number {
-  const raw =
-    coupon.kind === "percent"
-      ? Math.round((totalMinor * coupon.value) / 100)
-      : coupon.value;
-  return Math.max(0, Math.min(raw, totalMinor));
-}
-
 export type AuditRow = {
   id: string;
   actorEmail: string;
