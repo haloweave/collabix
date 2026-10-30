@@ -16,6 +16,8 @@ export type PaidBy = DeskMethod;
 const PASS_ERRORS: Record<string, string> = {
   seat_unavailable: "No desk or cabin of that plan is free for the whole term.",
   unknown_plan: "That plan isn't on sale.",
+  invalid_coupon: "That coupon code isn't active.",
+  coupon_covers_total: "That coupon leaves nothing to pay.",
 };
 
 export type RecordPassResult =
@@ -36,6 +38,7 @@ export async function recordPass(input: {
   phone?: string;
   paidBy: PaidBy;
   reference?: string;
+  couponCode?: string;
 }): Promise<RecordPassResult> {
   const staff = await requireStaff();
 
@@ -80,6 +83,7 @@ export async function recordPass(input: {
       planKey: parsed.data.planKey,
       unit: parsed.data.unit,
       count: parsed.data.count,
+      coupon: held.quote.discount?.code,
       totalMinor: held.quote.totalMinor,
       paidBy: input.paidBy,
       reference: input.reference?.trim() || null,

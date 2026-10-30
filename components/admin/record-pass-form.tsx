@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TERM_PLANS, findTermPlan } from "@/lib/tariff";
 import { MAX_MONTHS, MAX_YEARS, addMonths, priceTerm, termMonths } from "@/lib/domain/term";
+import { applyCoupon, normalizeCouponCode, type Coupon } from "@/lib/domain/coupon";
 import { recordPass, type PaidBy } from "@/app/admin/(dash)/memberships/actions";
 import { rupees, istDate } from "@/lib/admin/format";
 import { Button } from "@/components/ui/button";
@@ -38,12 +39,39 @@ export function RecordPassForm({ today }: { today: string }) {
   const [phone, setPhone] = useState("");
   const [paidBy, setPaidBy] = useState<PaidBy>("upi");
   const [reference, setReference] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  // The typed code once the server says it's active; checked as staff type, so
+  // the amount to collect is right before anything is recorded.
+  const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const code = normalizeCouponCode(couponCode);
+    if (!code) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      fetch(`/api/coupons?code=${encodeURIComponent(code)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((c: Coupon | null) => {
+          if (!cancelled) setCoupon(c);
+        })
+        .catch(() => {
+          if (!cancelled) setCoupon(null);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [couponCode]);
+  const typed = normalizeCouponCode(couponCode);
+  const applied = typed && coupon?.code.toUpperCase() === typed ? coupon : null;
 
   const plan = findTermPlan(planKey)!;
   const max = unit === "year" ? MAX_YEARS : MAX_MONTHS;
   const n = Math.min(Math.max(1, Number(count) || 1), max);
-  const quote = priceTerm(plan, { unit, count: n });
+  const priced = priceTerm(plan, { unit, count: n });
+  const quote = applied ? applyCoupon(priced, applied) : priced;
   const endDate = addMonths(date, termMonths({ unit, count: n }));
 
   function submit(e: React.FormEvent) {
@@ -63,6 +91,7 @@ export function RecordPassForm({ today }: { today: string }) {
         phone,
         paidBy,
         reference,
+        couponCode,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -163,12 +192,20 @@ export function RecordPassForm({ today }: { today: string }) {
             <Input placeholder="UPI or bank reference" value={reference} onChange={(e) => setReference(e.target.value)} />
           </label>
 
+          <label className="grid gap-1.5 text-sm sm:col-span-2">
+            <span className="text-muted-foreground">Coupon code (optional)</span>
+            <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
+            {typed && !applied && <span className="text-xs text-muted-foreground">No active coupon with this code.</span>}
+          </label>
+
           <div className="rounded-lg border bg-muted/40 p-3 text-sm sm:col-span-2">
             <p className="font-medium">
               {plan.name} · {istDate(`${date}T00:00:00+05:30`)} – {istDate(`${endDate}T00:00:00+05:30`)}
             </p>
             <p className="mt-1 text-muted-foreground">
-              {rupees(quote.subtotalMinor)} + GST {rupees(quote.taxMinor)} ={" "}
+              {rupees(quote.subtotalMinor)}
+              {quote.discount && ` − ${quote.discount.code} ${rupees(quote.discount.amountMinor)}`} + GST{" "}
+              {rupees(quote.taxMinor)} ={" "}
               <span className="font-medium text-foreground">{rupees(quote.totalMinor)}</span> to collect
             </p>
           </div>
