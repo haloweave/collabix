@@ -39,6 +39,7 @@ export function WalkInForm({ today }: { today: string }) {
   const [people, setPeople] = useState("1");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [coupon, setCoupon] = useState("");
   const [pending, startTransition] = useTransition();
   const product = bookableProduct(productKey)!;
 
@@ -57,6 +58,7 @@ export function WalkInForm({ today }: { today: string }) {
         people: Number(people),
         customerName: name,
         customerEmail: email,
+        couponCode: coupon,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -162,6 +164,11 @@ export function WalkInForm({ today }: { today: string }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+          </label>
+
+          <label className="grid gap-1.5 text-sm">
+            <span className="text-muted-foreground">Coupon code (optional)</span>
+            <Input value={coupon} onChange={(e) => setCoupon(e.target.value)} />
           </label>
 
 

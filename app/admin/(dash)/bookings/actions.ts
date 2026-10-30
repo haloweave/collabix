@@ -51,6 +51,8 @@ const WALK_IN_ERRORS: Record<string, string> = {
   not_enough_desks: "Not enough free desks for that day.",
   seat_unavailable: "That room is already booked for that time.",
   closed_date: "Collabix is closed on that date.",
+  invalid_coupon: "That coupon code isn't active.",
+  coupon_covers_total: "That coupon leaves nothing to pay.",
 };
 
 export type WalkInResult =
@@ -68,6 +70,7 @@ export async function createWalkIn(input: {
   people?: number;
   customerName: string;
   customerEmail: string;
+  couponCode?: string;
 }): Promise<WalkInResult> {
   await requireStaff();
 
@@ -94,6 +97,7 @@ export async function createWalkIn(input: {
       date: parsed.data.date,
       start: parsed.data.start,
       duration: parsed.data.duration,
+      coupon: held.quote.discount?.code,
       totalMinor: held.quote.totalMinor,
     },
   });
