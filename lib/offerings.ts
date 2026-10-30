@@ -160,9 +160,9 @@ export const offerings: Offering[] = [
     highlights: [
       { title: "Banaswadi address", text: "261, Ashwini Arcade, 100 Feet Road, HRBR Layout. Use it on your letterhead and website." },
       { title: "GST NOC", text: "A no-objection certificate so you can register for GST at this address." },
-      { title: "Mail handling", text: "We let you know when mail arrives and forward it by Bluedart pouch." },
+      { title: "Mail handling", text: "On Virtual Pro, we let you know when mail arrives and forward it by Bluedart pouch." },
       { title: "Name-board display", text: "Your business name on our board, included on Virtual Pro." },
-      { title: "Meeting credits", text: "2 or 4 hours of meeting-room time a month for when you need to meet in person." },
+      { title: "Meeting credits", text: "4 hours of meeting-room time a month on Virtual Pro, for when you need to meet in person." },
       { title: "GST and registration help", text: "Need the registration done too? Our service desk can handle it." },
     ],
   },
