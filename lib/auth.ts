@@ -7,13 +7,16 @@ import * as authSchema from "./db/auth-schema";
 import { sendEmail } from "./email";
 import { sendOtpSms, toIndianMobile } from "./sms";
 import { messageCentralConfigured, sendVerification, validateVerification } from "./message-central";
+import { firebasePhoneConfigured, looksLikeFirebaseToken, verifyFirebasePhoneToken } from "./firebase-phone-token";
 
 const mcKey = (phone: string) => `message-central:${phone}`;
 
 // Members sign in passwordless; staff may also use an email + password.
 // Sign-in and checkout verify a mobile number by SMS code:
-// Message Central VerifyNow when configured (lib/message-central.ts), else
-// Fast2SMS (lib/sms.ts). The email-OTP plugin stays for staff tooling but the
+// Firebase Phone Auth in the browser when configured, its ID token checked
+// here (lib/firebase-phone-token.ts); otherwise, or if Firebase fails,
+// Message Central VerifyNow (lib/message-central.ts), else Fast2SMS
+// (lib/sms.ts). Firebase tokens are accepted alongside Message Central only. The email-OTP plugin stays for staff tooling but the
 // public login offers mobile codes and staff passwords only.
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
@@ -74,6 +77,11 @@ export const auth = betterAuth({
               });
             },
             async verifyOTP({ phoneNumber, code }, ctx) {
+              // Firebase Phone Auth: the browser already checked the code with
+              // Firebase and sends its ID token instead (lib/phone-otp-client.ts).
+              if (firebasePhoneConfigured() && looksLikeFirebaseToken(code)) {
+                return verifyFirebasePhoneToken(code, phoneNumber);
+              }
               const adapter = ctx!.context.internalAdapter;
               const row = await adapter.findVerificationValue(mcKey(phoneNumber));
               if (!row || row.expiresAt < new Date()) return false;
