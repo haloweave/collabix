@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { classifyIdentifier, dashboardFor, type LoginIdentifier } from "@/lib/auth/login-routing";
+import { sendPhoneCode, verifyPhoneCode } from "@/lib/phone-otp-client";
 
 // One sign-in for members and staff. A mobile number gets an SMS code (the
 // same flow checkout uses); an email reveals a password field for staff
@@ -31,11 +32,7 @@ export function UniversalLoginForm() {
   async function requestCode(target: LoginIdentifier) {
     setBusy(true);
     try {
-      const r = await fetch("/api/auth/phone-number/send-otp", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phoneNumber: target.value }),
-      });
+      const r = await sendPhoneCode(target.value);
       if (r.status === 429) throw new Error("Too many codes requested. Please wait a few minutes and try again.");
       if (!r.ok) throw new Error("Could not send the code. Check the number.");
       setId(target);
@@ -78,11 +75,7 @@ export function UniversalLoginForm() {
     if (!id || code.trim().length < 4) return;
     setBusy(true);
     try {
-      const r = await fetch("/api/auth/phone-number/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phoneNumber: id.value, code: code.trim() }),
-      });
+      const r = await verifyPhoneCode(id.value, code.trim());
       if (!r.ok) throw new Error("That code didn't match. Please try again.");
       await goToDashboard();
     } catch (err) {
