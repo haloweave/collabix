@@ -696,7 +696,7 @@ export function CheckoutSteps({
                 value={co.otp}
                 onChange={(e) => co.setOtp(e.target.value.replace(/\D/g, ""))}
               />
-              <p className="avail-hint">It expires in 1 minute. Tap Resend code if it runs out.</p>
+              <p className="avail-hint">Enter the 6-digit code from the SMS. Not arrived? Tap Resend code.</p>
             </div>
             <div className="step-actions">
               <button

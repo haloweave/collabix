@@ -151,7 +151,7 @@ export function UniversalLoginForm() {
       <button type="submit" className="login-submit" disabled={busy || code.length < 4}>
         {busy ? "Signing in…" : <>Verify &amp; sign in <span className="arw">→</span></>}
       </button>
-      <p className="login-hint">The code expires in 1 minute.</p>
+      <p className="login-hint">Enter the 6-digit code from the SMS. Not arrived? Tap Resend code.</p>
       <p className="login-hint">
         <button type="button" disabled={busy} onClick={() => void requestCode(id)} style={linkButton}>
           Resend code
