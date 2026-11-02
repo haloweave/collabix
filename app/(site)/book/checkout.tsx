@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { money } from "@/lib/tariff";
 import { applyCoupon, type Coupon } from "@/lib/domain/coupon";
 import { authClient } from "@/lib/auth-client";
+import { sendPhoneCode, verifyPhoneCode } from "@/lib/phone-otp-client";
 
 // The checkout every /book flow shares once something is chosen: details,
 // phone OTP, Cashfree payment and the confirmation. Each flow supplies its own
@@ -200,11 +201,7 @@ export function useCheckout() {
 
   async function sendOtp() {
     setError(null);
-    const r = await fetch("/api/auth/phone-number/send-otp", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phoneNumber: phoneE164 }),
-    });
+    const r = await sendPhoneCode(phoneE164);
     if (r.status === 429) setError("Too many codes requested. Please wait a few minutes and try again.");
     else if (!r.ok) setError("Could not send the code. Check the mobile number.");
   }
@@ -215,11 +212,7 @@ export function useCheckout() {
     setBusy(true);
     setError(null);
     try {
-      const v = await fetch("/api/auth/phone-number/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phoneNumber: phoneE164, code: otp.trim() }),
-      });
+      const v = await verifyPhoneCode(phoneE164, otp.trim());
       if (!v.ok) {
         setError("That code didn't match. Please try again.");
         return;
