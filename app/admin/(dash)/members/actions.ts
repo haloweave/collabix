@@ -35,10 +35,11 @@ export async function createMember(input: {
   // Granting manager/owner at creation is a privileged act.
   if (role === "manager" || role === "owner") await requireManager();
 
-  // Stored as the phone sign-in stores it (+91…), so the member can sign in
-  // with it; one account per number.
+  // Members sign in by mobile only (staff use email and password), so a
+  // member needs one, stored as the phone sign-in stores it (+91…).
   const phone = input.phone?.trim() ? toAccountPhone(input.phone) : null;
   if (input.phone?.trim() && !phone) return { ok: false, error: "Enter a valid 10-digit mobile number." };
+  if (role === "member" && !phone) return { ok: false, error: "A member needs a mobile number to sign in." };
   if (phone) {
     const [taken] = await db
       .select({ id: authSchema.user.id })

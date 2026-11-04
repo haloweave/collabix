@@ -43,6 +43,10 @@ export function MemberForm() {
       toast.error("Name and email are required.");
       return;
     }
+    if (role === "member" && phone.replace(/\D/g, "").length < 10) {
+      toast.error("A member needs a mobile number to sign in.");
+      return;
+    }
     startTransition(async () => {
       const res = await createMember({ name, email, phone, role, notes });
       if (!res.ok) {
@@ -74,8 +78,14 @@ export function MemberForm() {
             />
           </label>
           <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Phone</span>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <span className="text-muted-foreground">{role === "member" ? "Mobile *" : "Mobile"}</span>
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="98765 43210"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
           </label>
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Role</span>
