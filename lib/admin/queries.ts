@@ -700,13 +700,14 @@ export async function getBookingsInRange(
 export type MembershipStatus = "active" | "upcoming" | "ended";
 
 /** A membership: one monthly or annual pass (a confirmed term booking of one
- * desk or cabin), bought online or recorded by staff. */
+ * or more desks or cabins), bought online or recorded by staff. */
 export type MembershipRow = {
   bookingId: string;
   memberId: string | null;
   customerName: string;
   customerEmail: string;
   planName: string;
+  /** The desk or cabin codes it holds, e.g. "D-01, D-02". */
   space: string;
   months: number;
   startAt: Date;
@@ -723,11 +724,15 @@ function membershipStatus(startAt: Date, endAt: Date, now: Date): MembershipStat
 /** Memberships, newest term first. Pass a memberId for one member's history. */
 export async function listMemberships(opts: { memberId?: string } = {}): Promise<MembershipRow[]> {
   const memberId = opts.memberId ?? null;
+  // One row per booking: a team pass holds several desks or cabins, each its
+  // own reservation, all sharing the term and the booking's quote.
   const rows = await sql`
     SELECT b.id AS booking_id, b.member_id, b.customer_name, b.customer_email,
-      rp.name AS plan_name, res.code AS space, r.start_at, r.end_at,
-      COALESCE((r.quote_snapshot->>'months')::int, 0) AS months,
-      COALESCE((r.quote_snapshot->>'totalMinor')::bigint, 0) AS total_minor
+      min(rp.name) AS plan_name,
+      string_agg(res.code, ', ' ORDER BY res.code) AS space,
+      min(r.start_at) AS start_at, max(r.end_at) AS end_at,
+      COALESCE(max((r.quote_snapshot->>'months')::int), 0) AS months,
+      COALESCE(max((r.quote_snapshot->>'totalMinor')::bigint), 0) AS total_minor
     FROM reservation r
     JOIN booking b ON b.id = r.booking_id
     JOIN rate_plan rp ON rp.id = r.rate_plan_id
@@ -735,7 +740,8 @@ export async function listMemberships(opts: { memberId?: string } = {}): Promise
     WHERE r.status = 'confirmed' AND b.status = 'active'
       AND rp.key = ANY(${[...TERM_PLAN_KEYS]})
       AND (${memberId}::text IS NULL OR b.member_id = ${memberId})
-    ORDER BY r.start_at DESC
+    GROUP BY b.id
+    ORDER BY min(r.start_at) DESC
     LIMIT 500`;
   const now = new Date();
   return rows.map((r: Record<string, unknown>) => {
