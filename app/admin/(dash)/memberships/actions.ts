@@ -1,15 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import * as authSchema from "@/lib/db/auth-schema";
 import { requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { termHoldBody } from "@/lib/api/validation";
 import { confirmBooking, holdTerm } from "@/lib/domain/reservations";
 import { recordDeskPayment, type DeskMethod } from "@/lib/domain/desk-payment";
-import { toIndianMobile } from "@/lib/sms";
+import { findMemberByContact, toAccountPhone } from "@/lib/admin/member-lookup";
 
 export type PaidBy = DeskMethod;
 
@@ -47,26 +45,15 @@ export async function recordPass(input: {
   const parsed = termHoldBody.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the plan, start date, term and customer details." };
   const email = parsed.data.customerEmail.toLowerCase();
-  const mobile = input.phone?.trim() ? toIndianMobile(input.phone) : null;
-  if (input.phone?.trim() && !mobile) return { ok: false, error: "Enter a valid 10-digit mobile number." };
-  // Accounts store numbers in E.164, as the phone sign-in creates them.
-  const phone = mobile ? `+91${mobile}` : null;
-
-  const [member] = await db
-    .select({ id: authSchema.user.id })
-    .from(authSchema.user)
-    .where(
-      phone
-        ? or(eq(authSchema.user.email, email), eq(authSchema.user.phoneNumber, phone))
-        : eq(authSchema.user.email, email),
-    )
-    .limit(1);
+  const phone = input.phone?.trim() ? toAccountPhone(input.phone) : null;
+  if (input.phone?.trim() && !phone) return { ok: false, error: "Enter a valid 10-digit mobile number." };
+  const memberId = await findMemberByContact(email, phone);
 
   const held = await holdTerm(db, { ...parsed.data, customerEmail: email, holdMinutes: 5 });
   if (!held.ok) {
     return { ok: false, error: PASS_ERRORS[held.error] ?? `Couldn't record the pass: ${held.error}.` };
   }
-  const confirmed = await confirmBooking(db, { bookingId: held.bookingId, memberId: member?.id });
+  const confirmed = await confirmBooking(db, { bookingId: held.bookingId, memberId: memberId ?? undefined });
   if (!confirmed.ok) return { ok: false, error: "A desk or cabin was just taken. Please try again." };
   // The money was taken in person: record it like a desk payment on any booking,
   // so the invoice and every "is it paid?" check show it as paid.
@@ -94,7 +81,7 @@ export async function recordPass(input: {
     },
   });
   revalidatePath("/admin/memberships");
-  if (member) revalidatePath(`/admin/members/${member.id}`);
+  if (memberId) revalidatePath(`/admin/members/${memberId}`);
   if (!paid.ok) {
     return {
       ok: false,
