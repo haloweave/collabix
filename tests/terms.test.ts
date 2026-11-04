@@ -67,6 +67,26 @@ describe("monthly & annual passes", () => {
     expect(await free(months("cabin-base", 1))).toBe(3);
   });
 
+  test("a team term holds one desk per space, all for the whole term", async () => {
+    const held = await holdTerm(db, { ...months("hot-desk", 3), spaces: 3, ...guest });
+    if (!held.ok) throw new Error(held.error);
+    expect(held.reservationIds).toHaveLength(3);
+    const codes = await Promise.all(held.reservationIds.map(heldCode));
+    expect(new Set(codes).size).toBe(3);
+    // ₹6,000 × 3 months × 3 desks + 18% GST.
+    expect(held.quote.totalMinor).toBe(6372000);
+    expect(await free(months("hot-desk", 1))).toBe(25);
+  });
+
+  test("a cabin term can take several cabins, but not more than are free", async () => {
+    const two = await holdTerm(db, { ...months("cabin-base", 1), spaces: 2, ...guest });
+    if (!two.ok) throw new Error(two.error);
+    expect((await Promise.all(two.reservationIds.map(heldCode))).every((c) => /^C-0[1-4]$/.test(c))).toBe(true);
+    const three = await holdTerm(db, { ...months("cabin-base", 1), spaces: 3, ...guest });
+    expect(three).toEqual({ ok: false, error: "seat_unavailable" });
+    expect(await free(months("cabin-base", 1))).toBe(2);
+  });
+
   test("an annual term is priced from the Annual column", async () => {
     const held = await holdTerm(db, { planKey: "dedicated-desk", date: START, unit: "year", count: 2, ...guest });
     if (!held.ok) throw new Error(held.error);

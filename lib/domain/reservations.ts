@@ -331,14 +331,16 @@ export async function getTermAvailability(
 
 export type TermHoldInput = TermInput & {
   planKey: string;
+  /** Desks (desk plans) or cabins (cabin plans) to hold; one by default. */
+  spaces?: number;
   customerName: string;
   customerEmail: string;
   holdMinutes?: number;
   couponCode?: string;
 };
 
-/** Hold one desk or cabin for a whole term, priced from the tariff. Paid and
- * confirmed through the same flow as any booking (lib/domain/payments.ts). */
+/** Hold one or more desks or cabins for a whole term, priced from the tariff.
+ * Paid and confirmed through the same flow as any booking (lib/domain/payments.ts). */
 export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): Promise<HoldResult> {
   await sweepExpiredHolds(db);
   const plan = findTermPlan(input.planKey);
@@ -348,13 +350,17 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
   const ratePlan = await getPlan(db, plan.key);
   if (!ratePlan || !ratePlan.active) return { ok: false, error: "unknown_plan" };
 
+  const spaces = Math.max(1, input.spaces ?? 1);
   const free = (await termSlots(db, plan, w.window)).filter((s) => s.available);
-  const code =
-    plan.space === "desk" ? autoAssignDesks(free.map((s) => s.code), 1)[0] : free[0]?.code;
-  const resourceId = free.find((s) => s.code === code)?.resourceId;
-  if (!resourceId) return { ok: false, error: "seat_unavailable" };
+  const codes =
+    plan.space === "desk"
+      ? autoAssignDesks(free.map((s) => s.code), spaces)
+      : free.slice(0, spaces).map((s) => s.code);
+  if (codes.length < spaces) return { ok: false, error: "seat_unavailable" };
+  const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
+  const resourceIds = codes.map((c) => idByCode.get(c)!);
 
-  const priced = await withCoupon(db, priceTerm(plan, input, now), input.couponCode);
+  const priced = await withCoupon(db, priceTerm(plan, { ...input, spaces }, now), input.couponCode);
   if (!priced.ok) return priced;
   const quote = priced.quote;
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
@@ -364,20 +370,23 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
         .insert(schema.booking)
         .values({ customerName: input.customerName, customerEmail: input.customerEmail })
         .returning({ id: schema.booking.id });
-      const [r] = await tx
+      // All-or-nothing: one conflicting space aborts the whole team hold.
+      const rows = await tx
         .insert(schema.reservation)
-        .values({
-          bookingId: b.id,
-          resourceId,
-          ratePlanId: ratePlan.id,
-          startAt: w.window.startAt,
-          endAt: w.window.endAt,
-          status: "held",
-          holdExpiresAt,
-          quoteSnapshot: quote,
-        })
+        .values(
+          resourceIds.map((resourceId) => ({
+            bookingId: b.id,
+            resourceId,
+            ratePlanId: ratePlan.id,
+            startAt: w.window.startAt,
+            endAt: w.window.endAt,
+            status: "held" as const,
+            holdExpiresAt,
+            quoteSnapshot: quote,
+          })),
+        )
         .returning({ id: schema.reservation.id });
-      return { bookingId: b.id, reservationIds: [r.id] };
+      return { bookingId: b.id, reservationIds: rows.map((r) => r.id) };
     });
     return { ok: true, ...result, holdExpiresAt, quote };
   } catch (e) {
