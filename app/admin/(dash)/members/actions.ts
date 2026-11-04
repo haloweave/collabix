@@ -7,6 +7,7 @@ import { db } from "@/lib/db/client";
 import * as authSchema from "@/lib/db/auth-schema";
 import { requireManager, requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
+import { toAccountPhone } from "@/lib/admin/member-lookup";
 
 const ROLES = ["member", "reception", "staff", "manager", "owner"] as const;
 type AssignableRole = (typeof ROLES)[number];
@@ -34,6 +35,18 @@ export async function createMember(input: {
   // Granting manager/owner at creation is a privileged act.
   if (role === "manager" || role === "owner") await requireManager();
 
+  // Stored as the phone sign-in stores it (+91…), so the member can sign in
+  // with it; one account per number.
+  const phone = input.phone?.trim() ? toAccountPhone(input.phone) : null;
+  if (input.phone?.trim() && !phone) return { ok: false, error: "Enter a valid 10-digit mobile number." };
+  if (phone) {
+    const [taken] = await db
+      .select({ id: authSchema.user.id })
+      .from(authSchema.user)
+      .where(eq(authSchema.user.phoneNumber, phone));
+    if (taken) return { ok: false, error: "An account with that mobile number exists." };
+  }
+
   const [existing] = await db
     .select({ id: authSchema.user.id })
     .from(authSchema.user)
@@ -46,7 +59,7 @@ export async function createMember(input: {
     name,
     email,
     emailVerified: false,
-    phoneNumber: input.phone?.trim() || null,
+    phoneNumber: phone,
     role,
     notes: input.notes?.trim() || null,
   });
