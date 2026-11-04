@@ -12,6 +12,7 @@ import {
   holdReservation,
 } from "@/lib/domain/reservations";
 import { recordDeskPayment, removeDeskPayment } from "@/lib/domain/desk-payment";
+import { findMemberByContact, toAccountPhone } from "@/lib/admin/member-lookup";
 
 // Cancel a whole booking: mark it cancelled and release every held/confirmed
 // reservation under it (status='cancelled' drops out of the no-overlap
@@ -61,7 +62,9 @@ export type WalkInResult =
 
 // Staff-created (walk-in) booking: auto-pick the first N available seats for the
 // window, hold them, and confirm immediately — same engine as the customer flow
-// but without the OTP step. All-or-nothing on availability.
+// but without the OTP step. All-or-nothing on availability. The mobile is
+// required (customers sign in by mobile only) and links the booking to their
+// account when one matches.
 export async function createWalkIn(input: {
   productKey: string;
   date: string;
@@ -70,21 +73,26 @@ export async function createWalkIn(input: {
   people?: number;
   customerName: string;
   customerEmail: string;
+  phone: string;
   couponCode?: string;
 }): Promise<WalkInResult> {
   await requireStaff();
 
   const parsed = holdBody.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the product, date, time and customer details." };
+  const phone = toAccountPhone(input.phone ?? "");
+  if (!phone) return { ok: false, error: "Enter the customer's 10-digit mobile number." };
+  const email = parsed.data.customerEmail.toLowerCase();
+  const memberId = await findMemberByContact(email, phone);
 
   const held = await holdReservation(db, {
     ...parsed.data,
-    customerEmail: parsed.data.customerEmail.toLowerCase(),
+    customerEmail: email,
     holdMinutes: 5,
   });
   if (!held.ok) return { ok: false, error: WALK_IN_ERRORS[held.error] ?? held.error };
 
-  const confirmed = await confirmBooking(db, { bookingId: held.bookingId });
+  const confirmed = await confirmBooking(db, { bookingId: held.bookingId, memberId: memberId ?? undefined });
   if (!confirmed.ok) return { ok: false, error: confirmed.error };
 
   await logAudit({
