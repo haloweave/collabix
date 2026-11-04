@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { TERM_PLANS, findTermPlan } from "@/lib/tariff";
 import { MAX_MONTHS, MAX_YEARS, addMonths, priceTerm, termMonths } from "@/lib/domain/term";
+import { MAX_SEATS } from "@/lib/api/validation";
 import { applyCoupon, normalizeCouponCode, type Coupon } from "@/lib/domain/coupon";
 import { recordPass, type PaidBy } from "@/app/admin/(dash)/memberships/actions";
 import { rupees, istDate } from "@/lib/admin/format";
@@ -27,12 +28,13 @@ const PAID_BY: { key: PaidBy; label: string }[] = [
 ];
 
 // Record a monthly or annual pass sold at the front desk. Same plans and
-// prices as the website; the desk or cabin is assigned automatically.
+// prices as the website; the desks or cabins are assigned automatically.
 export function RecordPassForm({ today }: { today: string }) {
   const router = useRouter();
   const [planKey, setPlanKey] = useState<string>(TERM_PLANS[0].key);
   const [unit, setUnit] = useState<"month" | "year">("month");
   const [count, setCount] = useState("1");
+  const [spaces, setSpaces] = useState("1");
   const [date, setDate] = useState(today);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,7 +72,9 @@ export function RecordPassForm({ today }: { today: string }) {
   const plan = findTermPlan(planKey)!;
   const max = unit === "year" ? MAX_YEARS : MAX_MONTHS;
   const n = Math.min(Math.max(1, Number(count) || 1), max);
-  const priced = priceTerm(plan, { unit, count: n });
+  const k = Math.min(Math.max(1, Number(spaces) || 1), MAX_SEATS);
+  const spaceWord = plan.space === "desk" ? "desk" : "cabin";
+  const priced = priceTerm(plan, { unit, count: n, spaces: k });
   const quote = applied ? applyCoupon(priced, applied) : priced;
   const endDate = addMonths(date, termMonths({ unit, count: n }));
 
@@ -86,6 +90,7 @@ export function RecordPassForm({ today }: { today: string }) {
         date,
         unit,
         count: n,
+        spaces: k,
         customerName: name.trim(),
         customerEmail: email.trim(),
         phone,
@@ -112,7 +117,14 @@ export function RecordPassForm({ today }: { today: string }) {
         <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-sm sm:col-span-2">
             <span className="text-muted-foreground">Plan</span>
-            <Select value={planKey} onValueChange={setPlanKey}>
+            <Select
+              value={planKey}
+              onValueChange={(v) => {
+                // People on a desk plan aren't cabins: moving between desks and cabins starts at one.
+                if (findTermPlan(v)!.space !== plan.space) setSpaces("1");
+                setPlanKey(v);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -151,10 +163,16 @@ export function RecordPassForm({ today }: { today: string }) {
             </label>
           </div>
 
-          <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Starts</span>
-            <Input type="date" value={date} min={today} onChange={(e) => setDate(e.target.value)} />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted-foreground">{plan.space === "desk" ? "People" : "Cabins"}</span>
+              <Input type="number" min={1} max={MAX_SEATS} value={spaces} onChange={(e) => setSpaces(e.target.value)} />
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted-foreground">Starts</span>
+              <Input type="date" value={date} min={today} onChange={(e) => setDate(e.target.value)} />
+            </label>
+          </div>
 
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Member name</span>
@@ -200,7 +218,7 @@ export function RecordPassForm({ today }: { today: string }) {
 
           <div className="rounded-lg border bg-muted/40 p-3 text-sm sm:col-span-2">
             <p className="font-medium">
-              {plan.name} · {istDate(`${date}T00:00:00+05:30`)} – {istDate(`${endDate}T00:00:00+05:30`)}
+              {plan.name} · {k} {spaceWord}{k === 1 ? "" : "s"} · {istDate(`${date}T00:00:00+05:30`)} – {istDate(`${endDate}T00:00:00+05:30`)}
             </p>
             <p className="mt-1 text-muted-foreground">
               {rupees(quote.subtotalMinor)}
