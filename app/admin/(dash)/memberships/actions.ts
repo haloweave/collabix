@@ -14,7 +14,7 @@ import { toIndianMobile } from "@/lib/sms";
 export type PaidBy = DeskMethod;
 
 const PASS_ERRORS: Record<string, string> = {
-  seat_unavailable: "No desk or cabin of that plan is free for the whole term.",
+  seat_unavailable: "Not enough desks or cabins of that plan are free for the whole term.",
   unknown_plan: "That plan isn't on sale.",
   invalid_coupon: "That coupon code isn't active.",
   coupon_covers_total: "That coupon leaves nothing to pay.",
@@ -33,6 +33,8 @@ export async function recordPass(input: {
   date: string;
   unit: "month" | "year";
   count: number;
+  /** Desks or cabins to hold; one by default. */
+  spaces?: number;
   customerName: string;
   customerEmail: string;
   phone?: string;
@@ -65,7 +67,7 @@ export async function recordPass(input: {
     return { ok: false, error: PASS_ERRORS[held.error] ?? `Couldn't record the pass: ${held.error}.` };
   }
   const confirmed = await confirmBooking(db, { bookingId: held.bookingId, memberId: member?.id });
-  if (!confirmed.ok) return { ok: false, error: "That desk or cabin was just taken. Please try again." };
+  if (!confirmed.ok) return { ok: false, error: "A desk or cabin was just taken. Please try again." };
   // The money was taken in person: record it like a desk payment on any booking,
   // so the invoice and every "is it paid?" check show it as paid.
   const paid = await recordDeskPayment(db, {
@@ -83,6 +85,7 @@ export async function recordPass(input: {
       planKey: parsed.data.planKey,
       unit: parsed.data.unit,
       count: parsed.data.count,
+      spaces: parsed.data.spaces,
       coupon: held.quote.discount?.code,
       totalMinor: held.quote.totalMinor,
       paidBy: input.paidBy,
