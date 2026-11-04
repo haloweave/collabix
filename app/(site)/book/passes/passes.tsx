@@ -6,7 +6,10 @@ import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "../checkout";
 
-type Choice = { planKey: TermPlanKey; unit: TermUnit; count: number; date: string };
+type Choice = { planKey: TermPlanKey; unit: TermUnit; count: number; date: string; spaces: number };
+
+// Per-booking cap on desks or cabins, matching the server's limit.
+const MAX_SPACES = 20;
 
 // "2026-10-27" for the IST calendar day `offset` days from today.
 function istDay(offset = 0): string {
@@ -44,6 +47,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
     unit: "month",
     count: DEFAULT_MONTHS,
     date: istDay(),
+    spaces: 1,
   }));
   const co = useCheckout();
   const { step, setStep, quote, error, setError } = co;
@@ -82,13 +86,16 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   }, [step, availKey, setError]);
 
   const spaceWord = plan.space === "desk" ? "desk" : "cabin";
-  const canContinue = label === "Book" && !!win && free != null && free >= 1;
+  const maxSpaces = Math.max(1, Math.min(MAX_SPACES, free ?? MAX_SPACES));
+  const canContinue = label === "Book" && !!win && free != null && free >= choice.spaces;
+  const spacesLabel = `${choice.spaces} ${spaceWord}${choice.spaces === 1 ? "" : "s"}`;
 
   function update(next: Partial<Choice>) {
     setChoice((prev) => {
       const merged = { ...prev, ...next };
       // Switching between months and years starts from that unit's default.
       if (next.unit && next.unit !== prev.unit) merged.count = next.unit === "year" ? 1 : DEFAULT_MONTHS;
+      merged.spaces = Math.min(Math.max(1, merged.spaces), MAX_SPACES);
       return merged;
     });
   }
@@ -121,8 +128,13 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   }
 
   const dates = win ? `${longDate(win.startDate)} – ${longDate(dayBefore(win.endDate))}` : "Choose a start date";
+  const n = choice.spaces;
   const spaceLine =
-    plan.space === "cabin" ? "A private cabin for 4" : plan.key === "hot-desk" ? "Any shared desk" : "Your own fixed desk";
+    plan.space === "cabin"
+      ? n === 1 ? `A private cabin for ${plan.seats}` : `${n} private cabins for ${plan.seats} each`
+      : plan.key === "hot-desk"
+        ? n === 1 ? "Any shared desk" : `${n} people · any shared desks`
+        : n === 1 ? "Your own fixed desk" : `${n} fixed desks`;
 
   return (
     <section className="pad section-ivory booking-page">
@@ -197,6 +209,38 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                   </div>
                 ))}
 
+                <div className="seats-control">
+                  <div className="seats-count">
+                    <span className="filter-label">{plan.space === "desk" ? "People" : "Cabins"}</span>
+                    <div
+                      className="stepper"
+                      role="group"
+                      aria-label={plan.space === "desk" ? "Number of people" : "Number of cabins"}
+                    >
+                      <button
+                        type="button"
+                        aria-label={plan.space === "desk" ? "One fewer person" : "One fewer cabin"}
+                        disabled={choice.spaces <= 1}
+                        onClick={() => update({ spaces: choice.spaces - 1 })}
+                      >
+                        −
+                      </button>
+                      <span className="stepper-val" aria-live="polite">{choice.spaces}</span>
+                      <button
+                        type="button"
+                        aria-label={plan.space === "desk" ? "One more person" : "One more cabin"}
+                        disabled={choice.spaces >= maxSpaces}
+                        onClick={() => update({ spaces: choice.spaces + 1 })}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <span className="avail-hint">
+                    {plan.space === "desk" ? "One desk each" : `Each cabin seats ${plan.seats}`}
+                  </span>
+                </div>
+
                 <span className="filter-label">Starting</span>
                 <DateStrip
                   value={choice.date}
@@ -214,7 +258,9 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                   <p className="avail-hint" role="status">
                     {free === 0
                       ? `No ${spaceWord}s are free for the whole of ${dates}. Try another start date or a shorter term.`
-                      : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for the whole term.`}
+                      : free < choice.spaces
+                        ? `Only ${free} ${spaceWord}${free === 1 ? " is" : "s are"} free for the whole term. Please choose fewer or another start date.`
+                        : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for the whole term.`}
                   </p>
                 )}
                 <p className="avail-hint">
@@ -227,12 +273,12 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
             <CheckoutSteps
               co={co}
               onSubmitDetails={submitDetails}
-              holding={plan.space === "desk" ? "your desk" : "your cabin"}
+              holding={choice.spaces > 1 ? `your ${spaceWord}s` : `your ${spaceWord}`}
               onRestart={restart}
-              summary={`${plan.name} · ${termLabel(choice.unit, choice.count)} · ${dates}`}
+              summary={`${plan.name} · ${spacesLabel} · ${termLabel(choice.unit, choice.count)} · ${dates}`}
               details={
                 <>
-                  <p>{plan.name} · {termLabel(choice.unit, choice.count)}</p>
+                  <p>{plan.name} · {spacesLabel} · {termLabel(choice.unit, choice.count)}</p>
                   <p>{dates}</p>
                 </>
               }
@@ -260,7 +306,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
               ["Term", termLabel(choice.unit, choice.count)],
               ["Dates", dates],
               ...shown.lines.map((l): [string, ReactNode] => [
-                `${choice.unit === "year" ? "Annual" : "Monthly"} × ${l.qty}`,
+                `${choice.unit === "year" ? "Annual" : "Monthly"} × ${choice.count}${n > 1 ? ` × ${n} ${spaceWord}s` : ""}`,
                 rupees(l.amountMinor),
               ]),
             ]}
