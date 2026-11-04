@@ -77,4 +77,18 @@ describe("priceTerm", () => {
     expect(q.totalMinor).toBe(169920000);
     expect(q.months).toBe(36);
   });
+
+  test("several desks or cabins multiply the price per space", () => {
+    const q = priceTerm(hot, { unit: "month", count: 3, spaces: 2 }, NOW);
+    expect(q.lines).toEqual([{ label: "Hot Desk Flexi · monthly · 2 desks", qty: 6, unitMinor: 600000, amountMinor: 3600000 }]);
+    expect(q.seats).toBe(2);
+    expect(q.totalMinor).toBe(4248000);
+    const c = priceTerm(cabin, { unit: "year", count: 1, spaces: 2 }, EARLY);
+    expect(c.lines[0]).toMatchObject({ label: "Cabin · Enterprise · annual · 2 cabins", qty: 2 });
+    expect(c.seats).toBe(2);
+  });
+
+  test("one space is the default", () => {
+    expect(priceTerm(hot, { unit: "month", count: 1 }, NOW).seats).toBe(1);
+  });
 });

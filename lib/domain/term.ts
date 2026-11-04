@@ -7,6 +7,8 @@ import { IST_OFFSET_MIN, type Quote } from "./booking";
 
 export type TermUnit = "month" | "year";
 export type TermInput = { date: string; unit: TermUnit; count: number };
+/** How many desks (desk plans) or cabins (cabin plans) one term holds. */
+export type TermSpaces = { spaces?: number };
 
 /** Monthly terms run 1–11 months; from 12 months it is an annual plan. */
 export const MAX_MONTHS = 11;
@@ -68,20 +70,27 @@ export function termWindow(
 }
 
 /** Server-computed price in integer paise: the monthly rate per month, or the
- * Annual tariff column per year, plus GST. */
-export function priceTerm(plan: TermPlan, input: Pick<TermInput, "unit" | "count">, now = new Date()): Quote {
+ * Annual tariff column per year, for each desk or cabin, plus GST. */
+export function priceTerm(
+  plan: TermPlan,
+  input: Pick<TermInput, "unit" | "count"> & TermSpaces,
+  now = new Date(),
+): Quote {
   const { unit, count } = input;
+  const spaces = input.spaces ?? 1;
   const unitMinor = unit === "year" ? plan.annualMinor : termMonthlyMinor(plan, now);
-  const label = `${plan.name} · ${unit === "year" ? "annual" : "monthly"}`;
-  const subtotalMinor = unitMinor * count;
+  const word = plan.space === "desk" ? "desks" : "cabins";
+  const label = `${plan.name} · ${unit === "year" ? "annual" : "monthly"}${spaces > 1 ? ` · ${spaces} ${word}` : ""}`;
+  const qty = count * spaces;
+  const subtotalMinor = unitMinor * qty;
   const taxMinor = Math.round(subtotalMinor * GST_RATE);
   return {
     productKey: plan.key,
     rateMinor: unitMinor,
     hours: 0,
-    seats: 1,
+    seats: spaces,
     months: termMonths(input),
-    lines: [{ label, qty: count, unitMinor, amountMinor: subtotalMinor }],
+    lines: [{ label, qty, unitMinor, amountMinor: subtotalMinor }],
     subtotalMinor,
     taxMinor,
     totalMinor: subtotalMinor + taxMinor,
