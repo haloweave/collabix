@@ -43,6 +43,8 @@ export const termAvailabilityQuery = z.object(term);
 
 export const termHoldBody = z.object({
   ...term,
+  // Desks or cabins for the term; whether that many are free is checked on hold.
+  spaces: people,
   customerName: z.string().trim().min(2).max(100),
   customerEmail: z.string().email().max(254),
   couponCode,
