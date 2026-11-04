@@ -95,6 +95,8 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
       const merged = { ...prev, ...next };
       // Switching between months and years starts from that unit's default.
       if (next.unit && next.unit !== prev.unit) merged.count = next.unit === "year" ? 1 : DEFAULT_MONTHS;
+      // People on a desk plan aren't cabins: moving between desks and cabins starts at one.
+      if (findTermPlan(merged.planKey)!.space !== findTermPlan(prev.planKey)!.space) merged.spaces = 1;
       merged.spaces = Math.min(Math.max(1, merged.spaces), MAX_SPACES);
       return merged;
     });
