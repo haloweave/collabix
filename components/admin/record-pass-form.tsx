@@ -80,8 +80,8 @@ export function RecordPassForm({ today }: { today: string }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (name.trim().length < 2 || !email.trim()) {
-      toast.error("Enter the member's name and email.");
+    if (name.trim().length < 2 || !email.trim() || phone.replace(/\D/g, "").length < 10) {
+      toast.error("Enter the member's name, email and mobile number.");
       return;
     }
     startTransition(async () => {
@@ -185,7 +185,7 @@ export function RecordPassForm({ today }: { today: string }) {
           </label>
 
           <label className="grid gap-1.5 text-sm">
-            <span className="text-muted-foreground">Mobile (optional)</span>
+            <span className="text-muted-foreground">Member mobile</span>
             <Input type="tel" inputMode="tel" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </label>
 

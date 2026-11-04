@@ -25,7 +25,7 @@ export type RecordPassResult =
 // A monthly or annual pass sold at the front desk: the same plans, prices and
 // desk/cabin assignment as /book/passes, confirmed straight away because the
 // money was taken in person. Linked to the member's account when their email
-// or mobile matches one.
+// or mobile matches one; the mobile is required.
 export async function recordPass(input: {
   planKey: string;
   date: string;
@@ -35,7 +35,7 @@ export async function recordPass(input: {
   spaces?: number;
   customerName: string;
   customerEmail: string;
-  phone?: string;
+  phone: string;
   paidBy: PaidBy;
   reference?: string;
   couponCode?: string;
@@ -45,8 +45,10 @@ export async function recordPass(input: {
   const parsed = termHoldBody.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Check the plan, start date, term and customer details." };
   const email = parsed.data.customerEmail.toLowerCase();
-  const phone = input.phone?.trim() ? toAccountPhone(input.phone) : null;
-  if (input.phone?.trim() && !phone) return { ok: false, error: "Enter a valid 10-digit mobile number." };
+  // The mobile is how the member signs in to see the pass (there is no email
+  // sign-in), so it is required.
+  const phone = toAccountPhone(input.phone ?? "");
+  if (!phone) return { ok: false, error: "Enter the member's 10-digit mobile number." };
   const memberId = await findMemberByContact(email, phone);
 
   const held = await holdTerm(db, { ...parsed.data, customerEmail: email, holdMinutes: 5 });
