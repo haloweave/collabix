@@ -35,12 +35,6 @@ export const rupees = (minor: number) =>
     ? money(minor / 100)
     : `₹${(minor / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-// Direct UPI while Cashfree caps online orders: the guest scans our QR, then
-// sends the payment screenshot on WhatsApp and staff confirm the booking.
-const UPI_ID = "9731100900.1@hdfc";
-const UPI_NAME = "GAJENDRAN C V";
-const WHATSAPP = "919632771444";
-
 // How long we keep asking the server about a payment Cashfree hasn't settled
 // yet (the webhook or the bank can lag the modal closing by a few seconds).
 const SETTLE_RETRIES = 5;
@@ -244,7 +238,7 @@ export function useCheckout() {
             ? "Your hold expired. Please start again."
             : data.error === "payments_not_configured"
               ? "Online payment isn't available right now. Please try again later."
-              : "We couldn't start the payment. Try again, or pay by UPI QR below.",
+              : "We couldn't start the payment. Please try again.",
         );
         return;
       }
@@ -494,58 +488,6 @@ function CouponField({ co }: { co: Checkout }) {
   );
 }
 
-/** Pay by scanning our UPI QR instead of the Cashfree checkout, then send the
- * screenshot on WhatsApp so staff can confirm the booking by hand. */
-function UpiPay({ co, summary, amount }: { co: Checkout; summary: string; amount: number }) {
-  const [copied, setCopied] = useState(false);
-  const ref = co.bookingId ? co.bookingId.slice(0, 8).toUpperCase() : "";
-  const message = [
-    `Hi Collabix, I've paid ${rupees(amount)} by UPI for my booking.`,
-    `Booking ref: ${ref}`,
-    summary,
-    `${co.name} · ${co.phoneE164} · ${co.email}`,
-    "Payment screenshot attached.",
-  ].join("\n");
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(UPI_ID);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked: the ID is on screen to copy by hand.
-    }
-  }
-
-  return (
-    <div className="upi-pay">
-      {/* eslint-disable-next-line @next/next/no-img-element -- static QR image */}
-      <img src="/collabix/img/upi-qr.jpg" alt={`UPI QR code for ${UPI_NAME}, ${UPI_ID}`} width={220} height={310} />
-      <p>
-        Scan with any UPI app and pay <strong>{rupees(amount)}</strong> to {UPI_NAME}.
-      </p>
-      <p className="upi-id">
-        UPI ID <code>{UPI_ID}</code>{" "}
-        <button type="button" className="link-btn" onClick={copy}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </p>
-      <p className="avail-hint">
-        Then send us the payment screenshot on WhatsApp. We&#39;ll confirm your booking and email your
-        ticket once we see the payment.
-      </p>
-      <a
-        className="btn btn-outline"
-        href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Send screenshot on WhatsApp
-      </a>
-    </div>
-  );
-}
-
 /** Steps 2–5: Details, Verify, Pay and Done. `details` is what was booked,
  * shown on the Pay and Done steps. */
 export function CheckoutSteps({
@@ -553,15 +495,12 @@ export function CheckoutSteps({
   onSubmitDetails,
   holding,
   details,
-  summary,
   onRestart,
 }: {
   co: Checkout;
   onSubmitDetails: (e: React.FormEvent) => void;
   holding: string;
   details: ReactNode;
-  /** One line naming what was booked, for the UPI payment message. */
-  summary: string;
   onRestart: () => void;
 }) {
   const label = STEPS[co.step];
@@ -569,8 +508,6 @@ export function CheckoutSteps({
   // A signed-in customer whose account has everything sees who they're
   // booking as instead of the form, unless they choose to edit it.
   const [editing, setEditing] = useState(false);
-  // Pay step: Cashfree online, or our UPI QR confirmed by staff by hand.
-  const [method, setMethod] = useState<"online" | "upi">("online");
   const known =
     !!account?.name && !!account.email && !!account.phone && co.phoneVerified &&
     co.name === account.name && co.email === account.email;
@@ -723,86 +660,34 @@ export function CheckoutSteps({
         <>
           {timer}
           <div className="confirm-details">{details}</div>
-          <span className="filter-label">How would you like to pay?</span>
-          <div className="space-pills pay-methods" role="radiogroup" aria-label="Payment method">
+          <div className="step-actions">
             <button
+              className="btn btn-outline"
               type="button"
-              role="radio"
-              aria-checked={method === "online"}
-              className={`pill ${method === "online" ? "sel" : ""}`}
-              onClick={() => setMethod("online")}
+              onClick={onRestart}
+              disabled={busy}
             >
-              <span className="pn">Pay online</span>
-              <span className="pd">UPI, cards or net banking through Cashfree. Confirmed instantly.</span>
+              Start over
             </button>
             <button
+              className="btn btn-gold"
               type="button"
-              role="radio"
-              aria-checked={method === "upi"}
-              className={`pill ${method === "upi" ? "sel" : ""}`}
-              onClick={() => setMethod("upi")}
+              onClick={co.startPayment}
+              disabled={busy || remaining === 0 || !quote}
             >
-              <span className="pn">Pay by UPI QR</span>
-              <span className="pd">Scan our QR, then send us the screenshot. We confirm it for you.</span>
+              {payPhase === "opening"
+                ? "Opening secure checkout…"
+                : payPhase === "confirming"
+                  ? "Confirming your payment…"
+                  : quote
+                    ? `Pay ${rupees(quote.totalMinor)} →`
+                    : "Pay →"}
             </button>
           </div>
-
-          {method === "online" && (
-            <>
-              <div className="step-actions">
-                <button
-                  className="btn btn-outline"
-                  type="button"
-                  onClick={onRestart}
-                  disabled={busy}
-                >
-                  Start over
-                </button>
-                <button
-                  className="btn btn-gold"
-                  type="button"
-                  onClick={co.startPayment}
-                  disabled={busy || remaining === 0 || !quote}
-                >
-                  {payPhase === "opening"
-                    ? "Opening secure checkout…"
-                    : payPhase === "confirming"
-                      ? "Confirming your payment…"
-                      : quote
-                        ? `Pay ${rupees(quote.totalMinor)} →`
-                        : "Pay →"}
-                </button>
-              </div>
-              <p className="avail-hint">
-                Secure payment by Cashfree · UPI, cards, net banking. Your
-                e-ticket arrives by email.
-              </p>
-              {co.error && !busy && remaining > 0 && (
-                <p className="pay-fallback">
-                  Payment not going through?{" "}
-                  <button type="button" className="link-btn" onClick={() => setMethod("upi")}>
-                    Pay by UPI QR instead
-                  </button>
-                </p>
-              )}
-            </>
-          )}
-
-          {method === "upi" && (
-            <>
-              {quote && <UpiPay co={co} summary={summary} amount={quote.totalMinor} />}
-              <div className="step-actions">
-                <button
-                  className="btn btn-outline"
-                  type="button"
-                  onClick={onRestart}
-                  disabled={busy}
-                >
-                  Start over
-                </button>
-              </div>
-            </>
-          )}
+          <p className="avail-hint">
+            Secure payment by Cashfree · UPI, cards, net banking. Your
+            e-ticket arrives by email.
+          </p>
         </>
       )}
 

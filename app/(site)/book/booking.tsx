@@ -213,7 +213,6 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
               onSubmitDetails={submitDetails}
               holding={holding}
               onRestart={restart}
-              summary={`${product.name}${isPass ? ` · ${whoWhere}` : ""}${shownWin ? ` · ${shownWin.date} ${timeRange(shownWin)}` : ""}`}
               details={
                 <>
                   <p>{product.name} · {whoWhere}</p>
