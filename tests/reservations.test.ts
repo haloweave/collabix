@@ -12,6 +12,8 @@ import {
   seedInventory,
   type TestDb,
 } from "./helpers/db";
+import { eq, sql } from "drizzle-orm";
+import * as authSchema from "../lib/db/auth-schema";
 
 let db: TestDb;
 let client: ReturnType<typeof makeClient>["client"];
@@ -141,5 +143,50 @@ describe("only tariff products can be booked", () => {
   test("a product key outside the tariff is refused", async () => {
     const r = await holdReservation(db, { productKey: "hotdesk", date: DATE, ...guest });
     expect(r).toEqual({ ok: false, error: "unknown_product" });
+  });
+});
+
+describe("checkout fills in a new account's details", () => {
+  const phone = "+919000000077";
+  const placeholder = { name: phone, email: `${phone}@phone.collabix.local` };
+
+  async function member(id: string, fields: { name: string; email: string }) {
+    await db.delete(authSchema.user).where(eq(authSchema.user.id, id));
+    await db.insert(authSchema.user).values({ id, ...fields, phoneNumber: id === "t-new" ? phone : null });
+    return id;
+  }
+  async function account(id: string) {
+    const [u] = await db.select().from(authSchema.user).where(eq(authSchema.user.id, id));
+    return u;
+  }
+
+  afterAll(async () => {
+    await db.delete(authSchema.user).where(inArrayIds(["t-new", "t-other"]));
+  });
+  const inArrayIds = (ids: string[]) => sql`${authSchema.user.id} in ${ids}`;
+
+  test("a phone-only account takes the name and email given at checkout", async () => {
+    const id = await member("t-new", placeholder);
+    const held = await holdReservation(db, { ...dayPass, people: 1, ...guest });
+    if (!held.ok) throw new Error("hold failed");
+    expect((await confirmBooking(db, { bookingId: held.bookingId, memberId: id })).ok).toBe(true);
+    expect(await account(id)).toMatchObject({ name: guest.customerName, email: guest.customerEmail });
+  });
+
+  test("an account with its own details keeps them", async () => {
+    const id = await member("t-new", { name: "Real Name", email: "real@example.com" });
+    const held = await holdReservation(db, { ...dayPass, people: 1, ...guest });
+    if (!held.ok) throw new Error("hold failed");
+    await confirmBooking(db, { bookingId: held.bookingId, memberId: id });
+    expect(await account(id)).toMatchObject({ name: "Real Name", email: "real@example.com" });
+  });
+
+  test("an email another account already uses is not taken", async () => {
+    await member("t-other", { name: "Someone", email: guest.customerEmail });
+    const id = await member("t-new", placeholder);
+    const held = await holdReservation(db, { ...dayPass, people: 1, ...guest });
+    if (!held.ok) throw new Error("hold failed");
+    expect((await confirmBooking(db, { bookingId: held.bookingId, memberId: id })).ok).toBe(true);
+    expect(await account(id)).toMatchObject({ name: guest.customerName, email: placeholder.email });
   });
 });

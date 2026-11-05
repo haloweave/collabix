@@ -7,6 +7,7 @@
 import { and, eq, gt, inArray, isNull, like, lt, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
+import * as authSchema from "../db/auth-schema";
 import { priceBooking, productWindow, toUtcWindow, type Quote, type WindowInput } from "./booking";
 import { applyCoupon, normalizeCouponCode, type Coupon } from "./coupon";
 import { bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
@@ -473,6 +474,7 @@ async function confirmInTx(
         .update(schema.booking)
         .set({ memberId: input.memberId })
         .where(eq(schema.booking.id, input.bookingId));
+      await fillPlaceholderAccount(tx, input.memberId, input.bookingId);
     }
     // The ticket is issued with confirmation — once Cashfree lands, confirmation
     // happens only after payment, so "has a ticket" means "paid".
@@ -481,6 +483,53 @@ async function confirmInTx(
     await issueInvoiceNo(tx, input.bookingId);
     return { ok: true as const, ticketToken: ticket.token, newlyConfirmed: held.length > 0 };
   });
+}
+
+/** Domain of the stand-in email a phone sign-up gets (lib/auth.ts getTempEmail). */
+const PLACEHOLDER_EMAIL_DOMAIN = "@phone.collabix.local";
+
+/**
+ * A phone OTP creates the account with the number as its name and a
+ * placeholder email (lib/auth.ts). On the first booking, take the name and
+ * email the customer typed at checkout so the next checkout is pre-filled.
+ * Details the account already has are never overwritten, and an email another
+ * account owns is left alone.
+ */
+async function fillPlaceholderAccount(tx: Tx, memberId: string, bookingId: string) {
+  const [u] = await tx
+    .select({ name: authSchema.user.name, email: authSchema.user.email, phone: authSchema.user.phoneNumber })
+    .from(authSchema.user)
+    .where(eq(authSchema.user.id, memberId));
+  if (!u) return;
+  const placeholderName = u.name === u.phone;
+  const placeholderEmail = u.email.endsWith(PLACEHOLDER_EMAIL_DOMAIN);
+  if (!placeholderName && !placeholderEmail) return;
+
+  const [b] = await tx
+    .select({ name: schema.booking.customerName, email: schema.booking.customerEmail })
+    .from(schema.booking)
+    .where(eq(schema.booking.id, bookingId));
+  if (!b) return;
+  const set: { name?: string; email?: string; updatedAt: Date } = { updatedAt: new Date() };
+  if (placeholderName && b.name.trim()) set.name = b.name.trim();
+  const email = b.email.trim().toLowerCase();
+  if (placeholderEmail && email) {
+    const [taken] = await tx
+      .select({ id: authSchema.user.id })
+      .from(authSchema.user)
+      .where(eq(sql`lower(${authSchema.user.email})`, email));
+    if (!taken) set.email = email;
+  }
+  if (!set.name && !set.email) return;
+  // In a savepoint: a lost race on the unique email must never undo a paid
+  // booking's confirmation, only skip this nicety.
+  try {
+    await tx.transaction(async (sp) => {
+      await sp.update(authSchema.user).set(set).where(eq(authSchema.user.id, memberId));
+    });
+  } catch (e) {
+    console.error("[checkout] could not fill account details", e);
+  }
 }
 
 /**
