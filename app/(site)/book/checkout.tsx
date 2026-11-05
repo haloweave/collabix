@@ -286,7 +286,7 @@ export function useCheckout() {
       case "payment_pending":
       case "gateway_error":
         if (dismissed) {
-          setError("Payment wasn't completed. Your seat is still held — pay whenever you're ready.");
+          setError("Payment wasn't completed. Your booking is still held — pay whenever you're ready.");
           return;
         }
         if (attempt < SETTLE_RETRIES) {
