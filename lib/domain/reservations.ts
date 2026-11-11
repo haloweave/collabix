@@ -294,7 +294,7 @@ export async function holdReservation(
 /* ---------- Monthly & annual passes ---------- */
 
 export type TermAvailabilityResult =
-  | { ok: true; window: TermWindow; free: number }
+  | { ok: true; window: TermWindow; free: number; resources: Slot[] }
   | { ok: false; error: string };
 
 /** The desks (any shared desk) or cabins (C-xx) a term plan can take, each
@@ -327,13 +327,15 @@ export async function getTermAvailability(
   const w = termWindow(input, now);
   if (!w.ok) return w;
   const slots = await termSlots(db, plan, w.window);
-  return { ok: true, window: w.window, free: slots.filter((s) => s.available).length };
+  return { ok: true, window: w.window, free: slots.filter((s) => s.available).length, resources: slots };
 }
 
 export type TermHoldInput = TermInput & {
   planKey: string;
   /** Desks (desk plans) or cabins (cabin plans) to hold; one by default. */
   spaces?: number;
+  /** The guest's own choice of desks or cabins; used only if all are free. */
+  resourceIds?: string[];
   customerName: string;
   customerEmail: string;
   holdMinutes?: number;
@@ -353,13 +355,22 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
 
   const spaces = Math.max(1, input.spaces ?? 1);
   const free = (await termSlots(db, plan, w.window)).filter((s) => s.available);
-  const codes =
-    plan.space === "desk"
-      ? autoAssignDesks(free.map((s) => s.code), spaces)
-      : free.slice(0, spaces).map((s) => s.code);
-  if (codes.length < spaces) return { ok: false, error: "seat_unavailable" };
-  const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
-  const resourceIds = codes.map((c) => idByCode.get(c)!);
+  // The guest's picks if there is one per space and all are free; otherwise
+  // desks are clustered for the team and cabins taken in order.
+  const picked = [...new Set(input.resourceIds ?? [])];
+  const freeIds = new Set(free.map((s) => s.resourceId));
+  let resourceIds: string[];
+  if (picked.length === spaces && picked.every((id) => freeIds.has(id))) {
+    resourceIds = picked;
+  } else {
+    const codes =
+      plan.space === "desk"
+        ? autoAssignDesks(free.map((s) => s.code), spaces)
+        : free.slice(0, spaces).map((s) => s.code);
+    if (codes.length < spaces) return { ok: false, error: "seat_unavailable" };
+    const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
+    resourceIds = codes.map((c) => idByCode.get(c)!);
+  }
 
   const priced = await withCoupon(db, priceTerm(plan, { ...input, spaces }, now), input.couponCode);
   if (!priced.ok) return priced;
