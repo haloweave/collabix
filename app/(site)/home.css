@@ -655,17 +655,7 @@
 /* bigger primary CTA on the reserve screen */
 .collabix-site .btn.big { padding: 1rem 2rem; font-size: 1rem; }
 
-/* portrait floorplan sizing + traced elements */
-.collabix-site .seatmap { max-width: 340px; }
-.collabix-site .seatmap .bank  { fill: rgba(247,245,242,.035); stroke: rgba(247,245,242,.12); stroke-width: 1.5; }
-.collabix-site .seatmap .bank.on { stroke: var(--gold); stroke-width: 2; fill: rgba(200,155,83,.06); }
-.collabix-site .seatmap .furn  { fill: none; stroke: rgba(247,245,242,.16); stroke-width: 1.4; }
-.collabix-site .seatmap .furnln{ stroke: rgba(247,245,242,.16); stroke-width: 1.4; }
-.collabix-site .seatmap .furnd { fill: rgba(247,245,242,.28); }
-.collabix-site .seatmap .furng { fill: rgba(200,155,83,.5); }
-
 @media (max-width: 720px) {
-  .collabix-site .seatmap { max-width: 100%; }
   .collabix-site .seg, .collabix-site .dur-seg { width: 100%; }
   .collabix-site .seg button, .collabix-site .dur-seg button { flex: 1; text-align: center; }
 }
