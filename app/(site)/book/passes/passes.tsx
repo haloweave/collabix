@@ -4,6 +4,7 @@ import { TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlanKey } f
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerm, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
+import { SeatPicker, pickedText, useSeatPicks, type Slot } from "../seat-picker";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "../checkout";
 
 type Choice = { planKey: TermPlanKey; unit: TermUnit; count: number; date: string; spaces: number };
@@ -58,10 +59,14 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const win = w.ok ? w.window : null;
   const shown = quote ?? co.withCoupon(priceTerm(plan, choice));
 
-  // Free desks or cabins for the whole term, tagged with the term it was fetched for.
-  const [avail, setAvail] = useState<{ key: string; free: number } | null>(null);
+  // Desks or cabins for the whole term, tagged with the term it was fetched for.
+  const [avail, setAvail] = useState<{ key: string; free: number; slots: Slot[] } | null>(null);
   const availKey = win ? `${plan.key}|${choice.date}|${choice.unit}|${choice.count}` : null;
   const free = avail && avail.key === availKey ? avail.free : null;
+  const slots = avail && avail.key === availKey ? avail.slots : [];
+  // A flexi hot desk is any desk on the day, so only fixed desks and cabins are picked.
+  const canPick = plan.key !== "hot-desk";
+  const picks = useSeatPicks(availKey, slots, choice.spaces, canPick);
   useEffect(() => {
     if (step !== 0 || !availKey) return;
     let cancelled = false;
@@ -74,7 +79,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
       })
       .then((d) => {
         if (cancelled) return;
-        setAvail({ key: availKey, free: d.free ?? 0 });
+        setAvail({ key: availKey, free: d.free ?? 0, slots: d.resources ?? [] });
         setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
@@ -87,7 +92,8 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
 
   const spaceWord = plan.space === "desk" ? "desk" : "cabin";
   const maxSpaces = Math.max(1, Math.min(MAX_SPACES, free ?? MAX_SPACES));
-  const canContinue = label === "Book" && !!win && free != null && free >= choice.spaces;
+  const canContinue =
+    label === "Book" && !!win && free != null && free >= choice.spaces && picks.complete;
   const spacesLabel = `${choice.spaces} ${spaceWord}${choice.spaces === 1 ? "" : "s"}`;
 
   function update(next: Partial<Choice>) {
@@ -112,6 +118,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
     }
     const held = await co.hold("/api/passes/hold", {
       ...choice,
+      ...(picks.choosing ? { resourceIds: picks.picked } : {}),
       customerName: co.name.trim(),
       customerEmail: co.email.trim(),
     });
@@ -127,12 +134,15 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   function restart() {
     co.reset();
     setAvail(null);
+    picks.reset();
   }
 
   const dates = win ? `${longDate(win.startDate)} – ${longDate(dayBefore(win.endDate))}` : "Choose a start date";
   const n = choice.spaces;
-  const spaceLine =
-    plan.space === "cabin"
+  const noun = plan.space === "desk" ? "desk" : "cabin";
+  const spaceLine = picks.codes.length
+    ? `${plan.space === "desk" ? "Fixed" : "Private"} ${pickedText(picks.codes, noun)}`
+    : plan.space === "cabin"
       ? n === 1 ? `A private cabin for ${plan.seats}` : `${n} private cabins for ${plan.seats} each`
       : plan.key === "hot-desk"
         ? n === 1 ? "Any shared desk" : `${n} people · any shared desks`
@@ -264,6 +274,9 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                         ? `Only ${free} ${spaceWord}${free === 1 ? " is" : "s are"} free for the whole term. Please choose fewer or another start date.`
                         : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for the whole term.`}
                   </p>
+                )}
+                {canPick && win && !!free && free >= choice.spaces && (
+                  <SeatPicker picks={picks} slots={slots} count={choice.spaces} noun={noun} />
                 )}
                 <p className="avail-hint">
                   Once you&#39;ve paid, our team will be in touch about the agreement and
