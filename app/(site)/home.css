@@ -775,6 +775,73 @@
 .collabix-site .booking-page { padding-top: calc(76px + clamp(20px,4vw,40px)); }
 /* Live-booking additions: error, countdown, OTP. */
 .collabix-site .avail-hint {font-size:.9rem;color:var(--graphite);margin:.6rem 0 0;}
+.collabix-site .auto-toggle {display:inline-flex;align-items:center;gap:.5rem;margin-top:1rem;font-size:.9rem;color:var(--graphite);cursor:pointer;}
+.collabix-site .auto-toggle input {width:16px;height:16px;accent-color:var(--gold);}
+/* Interactive floor map (app/(site)/book/floor-map.tsx). */
+.collabix-site .floor-map {margin-top:16px;container-type:inline-size;}
+.collabix-site .floor-scroll {overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--ivory-dark);padding:10px;}
+.collabix-site .floor-svg {display:block;width:100%;height:auto;}
+.collabix-site .floor-swipe {display:none;margin:0 0 .5rem;font-size:.8rem;color:var(--graphite);}
+/* Where the panel is too narrow to show the whole plan with desks big enough
+   to tap (phones, a tablet's two-column layout), it scrolls sideways instead. */
+@container (max-width:540px){
+  .collabix-site .floor-svg {min-width:600px;}
+  .collabix-site .floor-swipe {display:block;}
+}
+.collabix-site .fm-shell {fill:#fff;stroke:rgba(11,31,58,.28);stroke-width:5;stroke-linejoin:round;}
+/* Context (non-bookable) shapes — orientation only. */
+.collabix-site .fm-ctx rect {fill:rgba(11,31,58,.035);stroke:rgba(11,31,58,.10);stroke-width:1.5;}
+.collabix-site .fm-ctx-label {fill:rgba(11,31,58,.38);font-size:21px;font-weight:500;text-anchor:middle;dominant-baseline:middle;}
+.collabix-site .fm-furn {fill:none;stroke:rgba(11,31,58,.16);stroke-width:1.5;}
+.collabix-site .fm-ctx-entrance rect {fill:rgba(200,155,83,.12);stroke:var(--line-gold);}
+.collabix-site .fm-ctx-entrance .fm-ctx-label {fill:var(--gold);letter-spacing:.06em;}
+/* Seats — shared. */
+.collabix-site .fm-seat {cursor:default;}
+.collabix-site .fm-seat[role="button"] {cursor:pointer;}
+.collabix-site .fm-desk {fill:#fff;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-chair {fill:#fff;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-desk-num {fill:var(--gold);font-size:30px;font-weight:600;text-anchor:middle;dominant-baseline:middle;}
+.collabix-site .fm-room {fill:#fff;stroke:var(--gold);stroke-width:2.5;}
+.collabix-site .fm-room-table {fill:none;stroke:var(--gold);stroke-width:2;}
+.collabix-site .fm-room-chair {fill:#fff;stroke:var(--gold);stroke-width:2;}
+.collabix-site .fm-room-label {fill:var(--navy);font-size:21px;font-weight:600;text-anchor:middle;}
+/* Hover / focus affordance for bookable seats. */
+.collabix-site .fm-available[role="button"]:hover .fm-desk,
+.collabix-site .fm-available[role="button"]:hover .fm-room {fill:rgba(200,155,83,.18);}
+.collabix-site .fm-seat:focus-visible {outline:none;}
+.collabix-site .fm-seat:focus-visible .fm-desk,
+.collabix-site .fm-seat:focus-visible .fm-room {stroke:var(--navy);stroke-width:3.5;}
+/* Selected — lights up gold. */
+.collabix-site .fm-selected .fm-desk,
+.collabix-site .fm-selected .fm-chair,
+.collabix-site .fm-selected .fm-room {fill:var(--gold);stroke:var(--gold);}
+.collabix-site .fm-selected .fm-room-table,
+.collabix-site .fm-selected .fm-room-chair {stroke:var(--navy);fill:var(--gold);}
+.collabix-site .fm-selected .fm-desk-num,
+.collabix-site .fm-selected .fm-room-label {fill:var(--navy);}
+/* Unavailable — greyed out, non-interactive. */
+.collabix-site .fm-unavailable .fm-desk,
+.collabix-site .fm-unavailable .fm-chair,
+.collabix-site .fm-unavailable .fm-room {fill:#e7e2d8;stroke:#c9c2b4;}
+.collabix-site .fm-unavailable .fm-room-table,
+.collabix-site .fm-unavailable .fm-room-chair {stroke:#c9c2b4;fill:#e7e2d8;}
+.collabix-site .fm-unavailable .fm-desk-num,
+.collabix-site .fm-unavailable .fm-room-label {fill:#a9a293;}
+/* Context seats (wrong type for the chosen product) — faint. */
+.collabix-site .fm-context .fm-desk,
+.collabix-site .fm-context .fm-chair,
+.collabix-site .fm-context .fm-room {fill:rgba(11,31,58,.03);stroke:rgba(11,31,58,.12);}
+.collabix-site .fm-context .fm-room-table,
+.collabix-site .fm-context .fm-room-chair {stroke:rgba(11,31,58,.18);fill:none;}
+.collabix-site .fm-context .fm-desk-num {fill:rgba(11,31,58,.22);}
+.collabix-site .fm-context .fm-room-label {fill:rgba(11,31,58,.38);font-weight:500;}
+/* Legend. */
+.collabix-site .floor-legend {display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:.8rem;font-size:.8rem;color:var(--graphite);}
+.collabix-site .floor-legend .lg {display:inline-flex;align-items:center;gap:.45rem;}
+.collabix-site .floor-legend .lg::before {content:"";width:14px;height:14px;border-radius:4px;}
+.collabix-site .floor-legend .lg-avail::before {border:2px solid var(--gold);background:#fff;}
+.collabix-site .floor-legend .lg-sel::before {background:var(--gold);}
+.collabix-site .floor-legend .lg-taken::before {background:#e7e2d8;border:1px solid #c9c2b4;}
 .collabix-site .link-btn {background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;}
 .collabix-site .booking-error {background:#fbeaea;border:1px solid #e5b3b3;color:#8a2b2b;border-radius:var(--radius);padding:.7rem 1rem;font-size:.86rem;margin:.4rem 0 1rem;}
 .collabix-site .hold-timer {display:flex;align-items:center;gap:.9rem;border:1px solid var(--line-gold);border-radius:var(--radius);padding:.7rem 1rem;margin:0 0 1.5rem;}
