@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   FLOOR,
+  contextShapes,
   deskBanks,
   rooms,
   seats,
@@ -24,6 +25,36 @@ describe("floor geometry", () => {
       expect(s.x + s.w).toBeLessThanOrEqual(FLOOR.width);
       expect(s.y + s.h).toBeLessThanOrEqual(FLOOR.height);
     }
+  });
+
+  test("no two seats or rooms overlap", () => {
+    const all = seats();
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        const a = all[i];
+        const b = all[j];
+        const apart =
+          a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+        expect(apart, `${a.code} overlaps ${b.code}`).toBe(true);
+      }
+    }
+  });
+
+  test("no context shape covers a bookable seat", () => {
+    for (const c of contextShapes) {
+      for (const s of seats()) {
+        const apart =
+          c.x + c.w <= s.x || s.x + s.w <= c.x || c.y + c.h <= s.y || s.y + s.h <= c.y;
+        expect(apart, `${c.label} overlaps ${s.code}`).toBe(true);
+      }
+    }
+  });
+
+  test("facing desks in a bank keep their chairs on the outside", () => {
+    const bySide = (bank: string) =>
+      seats().filter((s) => s.bankId === bank).map((s) => s.chair);
+    expect(new Set(bySide("center-top"))).toEqual(new Set(["left", "right"]));
+    expect(new Set(bySide("left-mid"))).toEqual(new Set(["top", "bottom"]));
   });
 
   test("seat kind is always a bookable resource kind", () => {

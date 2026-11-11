@@ -1,18 +1,21 @@
-// Single source of truth for the Collabix floor: geometry read (by eye, stylized)
-// from the architectural plan `Collabix - R.pdf`. Pure data + pure derivations —
-// no React, no DB — so both the SVG seat map (app/(site)/book/floor-map.tsx)
-// and the inventory seed (lib/db/seed.ts) build from the same source and cannot
-// drift apart. Coordinates are plan-relative units (≈ plan millimetres ÷ 10) in
-// a top-left origin; see FLOOR for the viewBox. Bank counts are the one thing
-// read from a CAD raster — each is a one-line edit here if the real numbers differ.
+// Single source of truth for the Collabix floor: geometry traced from the
+// architectural plan `Collabix - R.pdf`. Pure data + pure derivations — no
+// React, no DB — so both the SVG seat map (app/(site)/book/floor-map.tsx) and
+// the inventory seed (lib/db/seed.ts) build from the same source and cannot
+// drift apart. Coordinates are plan-relative units (≈ plan millimetres ÷ 11)
+// in a top-left origin; see FLOOR for the viewBox. Positions follow the plan's
+// layout; sizes are stylised for legibility rather than drawn to scale.
 
 export type SeatKind = "desk" | "room";
+
+export type ChairSide = "left" | "right" | "top" | "bottom";
 
 export type Seat = {
   code: string;
   kind: SeatKind;
   zone: string;
   bankId?: string; // desks only: which deskBank they came from
+  chair?: ChairSide; // desks only: which side of the desk the chair sits on
   label?: string;
   capacity: number;
   x: number;
@@ -21,11 +24,15 @@ export type Seat = {
   h: number;
 };
 
-// An open-plan desk bank: an anchor (top-left of the first desk) plus a grid.
-// Expanded into individual desk seats by seats(), row-major.
+// An open-plan desk bank: an anchor (top-left of the first seat) plus a grid.
+// Expanded into individual desk seats by seats(), row-major. Each bank is two
+// lines of desks pushed together, chairs on the outside: "columns" banks run
+// down the floor (chairs left and right), "rows" banks run across it (chairs
+// top and bottom).
 export type DeskBank = {
   id: string;
   zone: string;
+  layout: "columns" | "rows";
   anchor: { x: number; y: number };
   rows: number;
   cols: number;
@@ -36,7 +43,7 @@ export type DeskBank = {
 export type Room = Omit<Seat, "kind"> & { kind: "room" };
 
 export type ContextShape = {
-  kind: string; // pantry | lounge | stairs | restroom | server | ups | entrance
+  kind: string; // pantry | lounge | reception | lobby | lift | stairs | restroom | booth | server | ups | entrance
   label: string;
   x: number;
   y: number;
@@ -53,43 +60,64 @@ export type RenderSeat = Seat & {
   state: SeatState;
 };
 
-// The SVG viewBox. The plan is ~13.75 m × 12.5 m; height trimmed slightly to
-// match the drawn (L-notched) footprint at this stylised fidelity.
-export const FLOOR = { width: 1375, height: 1180 } as const;
+// The SVG viewBox. The plan is ~19 m × 12.5 m overall: a 4.9 m left wing
+// (boardroom, reception, lift lobby) joined to the 13.75 m main block.
+export const FLOOR = { width: 1700, height: 1180 } as const;
 
-const DESK_W = 62;
-const DESK_H = 72; // desk plate + chair back
+// The building outline: the left wing sits lower than the main block at the
+// top, and the restrooms jut out below the bottom wall.
+export const FLOOR_OUTLINE: [number, number][] = [
+  [0, 78], [450, 78], [450, 0], [1700, 0], [1700, 1143],
+  [745, 1143], [745, 1180], [595, 1180], [595, 1053], [0, 1053],
+];
+
+// A seat's footprint, chair included. Banks in "columns" put the chair beside
+// the desk; banks in "rows" put it above or below.
+const SEAT = {
+  columns: { w: 80, h: 84 },
+  rows: { w: 70, h: 84 },
+} as const;
 
 // Non-bookable orientation shapes — drawn faint, never interactive.
 export const contextShapes: ContextShape[] = [
-  { kind: "pantry", label: "Pantry", x: 430, y: 40, w: 170, h: 210 },
-  { kind: "lounge", label: "Lounge", x: 430, y: 270, w: 180, h: 200 },
-  { kind: "lounge", label: "Lounge", x: 40, y: 720, w: 200, h: 260 },
-  { kind: "stairs", label: "Stairs", x: 250, y: 560, w: 110, h: 260 },
-  { kind: "restroom", label: "Restrooms", x: 430, y: 730, w: 150, h: 150 },
-  { kind: "server", label: "CCTV / Server", x: 1185, y: 40, w: 170, h: 120 },
-  { kind: "ups", label: "UPS", x: 1185, y: 1000, w: 170, h: 120 },
-  { kind: "entrance", label: "Entrance", x: 60, y: 1090, w: 180, h: 60 },
+  { kind: "pantry", label: "Coffee", x: 303, y: 90, w: 157, h: 153 },
+  { kind: "pantry", label: "Pantry", x: 465, y: 18, w: 335, h: 225 },
+  { kind: "lounge", label: "Lounge", x: 543, y: 248, w: 257, h: 260 },
+  { kind: "reception", label: "Reception", x: 13, y: 475, w: 170, h: 105 },
+  { kind: "entrance", label: "Entrance", x: 30, y: 650, w: 150, h: 36 },
+  { kind: "lobby", label: "Lift lobby", x: 13, y: 693, w: 262, h: 347 },
+  { kind: "lift", label: "Lift", x: 295, y: 693, w: 165, h: 170 },
+  { kind: "stairs", label: "Stairs", x: 280, y: 878, w: 315, h: 162 },
+  { kind: "restroom", label: "Restrooms", x: 610, y: 878, w: 190, h: 255 },
+  { kind: "booth", label: "Booth", x: 1570, y: 673, w: 112, h: 110 },
+  { kind: "booth", label: "Booth", x: 1570, y: 795, w: 112, h: 110 },
+  { kind: "booth", label: "Booth", x: 1570, y: 917, w: 112, h: 110 },
+  { kind: "server", label: "Server", x: 1535, y: 18, w: 147, h: 75 },
+  { kind: "ups", label: "UPS", x: 1535, y: 1048, w: 147, h: 77 },
 ];
 
 // Open-plan desk banks, matching the plan's clusters. rows × cols = desk count.
+// Bank order and ids fix the desk numbering (D-01 …), so keep them stable.
 export const deskBanks: DeskBank[] = [
-  { id: "center-top", zone: "Open desks", anchor: { x: 650, y: 70 }, rows: 5, cols: 2, dx: 95, dy: 95 },
-  { id: "left-mid", zone: "Open desks", anchor: { x: 70, y: 360 }, rows: 2, cols: 2, dx: 95, dy: 95 },
-  { id: "right-top", zone: "Open desks", anchor: { x: 1070, y: 180 }, rows: 3, cols: 2, dx: 95, dy: 95 },
-  { id: "center-bottom", zone: "Open desks", anchor: { x: 640, y: 570 }, rows: 4, cols: 2, dx: 95, dy: 92 },
+  // Ten desks down the middle of the top half, between the lounge and the cabins.
+  { id: "center-top", zone: "Open desks", layout: "columns", anchor: { x: 898, y: 22 }, rows: 5, cols: 2, dx: 80, dy: 93 },
+  // Four desks between the boardroom and the lounge, under the coffee point.
+  { id: "left-mid", zone: "Open desks", layout: "rows", anchor: { x: 313, y: 294 }, rows: 2, cols: 2, dx: 75, dy: 84 },
+  // Six desks in the top-right corner, below the server room.
+  { id: "right-top", zone: "Open desks", layout: "columns", anchor: { x: 1453, y: 165 }, rows: 3, cols: 2, dx: 80, dy: 100 },
+  // Eight desks in the bottom-right, between the lower cabins and the booths.
+  { id: "center-bottom", zone: "Open desks", layout: "columns", anchor: { x: 1293, y: 700 }, rows: 4, cols: 2, dx: 80, dy: 105 },
 ];
 
-// Enclosed rooms: the top-left boardroom, the 4-seater meeting room and the
-// four cabins. C-03, C-04 and M-02 sit at approximate positions (the drawing
-// shows two cabins and one meeting room; the tariff lists four and two).
+// Enclosed rooms, as drawn: the boardroom in the left wing, the 4-seater
+// meeting room beside the lift, two cabins top-right and two bottom-centre.
 export const rooms: Room[] = [
-  { code: "M-01", kind: "room", zone: "Meeting", label: "The Boardroom", capacity: 8, x: 60, y: 60, w: 240, h: 260 },
-  { code: "M-02", kind: "room", zone: "Meeting", label: "Meeting Room (4-seater)", capacity: 4, x: 1100, y: 600, w: 200, h: 170 },
-  { code: "C-01", kind: "room", zone: "Cabins", label: "Cabin 1", capacity: 4, x: 880, y: 60, w: 170, h: 130 },
-  { code: "C-02", kind: "room", zone: "Cabins", label: "Cabin 2", capacity: 4, x: 880, y: 210, w: 170, h: 130 },
-  { code: "C-03", kind: "room", zone: "Cabins", label: "Cabin 3", capacity: 4, x: 880, y: 600, w: 170, h: 130 },
-  { code: "C-04", kind: "room", zone: "Cabins", label: "Cabin 4", capacity: 4, x: 880, y: 750, w: 170, h: 130 },
+  { code: "M-01", kind: "room", zone: "Meeting", label: "The Boardroom", capacity: 8, x: 13, y: 90, w: 285, h: 380 },
+  { code: "M-02", kind: "room", zone: "Meeting", label: "Meeting Room (4-seater)", capacity: 4, x: 475, y: 673, w: 325, h: 190 },
+  { code: "C-01", kind: "room", zone: "Cabins", label: "Cabin 1", capacity: 4, x: 1155, y: 18, w: 215, h: 240 },
+  { code: "C-02", kind: "room", zone: "Cabins", label: "Cabin 2", capacity: 4, x: 1155, y: 263, w: 215, h: 245 },
+  { code: "C-03", kind: "room", zone: "Cabins", label: "Cabin 3", capacity: 4, x: 925, y: 673, w: 255, h: 225 },
+  { code: "C-04", kind: "room", zone: "Cabins", label: "Cabin 4", capacity: 4, x: 925, y: 903, w: 255, h: 222 },
 ];
 
 /** The rate_plan registry key a reservation on this resource is recorded
@@ -107,19 +135,23 @@ export function seats(): Seat[] {
   const out: Seat[] = [];
   let n = 0;
   for (const bank of deskBanks) {
+    const size = SEAT[bank.layout];
     for (let r = 0; r < bank.rows; r++) {
       for (let c = 0; c < bank.cols; c++) {
         n += 1;
+        const chair: ChairSide =
+          bank.layout === "columns" ? (c === 0 ? "left" : "right") : r === 0 ? "top" : "bottom";
         out.push({
           code: `D-${String(n).padStart(2, "0")}`,
           kind: "desk",
           zone: bank.zone,
           bankId: bank.id,
+          chair,
           capacity: 1,
           x: bank.anchor.x + c * bank.dx,
           y: bank.anchor.y + r * bank.dy,
-          w: DESK_W,
-          h: DESK_H,
+          w: size.w,
+          h: size.h,
         });
       }
     }
