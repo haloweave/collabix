@@ -4,6 +4,7 @@ import {
   contextShapes,
   deskBanks,
   rooms,
+  roomSeating,
   seats,
   renderSeats,
   autoAssignDesks,
@@ -55,6 +56,21 @@ describe("floor geometry", () => {
       seats().filter((s) => s.bankId === bank).map((s) => s.chair);
     expect(new Set(bySide("center-top"))).toEqual(new Set(["left", "right"]));
     expect(new Set(bySide("left-mid"))).toEqual(new Set(["top", "bottom"]));
+  });
+
+  test("every room seats as many as the plan draws chairs in it", () => {
+    for (const room of rooms) {
+      const seating = roomSeating[room.code];
+      expect(seating, room.code).toBeDefined();
+      expect(seating.chairs.length, room.code).toBe(room.capacity);
+      for (const [cx, cy] of seating.chairs) {
+        expect(cx - 14).toBeGreaterThanOrEqual(room.x);
+        expect(cx + 14).toBeLessThanOrEqual(room.x + room.w);
+        expect(cy - 14).toBeGreaterThanOrEqual(room.y);
+        expect(cy + 14).toBeLessThanOrEqual(room.y + room.h);
+      }
+    }
+    expect(rooms.map((r) => r.capacity)).toEqual([8, 4, 3, 4, 4, 4]);
   });
 
   test("seat kind is always a bookable resource kind", () => {
