@@ -4,9 +4,8 @@ import { bookableProduct, type BookableProduct } from "@/lib/tariff";
 import { priceBooking, productWindow, type WindowInput } from "@/lib/domain/booking";
 import StepChoose, { type Choice } from "./step-choose";
 import { BookTabs } from "./book-tabs";
+import { SeatPicker, pickedText, useSeatPicks, type Slot } from "./seat-picker";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "./checkout";
-
-type Slot = { resourceId: string; code: string; available: boolean };
 
 // Per-booking cap on people for a pass, matching the server's limit.
 const MAX_PEOPLE = 20;
@@ -72,6 +71,8 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const free =
     avail && avail.key === availKey ? avail.slots.filter((s) => s.available).length : null;
   const maxPeople = Math.max(1, Math.min(MAX_PEOPLE, free ?? MAX_PEOPLE));
+  const slots = avail && avail.key === availKey ? avail.slots : [];
+  const picks = useSeatPicks(availKey, slots, choice.people, isPass);
   useEffect(() => {
     if (step !== 0 || !availKey) return;
     let cancelled = false;
@@ -110,7 +111,11 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   }, [step, initialProduct]);
 
   const canContinue =
-    label === "Book" && !!win && free != null && (isPass ? free >= choice.people : free >= 1);
+    label === "Book" &&
+    !!win &&
+    free != null &&
+    (isPass ? free >= choice.people : free >= 1) &&
+    picks.complete;
 
   // Changing product or date keeps the rest of the choice when it still makes
   // sense, otherwise moves to that product's first opening.
@@ -149,6 +154,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       start: fresh.window.start,
       duration: fresh.window.duration,
       people: isPass ? choice.people : 1,
+      ...(picks.choosing ? { resourceIds: picks.picked } : {}),
       customerName: co.name.trim(),
       customerEmail: co.email.trim(),
     });
@@ -169,10 +175,12 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     setChoice(initialChoice(choice.productKey));
     setAvail(null);
     setHeldWin(null);
+    picks.reset();
   }
 
+  const deskText = picks.codes.length ? pickedText(picks.codes, "desk") : "any shared desk";
   const whoWhere = isPass
-    ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · any shared desk`
+    ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · ${deskText}`
     : product.name;
   const holding = !isPass ? "your room" : choice.people > 1 ? "your desks" : "your desk";
 
@@ -197,6 +205,9 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   freeDesks={isPass ? free : null}
                   maxPeople={maxPeople}
                 />
+                {isPass && win && !!free && (
+                  <SeatPicker picks={picks} slots={slots} count={choice.people} noun="desk" />
+                )}
                 {win && free === 0 && (
                   <p className="avail-hint" role="status">
                     {isPass ? "No desks free that day. Please pick another day." : `${product.name} is booked at that time. Please pick another time.`}
@@ -241,7 +252,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
               ["Booking", product.name],
               ["Date", shownWin?.date ?? choice.date],
               ["Time", shownWin ? timeRange(shownWin) : "Choose a time"],
-              [isPass ? "People" : "Room", isPass ? `${choice.people} · any shared desk` : product.name],
+              [isPass ? "People" : "Room", isPass ? `${choice.people} · ${deskText}` : product.name],
               ...(shown?.lines ?? []).map((l): [string, ReactNode] => [
                 l.qty > 1 || product.kind === "room" ? `${l.label} × ${l.qty}` : l.label,
                 rupees(l.amountMinor),
