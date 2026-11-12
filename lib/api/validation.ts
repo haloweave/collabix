@@ -32,24 +32,30 @@ export const holdBody = z.object({
 });
 
 // Monthly & annual passes: which counts are valid for the unit is checked by termWindow.
+const planKey = z.enum(TERM_PLAN_KEYS);
 const term = {
-  planKey: z.enum(TERM_PLAN_KEYS),
   date,
   unit: z.enum(["month", "year"]),
   count: z.coerce.number().int().min(1).max(12),
 };
 
-export const termAvailabilityQuery = z.object(term);
+export const termAvailabilityQuery = z.object({ planKey, ...term });
 
-export const termHoldBody = z.object({
-  ...term,
-  // Desks or cabins for the term; whether that many are free is checked on hold.
-  spaces: people,
-  resourceIds: z.array(z.string().uuid()).max(MAX_SEATS).optional(),
-  customerName: z.string().trim().min(2).max(100),
-  customerEmail: z.string().email().max(254),
-  couponCode,
-});
+export const termHoldBody = z
+  .object({
+    ...term,
+    // One plan with `spaces` desks or cabins of it…
+    planKey: planKey.optional(),
+    spaces: people,
+    // …or a mix of plans in one booking. Whether that many are free is checked on hold.
+    items: z.array(z.object({ planKey, spaces: people })).min(1).max(TERM_PLAN_KEYS.length).optional(),
+    // The guest's own fixed desks and cabins, across every plan in the booking.
+    resourceIds: z.array(z.string().uuid()).max(MAX_SEATS * 2).optional(),
+    customerName: z.string().trim().min(2).max(100),
+    customerEmail: z.string().email().max(254),
+    couponCode,
+  })
+  .refine((v) => v.planKey || v.items?.length, { message: "choose a plan", path: ["planKey"] });
 
 export const couponQuery = z.object({ code: z.string().trim().min(1).max(40) });
 
