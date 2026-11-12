@@ -69,30 +69,49 @@ export function termWindow(
   };
 }
 
-/** Server-computed price in integer paise: the monthly rate per month, or the
- * Annual tariff column per year, for each desk or cabin, plus GST. */
+/** One plan in a booking and how many of its desks or cabins are wanted. */
+export type TermItem = { plan: TermPlan; spaces: number };
+
+/** Server-computed price in integer paise for a mix of plans over one term:
+ * the monthly rate per month, or the Annual tariff column per year, for each
+ * desk or cabin, one line per plan, plus GST on the lot. */
+export function priceTerms(
+  items: TermItem[],
+  input: Pick<TermInput, "unit" | "count">,
+  now = new Date(),
+): Quote {
+  const { unit, count } = input;
+  const lines = items.map(({ plan, spaces }) => {
+    const unitMinor = unit === "year" ? plan.annualMinor : termMonthlyMinor(plan, now);
+    const word = plan.space === "desk" ? "desks" : "cabins";
+    const qty = count * spaces;
+    return {
+      label: `${plan.name} · ${unit === "year" ? "annual" : "monthly"}${spaces > 1 ? ` · ${spaces} ${word}` : ""}`,
+      qty,
+      unitMinor,
+      amountMinor: unitMinor * qty,
+    };
+  });
+  const subtotalMinor = lines.reduce((sum, l) => sum + l.amountMinor, 0);
+  const taxMinor = Math.round(subtotalMinor * GST_RATE);
+  return {
+    productKey: items.map((i) => i.plan.key).join("+"),
+    rateMinor: lines[0]?.unitMinor ?? 0,
+    hours: 0,
+    seats: items.reduce((sum, i) => sum + i.spaces, 0),
+    months: termMonths(input),
+    lines,
+    subtotalMinor,
+    taxMinor,
+    totalMinor: subtotalMinor + taxMinor,
+  };
+}
+
+/** The price of one plan: a single-line priceTerms. */
 export function priceTerm(
   plan: TermPlan,
   input: Pick<TermInput, "unit" | "count"> & TermSpaces,
   now = new Date(),
 ): Quote {
-  const { unit, count } = input;
-  const spaces = input.spaces ?? 1;
-  const unitMinor = unit === "year" ? plan.annualMinor : termMonthlyMinor(plan, now);
-  const word = plan.space === "desk" ? "desks" : "cabins";
-  const label = `${plan.name} · ${unit === "year" ? "annual" : "monthly"}${spaces > 1 ? ` · ${spaces} ${word}` : ""}`;
-  const qty = count * spaces;
-  const subtotalMinor = unitMinor * qty;
-  const taxMinor = Math.round(subtotalMinor * GST_RATE);
-  return {
-    productKey: plan.key,
-    rateMinor: unitMinor,
-    hours: 0,
-    seats: spaces,
-    months: termMonths(input),
-    lines: [{ label, qty, unitMinor, amountMinor: subtotalMinor }],
-    subtotalMinor,
-    taxMinor,
-    totalMinor: subtotalMinor + taxMinor,
-  };
+  return priceTerms([{ plan, spaces: input.spaces ?? 1 }], input, now);
 }

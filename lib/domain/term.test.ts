@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { findTermPlan } from "../tariff";
-import { addMonths, priceTerm, termWindow } from "./term";
+import { addMonths, priceTerm, priceTerms, termWindow } from "./term";
 
 const NOW = new Date("2026-10-27T06:00:00Z"); // 11:30 IST, after the Early Bird offer
 const EARLY = new Date("2026-10-10T06:00:00Z");
@@ -90,5 +90,25 @@ describe("priceTerm", () => {
 
   test("one space is the default", () => {
     expect(priceTerm(hot, { unit: "month", count: 1 }, NOW).seats).toBe(1);
+  });
+
+  test("a mix of plans is one line per plan, with GST on the lot", () => {
+    const desk = findTermPlan("dedicated-desk")!;
+    const q = priceTerms(
+      [
+        { plan: desk, spaces: 2 },
+        { plan: cabin, spaces: 1 },
+      ],
+      { unit: "month", count: 3 },
+      NOW,
+    );
+    expect(q.lines).toEqual([
+      { label: "Dedicated Desk · monthly · 2 desks", qty: 6, unitMinor: 850000, amountMinor: 5100000 },
+      { label: "Cabin · Enterprise · monthly", qty: 3, unitMinor: 4000000, amountMinor: 12000000 },
+    ]);
+    // (₹8,500 × 2 + ₹40,000) × 3 months, + 18% GST.
+    expect(q.subtotalMinor).toBe(17100000);
+    expect(q.totalMinor).toBe(20178000);
+    expect(q).toMatchObject({ productKey: "dedicated-desk+cabin-enterprise", seats: 3, months: 3 });
   });
 });
