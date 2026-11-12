@@ -188,6 +188,15 @@ describe("display copy", () => {
   test("monthly and annual passes show the plan and the space it holds", () => {
     expect(ticketSeats({ seats: 1, resourceCodes: ["D-07"], planKey: "dedicated-desk" })).toBe("Dedicated Desk · D-07");
     expect(ticketSeats({ seats: 1, resourceCodes: ["C-02"], planKey: "cabin-pro" })).toBe("Cabin · Pro · C-02");
+    // A booking that mixes plans names every plan it holds.
+    expect(
+      ticketSeats({
+        seats: 3,
+        resourceCodes: ["C-02", "D-07", "D-08"],
+        plan: "Cabin · Pro + Dedicated Desk",
+        planKey: "cabin-pro",
+      }),
+    ).toBe("Cabin · Pro + Dedicated Desk · C-02, D-07, D-08");
   });
 
   test("day passes say any shared desk; rooms show the room's name", () => {

@@ -25,13 +25,19 @@ export function ticketAmount(v: { totalMinor: number | null; paid?: boolean }): 
     : `${rupees(v.totalMinor)} · ${v.paid ? PAID : PAY_AT_DESK}`;
 }
 
-export function ticketSeats(v: { seats: number; resourceCodes: string[]; planKey?: string | null }): string {
+export function ticketSeats(v: {
+  seats: number;
+  resourceCodes: string[];
+  plan?: string | null;
+  planKey?: string | null;
+}): string {
   const product = v.planKey ? bookableProduct(v.planKey) : undefined;
   // A day pass is any free shared desk, so no desk number is printed.
   if (product?.kind === "pass") return `${v.seats} ${v.seats === 1 ? "person" : "people"} · Any shared desk`;
   if (product?.kind === "room") return product.name;
-  // A monthly or annual pass: the plan and the desk or cabin it holds.
+  // A monthly or annual pass: the plan and the desk or cabin it holds. A
+  // booking that mixes plans names them all ("Cabin · Base + Dedicated Desk").
   const term = v.planKey ? findTermPlan(v.planKey) : undefined;
-  if (term) return `${term.name} · ${v.resourceCodes.join(", ")}`;
+  if (term) return `${v.plan?.includes(" + ") ? v.plan : term.name} · ${v.resourceCodes.join(", ")}`;
   return `${v.seats} seat${v.seats === 1 ? "" : "s"} · ${v.resourceCodes.join(", ")}`;
 }

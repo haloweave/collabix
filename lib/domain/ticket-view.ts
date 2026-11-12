@@ -50,7 +50,7 @@ export async function getTicketView(db: Db, key: TicketKey): Promise<TicketView 
       max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
       array_agg(res.code ORDER BY res.code) AS codes,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(DISTINCT rp.key))[1] AS plan_key,
       (array_agg(r.quote_snapshot ->> 'totalMinor'))[1] AS total_minor,
       EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid,
