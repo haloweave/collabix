@@ -41,7 +41,7 @@ export async function getMyBookings(
       max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
       array_agg(res.code ORDER BY res.code) AS codes,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(DISTINCT rp.key))[1] AS plan_key,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       bool_or(r.status = 'confirmed') AS confirmed,

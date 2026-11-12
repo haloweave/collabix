@@ -31,7 +31,7 @@ async function bookingDoc(id: string): Promise<Owned<InvoiceDoc> | null> {
       u.phone_number,
       min(r.start_at) AS start_at, max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot))[1] AS quote,
       p.payment_method, p.cf_payment_id, p.paid_at
     FROM booking b
@@ -94,7 +94,7 @@ export async function listMyDocuments(userId: string, email: string): Promise<My
   const rows = await sql`
     SELECT b.id, b.status, b.invoice_no, b.invoiced_at,
       min(r.start_at) AS start_at, max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot ->> 'totalMinor'))[1]::bigint AS total_minor,
       EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid
     FROM booking b
