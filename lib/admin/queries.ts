@@ -188,7 +188,7 @@ export async function listBookings(opts: {
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       bool_or(r.status = 'confirmed') AS any_confirmed,
       bool_or(r.status = 'held' AND r.hold_expires_at > now()) AS any_active_hold
@@ -210,7 +210,7 @@ export async function getUpcomingBookings(): Promise<BookingRow[]> {
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       true AS any_confirmed,
       false AS any_active_hold
@@ -364,7 +364,7 @@ export async function getMember(id: string): Promise<MemberDetail | null> {
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       bool_or(r.status = 'confirmed') AS any_confirmed,
       bool_or(r.status = 'held' AND r.hold_expires_at > now()) AS any_active_hold
@@ -472,7 +472,7 @@ export async function getHereToday(now = new Date()): Promise<HereTodayRow[]> {
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       bool_and(coalesce(r.checked_in_at >= ${dayStart}::timestamptz, false)) AS checked_in,
       bool_and(coalesce(r.checked_out_at >= ${dayStart}::timestamptz, false)) AS checked_out,
       max(r.checked_in_at) FILTER (WHERE r.checked_in_at >= ${dayStart}::timestamptz) AS checked_in_at
@@ -676,7 +676,7 @@ export async function getBookingsInRange(
       count(r.id)::int AS seats,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
-      (array_agg(DISTINCT rp.name))[1] AS plan,
+      string_agg(DISTINCT rp.name, ' + ') AS plan,
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor
     FROM booking b
     JOIN reservation r ON r.booking_id = b.id AND r.status = 'confirmed'
@@ -728,7 +728,7 @@ export async function listMemberships(opts: { memberId?: string } = {}): Promise
   // own reservation, all sharing the term and the booking's quote.
   const rows = await sql`
     SELECT b.id AS booking_id, b.member_id, b.customer_name, b.customer_email,
-      min(rp.name) AS plan_name,
+      string_agg(DISTINCT rp.name, ' + ') AS plan_name,
       string_agg(res.code, ', ' ORDER BY res.code) AS space,
       min(r.start_at) AS start_at, max(r.end_at) AS end_at,
       COALESCE(max((r.quote_snapshot->>'months')::int), 0) AS months,
