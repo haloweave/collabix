@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlanKey } from "@/lib/tariff";
-import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerm, termWindow, type TermUnit } from "@/lib/domain/term";
+import { TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
+import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerms, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
 import { SeatPicker, pickedText, useSeatPicks, type Slot } from "../seat-picker";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "../checkout";
 
-type Choice = { planKey: TermPlanKey; unit: TermUnit; count: number; date: string; spaces: number };
+/** How many of each plan are in the booking; a plan left out is zero. */
+type Cart = Partial<Record<TermPlanKey, number>>;
+type Choice = { cart: Cart; unit: TermUnit; count: number; date: string };
 
-// Per-booking cap on desks or cabins, matching the server's limit.
+// Per-booking cap on desks, and on cabins, matching the server's limit.
 const MAX_SPACES = 20;
 
 // "2026-10-27" for the IST calendar day `offset` days from today.
@@ -35,51 +37,73 @@ const DEFAULT_MONTHS = 6;
 const termLabel = (unit: TermUnit, count: number) =>
   `${count} ${unit}${count === 1 ? "" : "s"}`;
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 const GROUPS = [
-  { space: "desk", title: "Shared desks" },
-  { space: "cabin", title: "Private cabins · 4 people" },
+  { space: "desk", title: "Shared desks", each: "one desk per person" },
+  { space: "cabin", title: "Private cabins", each: "4 people per cabin" },
 ] as const;
+
+// A flexi hot desk is any desk on the day, so only fixed desks and cabins are picked.
+const isFlexi = (p: TermPlan) => p.key === "hot-desk";
 
 const AVAIL_ERROR = "Could not load availability. Please try again.";
 
+type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
+
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
-    planKey: findTermPlan(initialPlan ?? "")?.key ?? "hot-desk",
+    cart: { [findTermPlan(initialPlan ?? "")?.key ?? "hot-desk"]: 1 },
     unit: "month",
     count: DEFAULT_MONTHS,
     date: istDay(),
-    spaces: 1,
   }));
   const co = useCheckout();
   const { step, setStep, quote, error, setError } = co;
   const label = STEPS[step];
 
-  const plan = findTermPlan(choice.planKey)!;
+  // The booking: every plan with at least one desk or cabin, in tariff order.
+  const items = TERM_PLANS.map((plan) => ({ plan, spaces: choice.cart[plan.key] ?? 0 })).filter((i) => i.spaces > 0);
+  const sum = (pred: (p: TermPlan) => boolean) => items.reduce((n, i) => n + (pred(i.plan) ? i.spaces : 0), 0);
+  const wanted = { desk: sum((p) => p.space === "desk"), cabin: sum((p) => p.space === "cabin") };
+  const fixedDesks = sum((p) => p.space === "desk" && !isFlexi(p));
+  const flexiDesks = wanted.desk - fixedDesks;
+  const total = wanted.desk + wanted.cabin;
+
   const w = termWindow(choice, new Date());
   const win = w.ok ? w.window : null;
-  const shown = quote ?? co.withCoupon(priceTerm(plan, choice));
+  const shown = quote ?? co.withCoupon(priceTerms(items, choice));
 
-  // Desks or cabins for the whole term, tagged with the term it was fetched for.
-  const [avail, setAvail] = useState<{ key: string; free: number; slots: Slot[] } | null>(null);
-  const availKey = win ? `${plan.key}|${choice.date}|${choice.unit}|${choice.count}` : null;
-  const free = avail && avail.key === availKey ? avail.free : null;
-  const slots = avail && avail.key === availKey ? avail.slots : [];
-  // A flexi hot desk is any desk on the day, so only fixed desks and cabins are picked.
-  const canPick = plan.key !== "hot-desk";
-  const picks = useSeatPicks(availKey, slots, choice.spaces, canPick);
+  // Desks and cabins for the whole term, tagged with the term they were fetched for.
+  const [avail, setAvail] = useState<Avail | null>(null);
+  const availKey = win ? `${choice.date}|${choice.unit}|${choice.count}` : null;
+  const live = avail && avail.key === availKey ? avail : null;
+  const free = live
+    ? {
+        desk: live.desks.filter((s) => s.available).length,
+        cabin: live.cabins.filter((s) => s.available).length,
+      }
+    : null;
+  // The map offers only what the booking has to choose: fixed desks and cabins.
+  const slots = live ? [...(fixedDesks ? live.desks : []), ...(wanted.cabin ? live.cabins : [])] : [];
+  const picks = useSeatPicks(availKey, slots, { desk: fixedDesks, cabin: wanted.cabin });
   useEffect(() => {
     if (step !== 0 || !availKey) return;
     let cancelled = false;
-    const [p, date, unit, count] = availKey.split("|");
-    fetch(`/api/passes/availability?plan=${p}&date=${date}&unit=${unit}&count=${count}`)
-      // A failed lookup is an error, never "nothing free".
-      .then((r) => {
-        if (!r.ok) throw new Error(`availability ${r.status}`);
-        return r.json();
-      })
-      .then((d) => {
+    const [date, unit, count] = availKey.split("|");
+    // Any desk plan reports the desks, any cabin plan the cabins.
+    const load = (plan: TermPlanKey): Promise<Slot[]> =>
+      fetch(`/api/passes/availability?plan=${plan}&date=${date}&unit=${unit}&count=${count}`)
+        // A failed lookup is an error, never "nothing free".
+        .then((r) => {
+          if (!r.ok) throw new Error(`availability ${r.status}`);
+          return r.json();
+        })
+        .then((d) => d.resources ?? []);
+    Promise.all([load("hot-desk"), load("cabin-base")])
+      .then(([desks, cabins]) => {
         if (cancelled) return;
-        setAvail({ key: availKey, free: d.free ?? 0, slots: d.resources ?? [] });
+        setAvail({ key: availKey, desks, cabins });
         setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
@@ -90,22 +114,22 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
     };
   }, [step, availKey, setError]);
 
-  const spaceWord = plan.space === "desk" ? "desk" : "cabin";
-  const maxSpaces = Math.max(1, Math.min(MAX_SPACES, free ?? MAX_SPACES));
-  const canContinue =
-    label === "Book" && !!win && free != null && free >= choice.spaces && picks.complete;
-  const spacesLabel = `${choice.spaces} ${spaceWord}${choice.spaces === 1 ? "" : "s"}`;
+  // What stops the booking as it stands: nothing chosen, or more than is free.
+  const short = (["desk", "cabin"] as const).filter((space) => free != null && wanted[space] > free[space]);
+  const fits = free != null && total > 0 && short.length === 0;
+  const canContinue = label === "Book" && !!win && fits && picks.complete;
 
-  function update(next: Partial<Choice>) {
+  function update(next: Partial<Omit<Choice, "cart">>) {
     setChoice((prev) => {
       const merged = { ...prev, ...next };
       // Switching between months and years starts from that unit's default.
       if (next.unit && next.unit !== prev.unit) merged.count = next.unit === "year" ? 1 : DEFAULT_MONTHS;
-      // People on a desk plan aren't cabins: moving between desks and cabins starts at one.
-      if (findTermPlan(merged.planKey)!.space !== findTermPlan(prev.planKey)!.space) merged.spaces = 1;
-      merged.spaces = Math.min(Math.max(1, merged.spaces), MAX_SPACES);
       return merged;
     });
+  }
+
+  function setSpaces(key: TermPlanKey, spaces: number) {
+    setChoice((prev) => ({ ...prev, cart: { ...prev.cart, [key]: Math.min(Math.max(0, spaces), MAX_SPACES) } }));
   }
 
   async function submitDetails(e: React.FormEvent) {
@@ -117,14 +141,21 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
       return;
     }
     const held = await co.hold("/api/passes/hold", {
-      ...choice,
+      date: choice.date,
+      unit: choice.unit,
+      count: choice.count,
+      items: items.map((i) => ({ planKey: i.plan.key, spaces: i.spaces })),
       ...(picks.choosing ? { resourceIds: picks.picked } : {}),
       customerName: co.name.trim(),
       customerEmail: co.email.trim(),
     });
     if (held.ok) return;
     if (held.error === "seat_unavailable") {
-      setError(`That ${spaceWord} was just taken for those dates. Please pick another start date.`);
+      setError(
+        total === 1
+          ? `That ${wanted.cabin ? "cabin" : "desk"} was just taken for those dates. Please pick another start date.`
+          : "Some of those spaces were just taken for those dates. Please check what is free and try again.",
+      );
       setStep(0);
     } else {
       setError(COUPON_ERRORS[held.error] ?? "We couldn't hold your pass. Please check your details.");
@@ -138,15 +169,37 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   }
 
   const dates = win ? `${longDate(win.startDate)} – ${longDate(dayBefore(win.endDate))}` : "Choose a start date";
-  const n = choice.spaces;
-  const noun = plan.space === "desk" ? "desk" : "cabin";
-  const spaceLine = picks.codes.length
-    ? `${plan.space === "desk" ? "Fixed" : "Private"} ${pickedText(picks.codes, noun)}`
-    : plan.space === "cabin"
-      ? n === 1 ? `A private cabin for ${plan.seats}` : `${n} private cabins for ${plan.seats} each`
-      : plan.key === "hot-desk"
-        ? n === 1 ? "Any shared desk" : `${n} people · any shared desks`
-        : n === 1 ? "Your own fixed desk" : `${n} fixed desks`;
+  const planLine = items.length
+    ? items.map((i) => (total === 1 ? i.plan.name : `${i.spaces} × ${i.plan.name}`)).join(", ")
+    : "Nothing chosen yet";
+  const spaceLine =
+    [
+      flexiDesks ? (flexiDesks === 1 ? "Any shared desk" : `${flexiDesks} people · any shared desks`) : "",
+      picks.deskCodes.length
+        ? `Fixed ${pickedText(picks.deskCodes, "desk")}`
+        : fixedDesks
+          ? fixedDesks === 1 ? "Your own fixed desk" : `${fixedDesks} fixed desks`
+          : "",
+      picks.cabinCodes.length
+        ? `Private ${pickedText(picks.cabinCodes, "cabin")}`
+        : wanted.cabin
+          ? wanted.cabin === 1 ? "A private cabin for 4" : `${wanted.cabin} private cabins for 4 each`
+          : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || "—";
+  const holding =
+    wanted.desk && wanted.cabin
+      ? "your desks and cabins"
+      : `your ${wanted.cabin ? "cabin" : "desk"}${total > 1 ? "s" : ""}`;
+  // One price line per plan, in the same order as the booking.
+  const priceRows = shown.lines.map((l, i): [string, ReactNode] => {
+    const item = shown.lines.length === items.length ? items[i] : null;
+    const name = item
+      ? `${item.plan.name} × ${termLabel(choice.unit, choice.count)}${item.spaces > 1 ? ` × ${item.spaces}` : ""}`
+      : l.label;
+    return [name, rupees(l.amountMinor)];
+  });
 
   return (
     <section className="pad section-ivory booking-page">
@@ -195,63 +248,61 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                   <p className="avail-hint">Staying 12 months or more? Switch to Annual.</p>
                 )}
 
-                {GROUPS.map((g) => (
-                  <div key={g.space}>
-                    <span className="filter-label">{g.title}</span>
-                    <div className="space-pills bk-products">
-                      {TERM_PLANS.filter((p) => p.space === g.space).map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          className={`pill ${p.key === plan.key ? "sel" : ""}`}
-                          aria-pressed={p.key === plan.key}
-                          onClick={() => update({ planKey: p.key })}
-                        >
-                          <span className="pn">{p.name}</span>
-                          <span className="pd">{p.blurb}</span>
-                          <span className="pp">
-                            {choice.unit === "year"
-                              ? money(p.annualMinor / 100)
-                              : money(termMonthlyMinor(p) / 100)}
-                            <span className="per"> / {choice.unit}</span>
-                          </span>
-                        </button>
-                      ))}
+                {GROUPS.map((g) => {
+                  const room = Math.min(MAX_SPACES, free?.[g.space] ?? MAX_SPACES);
+                  return (
+                    <div key={g.space}>
+                      <span className="filter-label">
+                        {g.title}
+                        <span className="fnote">
+                          {" "}· {g.each}
+                          {free && ` · ${free[g.space]} free`}
+                        </span>
+                      </span>
+                      <div className="plan-list">
+                        {TERM_PLANS.filter((p) => p.space === g.space).map((p) => {
+                          const n = choice.cart[p.key] ?? 0;
+                          return (
+                            <div key={p.key} className={`plan-row ${n > 0 ? "sel" : ""}`}>
+                              <div className="plan-info">
+                                <span className="pn">{p.name}</span>
+                                <span className="pd">{p.blurb}</span>
+                              </div>
+                              <span className="pp">
+                                {choice.unit === "year"
+                                  ? money(p.annualMinor / 100)
+                                  : money(termMonthlyMinor(p) / 100)}
+                                <span className="per"> / {choice.unit}</span>
+                              </span>
+                              <div className="stepper" role="group" aria-label={`${p.name}: number of ${g.space}s`}>
+                                <button
+                                  type="button"
+                                  aria-label={`One fewer ${p.name}`}
+                                  disabled={n <= 0}
+                                  onClick={() => setSpaces(p.key, n - 1)}
+                                >
+                                  −
+                                </button>
+                                <span className="stepper-val" aria-live="polite">{n}</span>
+                                <button
+                                  type="button"
+                                  aria-label={`One more ${p.name}`}
+                                  disabled={wanted[g.space] >= room}
+                                  onClick={() => setSpaces(p.key, n + 1)}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-
-                <div className="seats-control">
-                  <div className="seats-count">
-                    <span className="filter-label">{plan.space === "desk" ? "People" : "Cabins"}</span>
-                    <div
-                      className="stepper"
-                      role="group"
-                      aria-label={plan.space === "desk" ? "Number of people" : "Number of cabins"}
-                    >
-                      <button
-                        type="button"
-                        aria-label={plan.space === "desk" ? "One fewer person" : "One fewer cabin"}
-                        disabled={choice.spaces <= 1}
-                        onClick={() => update({ spaces: choice.spaces - 1 })}
-                      >
-                        −
-                      </button>
-                      <span className="stepper-val" aria-live="polite">{choice.spaces}</span>
-                      <button
-                        type="button"
-                        aria-label={plan.space === "desk" ? "One more person" : "One more cabin"}
-                        disabled={choice.spaces >= maxSpaces}
-                        onClick={() => update({ spaces: choice.spaces + 1 })}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <span className="avail-hint">
-                    {plan.space === "desk" ? "One desk each" : `Each cabin seats ${plan.seats}`}
-                  </span>
-                </div>
+                  );
+                })}
+                <p className="avail-hint plan-hint">
+                  Need both? Add desks and cabins together and pay for them in one booking.
+                </p>
 
                 <span className="filter-label">Starting</span>
                 <DateStrip
@@ -266,18 +317,22 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                       : `Passes can start up to ${MAX_START_DAYS} days ahead. Please pick an earlier date.`}
                   </p>
                 )}
-                {win && free != null && (
+                {win && free && total === 0 && (
                   <p className="avail-hint" role="status">
-                    {free === 0
-                      ? `No ${spaceWord}s are free for the whole of ${dates}. Try another start date or a shorter term.`
-                      : free < choice.spaces
-                        ? `Only ${free} ${spaceWord}${free === 1 ? " is" : "s are"} free for the whole term. Please choose fewer or another start date.`
-                        : `${free} ${spaceWord}${free === 1 ? "" : "s"} free for the whole term.`}
+                    Add at least one desk or cabin to continue.
                   </p>
                 )}
-                {canPick && win && !!free && free >= choice.spaces && (
-                  <SeatPicker picks={picks} slots={slots} count={choice.spaces} noun={noun} />
-                )}
+                {win &&
+                  free &&
+                  short.map((space) => (
+                    <p key={space} className="avail-hint" role="status">
+                      {free[space] === 0
+                        ? `No ${space}s are free for the whole of ${dates}.`
+                        : `Only ${plural(free[space], space)} ${free[space] === 1 ? "is" : "are"} free for the whole term, and you have chosen ${wanted[space]}.`}{" "}
+                      Please choose fewer, another start date or a shorter term.
+                    </p>
+                  ))}
+                {win && fits && <SeatPicker picks={picks} slots={slots} />}
                 <p className="avail-hint">
                   Once you&#39;ve paid, our team will be in touch about the agreement and
                   security deposit.
@@ -288,11 +343,11 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
             <CheckoutSteps
               co={co}
               onSubmitDetails={submitDetails}
-              holding={choice.spaces > 1 ? `your ${spaceWord}s` : `your ${spaceWord}`}
+              holding={holding}
               onRestart={restart}
               details={
                 <>
-                  <p>{plan.name} · {spacesLabel} · {termLabel(choice.unit, choice.count)}</p>
+                  <p>{planLine} · {termLabel(choice.unit, choice.count)}</p>
                   <p>{dates}</p>
                 </>
               }
@@ -315,14 +370,11 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
             shown={shown}
             final={!!quote}
             rows={[
-              ["Plan", plan.name],
+              [items.length > 1 ? "Plans" : "Plan", planLine],
               ["Space", spaceLine],
               ["Term", termLabel(choice.unit, choice.count)],
               ["Dates", dates],
-              ...shown.lines.map((l): [string, ReactNode] => [
-                `${choice.unit === "year" ? "Annual" : "Monthly"} × ${choice.count}${n > 1 ? ` × ${n} ${spaceWord}s` : ""}`,
-                rupees(l.amountMinor),
-              ]),
+              ...priceRows,
             ]}
           />
         </div>

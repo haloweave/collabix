@@ -4,6 +4,10 @@ import FloorMap from "./floor-map";
 
 export type Slot = { resourceId: string; code: string; available: boolean };
 type Noun = "desk" | "cabin";
+/** How many desks and cabins the guest is to choose. */
+export type PickLimits = Record<Noun, number>;
+
+const nounOf = (code: string): Noun => (code.startsWith("C-") ? "cabin" : "desk");
 
 // "D-07" reads as desk 07, "C-01" as cabin 1.
 const shortCode = (code: string) =>
@@ -13,27 +17,56 @@ const shortCode = (code: string) =>
 export const pickedText = (codes: string[], noun: Noun) =>
   `${noun}${codes.length === 1 ? "" : "s"} ${codes.join(", ")}`;
 
+/** "2 desks and a cabin": what is still to be chosen, or was. */
+const countText = (limits: PickLimits) =>
+  (["desk", "cabin"] as const)
+    .filter((noun) => limits[noun] > 0)
+    .map((noun) => (limits[noun] === 1 ? `a ${noun}` : `${limits[noun]} ${noun}s`))
+    .join(" and ");
+
 /** Spaces are chosen for the guest unless they untick the box and pick on the
  * floor map. Picks are tagged with the window they were made for, so a change
- * of day, time or term starts them afresh. */
-export function useSeatPicks(availKey: string | null, slots: Slot[], count: number, allowed = true) {
+ * of day, time or term starts them afresh. `count` is a number of desks, or
+ * how many desks and cabins when a booking takes both. */
+export function useSeatPicks(
+  availKey: string | null,
+  slots: Slot[],
+  count: number | PickLimits,
+  allowed = true,
+) {
+  const limits: PickLimits = typeof count === "number" ? { desk: count, cabin: 0 } : count;
+  const total = limits.desk + limits.cabin;
   const [auto, setAuto] = useState(true);
   const [picks, setPicks] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
-  const choosing = allowed && !auto;
-  // Only picks that are still free, and never more than were asked for.
+  const choosing = allowed && total > 0 && !auto;
+  const nounById = new Map(slots.map((s) => [s.resourceId, nounOf(s.code)]));
+
+  // Never more of a kind than was asked for: the latest picks win.
+  const trim = (ids: string[]) =>
+    ids.filter((id, i) => {
+      const noun = nounById.get(id)!;
+      const later = ids.slice(i + 1).filter((other) => nounById.get(other) === noun).length;
+      return later < limits[noun];
+    });
+
+  // Only picks that are still free.
   const picked =
     choosing && picks.key === availKey
-      ? picks.ids
-          .filter((id) => slots.some((s) => s.resourceId === id && s.available))
-          .slice(-count)
+      ? trim(picks.ids.filter((id) => slots.some((s) => s.resourceId === id && s.available)))
       : [];
-  const codes = picked.map((id) => shortCode(slots.find((s) => s.resourceId === id)!.code)).sort();
+  const codesOf = (noun: Noun) =>
+    picked
+      .filter((id) => nounById.get(id) === noun)
+      .map((id) => shortCode(slots.find((s) => s.resourceId === id)!.code))
+      .sort();
+  const deskCodes = codesOf("desk");
+  const cabinCodes = codesOf("cabin");
 
-  // Tap a space to take it, tap again to release it. Once enough are chosen,
-  // a new one replaces the earliest pick.
+  // Tap a space to take it, tap again to release it. Once enough of a kind are
+  // chosen, a new one replaces the earliest pick of that kind.
   function toggle(id: string) {
     if (!availKey) return;
-    const ids = picked.includes(id) ? picked.filter((p) => p !== id) : [...picked, id].slice(-count);
+    const ids = picked.includes(id) ? picked.filter((p) => p !== id) : trim([...picked, id]);
     setPicks({ key: availKey, ids });
   }
 
@@ -41,41 +74,45 @@ export function useSeatPicks(availKey: string | null, slots: Slot[], count: numb
     auto,
     setAuto,
     choosing,
+    limits,
     picked,
-    codes,
+    codes: [...deskCodes, ...cabinCodes],
+    deskCodes,
+    cabinCodes,
+    /** "desks 07, 08 and cabin 1" for what has been picked, or "" if nothing. */
+    text: [deskCodes.length ? pickedText(deskCodes, "desk") : "", cabinCodes.length ? pickedText(cabinCodes, "cabin") : ""]
+      .filter(Boolean)
+      .join(" and "),
     toggle,
     /** True when nothing more needs choosing before continuing. */
-    complete: !choosing || picked.length === count,
+    complete: !choosing || (deskCodes.length === limits.desk && cabinCodes.length === limits.cabin),
     reset: () => setPicks({ key: "", ids: [] }),
   };
 }
 
 /** The "pick for me" checkbox and, when it is unticked, the floor map. */
-export function SeatPicker({
-  picks,
-  slots,
-  count,
-  noun,
-}: {
-  picks: ReturnType<typeof useSeatPicks>;
-  slots: Slot[];
-  count: number;
-  noun: Noun;
-}) {
-  const many = count > 1;
+export function SeatPicker({ picks, slots }: { picks: ReturnType<typeof useSeatPicks>; slots: Slot[] }) {
+  const { limits } = picks;
+  const total = limits.desk + limits.cabin;
+  if (total === 0) return null;
+  const nouns = (["desk", "cabin"] as const).filter((noun) => limits[noun] > 0);
+  const label =
+    total === 1
+      ? `Pick a ${nouns[0]} for me`
+      : `Pick our ${nouns.map((noun) => (limits[noun] === 1 ? noun : `${noun}s`)).join(" and ")} for us`;
   return (
     <>
       <label className="auto-toggle">
         <input type="checkbox" checked={picks.auto} onChange={(e) => picks.setAuto(e.target.checked)} />
-        {many ? `Pick our ${noun}s for us` : `Pick a ${noun} for me`}
+        {label}
       </label>
       {picks.choosing && (
         <>
           <FloorMap slots={slots} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
           <p className="avail-hint" role="status">
-            {picks.picked.length === count
-              ? `You've chosen ${pickedText(picks.codes, noun)}.`
-              : `Tap ${many ? `${count} ${noun}s` : `a ${noun}`} on the map. ${picks.picked.length} of ${count} chosen.`}
+            {picks.complete
+              ? `You've chosen ${picks.text}.`
+              : `Tap ${countText(limits)} on the map. ${picks.picked.length} of ${total} chosen.`}
           </p>
         </>
       )}

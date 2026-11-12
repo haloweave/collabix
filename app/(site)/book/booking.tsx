@@ -206,7 +206,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   maxPeople={maxPeople}
                 />
                 {isPass && win && !!free && (
-                  <SeatPicker picks={picks} slots={slots} count={choice.people} noun="desk" />
+                  <SeatPicker picks={picks} slots={slots} />
                 )}
                 {win && free === 0 && (
                   <p className="avail-hint" role="status">
