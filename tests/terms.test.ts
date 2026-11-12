@@ -142,3 +142,110 @@ describe("monthly & annual passes", () => {
     expect(r.ok && r.resources.every((s) => s.available)).toBe(true);
   });
 });
+
+describe("a mix of plans in one booking", () => {
+  const mix = (items: { planKey: string; spaces: number }[], count = 3) => ({
+    items,
+    date: START,
+    unit: "month" as const,
+    count,
+    ...guest,
+  });
+
+  async function heldByPlan(bookingId: string) {
+    const rows = await db
+      .select({ plan: schema.ratePlan.key, code: schema.resource.code })
+      .from(schema.reservation)
+      .innerJoin(schema.resource, eq(schema.resource.id, schema.reservation.resourceId))
+      .innerJoin(schema.ratePlan, eq(schema.ratePlan.id, schema.reservation.ratePlanId))
+      .where(eq(schema.reservation.bookingId, bookingId));
+    const out: Record<string, string[]> = {};
+    for (const r of rows) (out[r.plan] ??= []).push(r.code);
+    for (const codes of Object.values(out)) codes.sort();
+    return out;
+  }
+
+  async function idOf(code: string) {
+    const [row] = await db.select({ id: schema.resource.id }).from(schema.resource).where(eq(schema.resource.code, code));
+    return row.id;
+  }
+
+  test("desks and a cabin are held together, each under its own plan, for one price", async () => {
+    const held = await holdTerm(
+      db,
+      mix([
+        { planKey: "cabin-base", spaces: 1 },
+        { planKey: "dedicated-desk", spaces: 2 },
+        { planKey: "hot-desk", spaces: 1 },
+      ]),
+    );
+    if (!held.ok) throw new Error(held.error);
+    expect(held.reservationIds).toHaveLength(4);
+    const byPlan = await heldByPlan(held.bookingId);
+    expect(byPlan["cabin-base"]).toHaveLength(1);
+    expect(byPlan["cabin-base"][0]).toMatch(/^C-0[1-4]$/);
+    expect(byPlan["dedicated-desk"]).toHaveLength(2);
+    expect(byPlan["hot-desk"]).toHaveLength(1);
+    expect(new Set(Object.values(byPlan).flat()).size).toBe(4);
+    // (₹6,000 + ₹8,500 × 2 + ₹24,000) × 3 months, + 18% GST.
+    expect(held.quote.subtotalMinor).toBe(14100000);
+    expect(held.quote.totalMinor).toBe(16638000);
+    expect(held.quote.lines).toHaveLength(3);
+    expect(await free(months("hot-desk", 1))).toBe(25);
+    expect(await free(months("cabin-base", 1))).toBe(3);
+    expect((await confirmBooking(db, { bookingId: held.bookingId })).ok).toBe(true);
+  });
+
+  test("picked desks go to the fixed-desk plans and picked cabins to the cabin plans", async () => {
+    const picks = await Promise.all(["D-11", "D-12", "C-03"].map(idOf));
+    const held = await holdTerm(db, {
+      ...mix([
+        { planKey: "hot-desk", spaces: 2 },
+        { planKey: "dedicated-desk", spaces: 1 },
+        { planKey: "dedicated-desk-pro", spaces: 1 },
+        { planKey: "cabin-pro", spaces: 1 },
+      ]),
+      resourceIds: picks,
+    });
+    if (!held.ok) throw new Error(held.error);
+    const byPlan = await heldByPlan(held.bookingId);
+    expect([...byPlan["dedicated-desk"], ...byPlan["dedicated-desk-pro"]].sort()).toEqual(["D-11", "D-12"]);
+    expect(byPlan["cabin-pro"]).toEqual(["C-03"]);
+    expect(byPlan["hot-desk"]).toHaveLength(2);
+    expect(byPlan["hot-desk"]).not.toContain("D-11");
+    expect(byPlan["hot-desk"]).not.toContain("D-12");
+  });
+
+  test("the whole mix is refused if any part of it is not free", async () => {
+    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-base", 1), ...guest });
+    const held = await holdTerm(
+      db,
+      mix([
+        { planKey: "hot-desk", spaces: 2 },
+        { planKey: "cabin-base", spaces: 1 },
+      ], 1),
+    );
+    expect(held).toEqual({ ok: false, error: "seat_unavailable" });
+    expect(await free(months("hot-desk", 1))).toBe(28);
+  });
+
+  test("desk plans share the 28 desks", async () => {
+    const held = await holdTerm(
+      db,
+      mix([
+        { planKey: "hot-desk", spaces: 15 },
+        { planKey: "dedicated-desk", spaces: 14 },
+      ]),
+    );
+    expect(held).toEqual({ ok: false, error: "seat_unavailable" });
+  });
+
+  test("the same plan listed twice is added up, and an unknown plan refuses the lot", async () => {
+    const twice = await holdTerm(db, mix([{ planKey: "hot-desk", spaces: 1 }, { planKey: "hot-desk", spaces: 2 }]));
+    if (!twice.ok) throw new Error(twice.error);
+    expect(twice.reservationIds).toHaveLength(3);
+    expect(twice.quote.lines).toHaveLength(1);
+    const bad = await holdTerm(db, mix([{ planKey: "hot-desk", spaces: 1 }, { planKey: "day-full", spaces: 1 }]));
+    expect(bad).toEqual({ ok: false, error: "unknown_plan" });
+  });
+});
