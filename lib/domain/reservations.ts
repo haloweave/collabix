@@ -10,8 +10,8 @@ import * as schema from "../db/schema";
 import * as authSchema from "../db/auth-schema";
 import { priceBooking, productWindow, toUtcWindow, type Quote, type WindowInput } from "./booking";
 import { applyCoupon, normalizeCouponCode, type Coupon } from "./coupon";
-import { bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
-import { priceTerm, termWindow, type TermInput, type TermWindow } from "./term";
+import { TERM_PLANS, bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
+import { priceTerms, termWindow, type TermInput, type TermItem, type TermWindow } from "./term";
 import { autoAssignDesks, type Slot } from "../floorplan";
 import { getSettings } from "../settings";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
@@ -297,16 +297,16 @@ export type TermAvailabilityResult =
   | { ok: true; window: TermWindow; free: number; resources: Slot[] }
   | { ok: false; error: string };
 
-/** The desks (any shared desk) or cabins (C-xx) a term plan can take, each
- * marked free only if nothing overlaps any part of the term. */
-async function termSlots(db: Db, plan: TermPlan, window: TermWindow): Promise<Slot[]> {
+/** The desks (any shared desk) or cabins (C-xx) a term can take, each marked
+ * free only if nothing overlaps any part of the term. */
+async function termSlots(db: Db, space: TermPlan["space"], window: TermWindow): Promise<Slot[]> {
   const resources = await db
     .select()
     .from(schema.resource)
     .where(
       and(
         eq(schema.resource.enabled, true),
-        plan.space === "desk"
+        space === "desk"
           ? eq(schema.resource.kind, "desk")
           : and(eq(schema.resource.kind, "room"), like(schema.resource.code, "C-%")),
       ),
@@ -326,15 +326,18 @@ export async function getTermAvailability(
   if (!plan) return { ok: false, error: "unknown_plan" };
   const w = termWindow(input, now);
   if (!w.ok) return w;
-  const slots = await termSlots(db, plan, w.window);
+  const slots = await termSlots(db, plan.space, w.window);
   return { ok: true, window: w.window, free: slots.filter((s) => s.available).length, resources: slots };
 }
 
 export type TermHoldInput = TermInput & {
-  planKey: string;
+  /** One plan, with `spaces` of it… */
+  planKey?: string;
   /** Desks (desk plans) or cabins (cabin plans) to hold; one by default. */
   spaces?: number;
-  /** The guest's own choice of desks or cabins; used only if all are free. */
+  /** …or a mix of plans in one booking, each with its own count. */
+  items?: { planKey: string; spaces?: number }[];
+  /** The guest's own choice of fixed desks and cabins; used only if all are free. */
   resourceIds?: string[];
   customerName: string;
   customerEmail: string;
@@ -342,37 +345,94 @@ export type TermHoldInput = TermInput & {
   couponCode?: string;
 };
 
-/** Hold one or more desks or cabins for a whole term, priced from the tariff.
- * Paid and confirmed through the same flow as any booking (lib/domain/payments.ts). */
+/** The plans asked for, one entry per plan in tariff order, or null if any is unknown. */
+function termItems(input: TermHoldInput): TermItem[] | null {
+  const asked = input.items?.length
+    ? input.items
+    : input.planKey
+      ? [{ planKey: input.planKey, spaces: input.spaces }]
+      : [];
+  const spacesByKey = new Map<string, number>();
+  for (const a of asked) {
+    if (!findTermPlan(a.planKey)) return null;
+    spacesByKey.set(a.planKey, (spacesByKey.get(a.planKey) ?? 0) + Math.max(1, a.spaces ?? 1));
+  }
+  const items = TERM_PLANS.filter((p) => spacesByKey.has(p.key)).map((plan) => ({
+    plan,
+    spaces: spacesByKey.get(plan.key)!,
+  }));
+  return items.length ? items : null;
+}
+
+/** A hot desk is any desk; every other plan holds a space the guest may choose. */
+const isFlexi = (plan: TermPlan) => plan.key === "hot-desk";
+
+/** Hold desks and cabins for a whole term, priced from the tariff: one plan or
+ * a mix of them in a single booking. Paid and confirmed through the same flow
+ * as any booking (lib/domain/payments.ts). */
 export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): Promise<HoldResult> {
   await sweepExpiredHolds(db);
-  const plan = findTermPlan(input.planKey);
-  if (!plan) return { ok: false, error: "unknown_plan" };
+  const items = termItems(input);
+  if (!items) return { ok: false, error: "unknown_plan" };
   const w = termWindow(input, now);
   if (!w.ok) return { ok: false, error: w.error };
-  const ratePlan = await getPlan(db, plan.key);
-  if (!ratePlan || !ratePlan.active) return { ok: false, error: "unknown_plan" };
-
-  const spaces = Math.max(1, input.spaces ?? 1);
-  const free = (await termSlots(db, plan, w.window)).filter((s) => s.available);
-  // The guest's picks if there is one per space and all are free; otherwise
-  // desks are clustered for the team and cabins taken in order.
-  const picked = [...new Set(input.resourceIds ?? [])];
-  const freeIds = new Set(free.map((s) => s.resourceId));
-  let resourceIds: string[];
-  if (picked.length === spaces && picked.every((id) => freeIds.has(id))) {
-    resourceIds = picked;
-  } else {
-    const codes =
-      plan.space === "desk"
-        ? autoAssignDesks(free.map((s) => s.code), spaces)
-        : free.slice(0, spaces).map((s) => s.code);
-    if (codes.length < spaces) return { ok: false, error: "seat_unavailable" };
-    const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
-    resourceIds = codes.map((c) => idByCode.get(c)!);
+  const ratePlanIds = new Map<string, string>();
+  for (const { plan } of items) {
+    const ratePlan = await getPlan(db, plan.key);
+    if (!ratePlan || !ratePlan.active) return { ok: false, error: "unknown_plan" };
+    ratePlanIds.set(plan.key, ratePlan.id);
   }
 
-  const priced = await withCoupon(db, priceTerm(plan, { ...input, spaces }, now), input.couponCode);
+  const count = (pred: (p: TermPlan) => boolean) =>
+    items.reduce((sum, i) => sum + (pred(i.plan) ? i.spaces : 0), 0);
+  const deskCount = count((p) => p.space === "desk");
+  const fixedDeskCount = count((p) => p.space === "desk" && !isFlexi(p));
+  const cabinCount = count((p) => p.space === "cabin");
+
+  const freeDesks = deskCount ? (await termSlots(db, "desk", w.window)).filter((s) => s.available) : [];
+  const freeCabins = cabinCount ? (await termSlots(db, "cabin", w.window)).filter((s) => s.available) : [];
+  if (freeDesks.length < deskCount || freeCabins.length < cabinCount) {
+    return { ok: false, error: "seat_unavailable" };
+  }
+
+  // The guest's picks count only if every one is free. Picked desks go to the
+  // fixed-desk plans (or to every desk, when there is one per desk); the rest
+  // are clustered for the team, and cabins without a pick are taken in order.
+  const freeIds = new Set([...freeDesks, ...freeCabins].map((s) => s.resourceId));
+  const asked = [...new Set(input.resourceIds ?? [])];
+  const picked = new Set(asked.every((id) => freeIds.has(id)) ? asked : []);
+  const pickedDesks = freeDesks.filter((s) => picked.has(s.resourceId));
+  const pickedCabins = freeCabins.filter((s) => picked.has(s.resourceId));
+  const idByCode = new Map(freeDesks.map((s) => [s.code, s.resourceId]));
+  const cluster = (from: Slot[], n: number) =>
+    autoAssignDesks(from.map((s) => s.code), n).map((c) => idByCode.get(c)!);
+
+  let fixedDesks: string[];
+  let flexiDesks: string[];
+  if (pickedDesks.length === deskCount) {
+    const ids = pickedDesks.map((s) => s.resourceId);
+    fixedDesks = ids.slice(0, fixedDeskCount);
+    flexiDesks = ids.slice(fixedDeskCount);
+  } else if (fixedDeskCount > 0 && pickedDesks.length === fixedDeskCount) {
+    fixedDesks = pickedDesks.map((s) => s.resourceId);
+    flexiDesks = cluster(freeDesks.filter((s) => !picked.has(s.resourceId)), deskCount - fixedDeskCount);
+  } else {
+    const ids = cluster(freeDesks, deskCount);
+    fixedDesks = ids.slice(0, fixedDeskCount);
+    flexiDesks = ids.slice(fixedDeskCount);
+  }
+  const cabins = (pickedCabins.length === cabinCount ? pickedCabins : freeCabins.slice(0, cabinCount)).map(
+    (s) => s.resourceId,
+  );
+  if (fixedDesks.length + flexiDesks.length < deskCount) return { ok: false, error: "seat_unavailable" };
+
+  // One reservation per space, each under its own plan.
+  const spaces = items.flatMap(({ plan, spaces: n }) => {
+    const pool = plan.space === "cabin" ? cabins : isFlexi(plan) ? flexiDesks : fixedDesks;
+    return pool.splice(0, n).map((resourceId) => ({ resourceId, ratePlanId: ratePlanIds.get(plan.key)! }));
+  });
+
+  const priced = await withCoupon(db, priceTerms(items, input, now), input.couponCode);
   if (!priced.ok) return priced;
   const quote = priced.quote;
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);
@@ -386,10 +446,10 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
       const rows = await tx
         .insert(schema.reservation)
         .values(
-          resourceIds.map((resourceId) => ({
+          spaces.map(({ resourceId, ratePlanId }) => ({
             bookingId: b.id,
             resourceId,
-            ratePlanId: ratePlan.id,
+            ratePlanId,
             startAt: w.window.startAt,
             endAt: w.window.endAt,
             status: "held" as const,
