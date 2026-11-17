@@ -354,6 +354,20 @@
 .collabix-site .feat h4 { font-size: 1rem; margin-bottom: .25rem; }
 .collabix-site .feat p { font-size: .85rem; color: var(--graphite); }
 
+/* full amenities checklist, grouped by category */
+.collabix-site .amen-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.collabix-site .amen-cat { background: var(--ivory); padding: 1.6rem 1.7rem 1.8rem; }
+.collabix-site .amen-cat .num { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .2em; color: var(--gold); }
+.collabix-site .amen-cat h3 { font-size: 1.05rem; margin: .45rem 0 1rem; }
+.collabix-site .amen-cat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .55rem; }
+.collabix-site .amen-cat li { position: relative; padding-left: 1.3rem; font-size: .9rem; color: var(--graphite); line-height: 1.45; }
+.collabix-site .amen-cat li::before { content: ""; position: absolute; left: 0; top: .55em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--gold); }
+.collabix-site .amen-extras { margin-top: 1.6rem; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.collabix-site .amen-extras .lab { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-right: .4rem; }
+.collabix-site .amen-extras span.chip { border: 1px solid var(--line-gold); border-radius: 999px; padding: .4rem .9rem; font-size: .84rem; color: var(--navy); background: var(--white); }
+@media (max-width: 1024px) { .collabix-site .amen-cats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .collabix-site .amen-cats { grid-template-columns: 1fr; } }
+
 /* spec / hours callout */
 .collabix-site .hours-card { background: var(--navy); border-radius: var(--radius); padding: clamp(2rem,4vw,3.2rem); position: relative; overflow: hidden; }
 .collabix-site .hours-row { display: flex; justify-content: space-between; align-items: baseline; padding: .85rem 0; border-bottom: 1px solid rgba(247,245,242,.12); position: relative; z-index: 2; }
