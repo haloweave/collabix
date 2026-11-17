@@ -7,6 +7,7 @@ import { db } from "@/lib/db/client";
 import * as authSchema from "@/lib/db/auth-schema";
 import { isManager, requireManager, requireStaff } from "@/lib/admin/auth";
 import { addWalletEntry } from "@/lib/domain/wallet";
+import { deleteDocument, reviewDocument } from "@/lib/domain/documents";
 import { logAudit } from "@/lib/admin/audit";
 import { toAccountPhone } from "@/lib/admin/member-lookup";
 
@@ -145,4 +146,35 @@ export async function addWalletFunds(input: {
   });
   revalidatePath(`/admin/members/${input.memberId}`);
   return res;
+}
+
+/** Mark a member's ID document verified or rejected. */
+export async function reviewMemberDocument(input: {
+  memberId: string;
+  documentId: string;
+  status: "verified" | "rejected";
+  note?: string;
+}): Promise<{ ok: boolean }> {
+  const staff = await requireStaff();
+  const ok = await reviewDocument(db, { id: input.documentId, status: input.status, note: input.note, by: staff.email });
+  if (ok) {
+    await logAudit({
+      action: `document.${input.status === "verified" ? "verify" : "reject"}`,
+      targetType: "member",
+      targetId: input.memberId,
+      detail: { documentId: input.documentId, note: input.note?.trim() || null },
+    });
+  }
+  revalidatePath(`/admin/members/${input.memberId}`);
+  return { ok };
+}
+
+/** Permanently delete a member's ID document (managers and owners only). */
+export async function deleteMemberDocument(memberId: string, documentId: string): Promise<{ ok: boolean; error?: string }> {
+  const staff = await requireStaff();
+  if (!isManager(staff.role)) return { ok: false, error: "Only a manager can delete documents." };
+  const ok = await deleteDocument(db, { id: documentId });
+  if (ok) await logAudit({ action: "document.delete", targetType: "member", targetId: memberId, detail: { documentId } });
+  revalidatePath(`/admin/members/${memberId}`);
+  return { ok };
 }

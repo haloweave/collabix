@@ -8,6 +8,7 @@ import * as schema from "@/lib/db/schema";
 import * as authSchema from "@/lib/db/auth-schema";
 import { getMemberSession } from "@/lib/account/auth";
 import { cancelBookingRecord } from "@/lib/domain/cancel";
+import { deleteDocument } from "@/lib/domain/documents";
 import { sendCancellationEmail } from "@/lib/booking-emails";
 import { isValidGstin, normalizeGstin } from "@/lib/invoice/gstin";
 
@@ -72,4 +73,13 @@ export async function cancelOwnBooking(
 
   revalidatePath("/account");
   return { ok: true };
+}
+
+/** Remove one of your own ID documents (only before staff verified it). */
+export async function deleteMyDocument(id: string): Promise<{ ok: boolean }> {
+  const m = await getMemberSession();
+  if (!m) return { ok: false };
+  const ok = await deleteDocument(db, { id, ownerId: m.id });
+  revalidatePath("/account/profile");
+  return { ok };
 }
