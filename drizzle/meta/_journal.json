@@ -113,6 +113,13 @@
       "when": 1793090121582,
       "tag": "0015_booking_billing_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794921894582,
+      "tag": "0016_booking_cancel_refund",
+      "breakpoints": true
     }
   ]
 }

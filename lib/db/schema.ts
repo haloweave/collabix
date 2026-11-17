@@ -118,6 +118,10 @@ export const booking = pgTable("booking", {
   // the invoice was issued, so later profile edits never rewrite it. Null for
   // a personal invoice.
   billingSnapshot: jsonb("billing_snapshot"),
+  // When and by whom the booking was cancelled: 'member', 'system', or the
+  // staff member's email.
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  cancelledBy: text("cancelled_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -149,6 +153,14 @@ export const payment = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     raw: jsonb("raw"),
+    // Refund of a paid payment after its booking is cancelled (lib/domain/
+    // refunds.ts). Null = no refund owed. due → pending (Cashfree processing)
+    // → refunded, or failed (retry). `status` stays 'paid' so the invoice holds.
+    refundStatus: text("refund_status"),
+    refundAmountMinor: integer("refund_amount_minor"),
+    refundId: text("refund_id"),
+    refundReference: text("refund_reference"),
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
