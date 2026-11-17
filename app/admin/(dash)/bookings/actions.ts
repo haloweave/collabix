@@ -12,6 +12,7 @@ import {
 import { cancelBookingRecord } from "@/lib/domain/cancel";
 import { recordManualRefund, refundOnline } from "@/lib/domain/refunds";
 import { getCashfreeGateway } from "@/lib/payments/cashfree";
+import { payFromWallet } from "@/lib/domain/wallet";
 import { sendCancellationEmail, sendRefundEmail } from "@/lib/booking-emails";
 import { recordDeskPayment, removeDeskPayment } from "@/lib/domain/desk-payment";
 import { findMemberByContact, toAccountPhone } from "@/lib/admin/member-lookup";
@@ -192,4 +193,28 @@ export async function undoDeskPayment(bookingId: string): Promise<{ ok: boolean 
     revalidatePath(`/admin/bookings/${bookingId}`);
   }
   return { ok: removed };
+}
+
+const WALLET_PAY_ERRORS: Record<string, string> = {
+  not_found: "This booking is cancelled or no longer exists.",
+  already_paid: "This booking is already paid.",
+  insufficient_funds: "The wallet doesn't have enough for this booking.",
+  no_amount: "This booking has no amount to collect.",
+  hold_expired: "This booking isn't confirmed.",
+  not_payable: "This booking can't be paid from the wallet.",
+};
+
+/** Settle a confirmed booking from its member's wallet at the front desk. */
+export async function chargeWallet(bookingId: string, memberId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const staff = await requireStaff();
+  const res = await payFromWallet(db, { bookingId, userId: memberId, by: staff.email, allowConfirmed: true });
+  if (!res.ok) return { ok: false, error: WALLET_PAY_ERRORS[res.error] ?? "Could not charge the wallet." };
+  await logAudit({
+    action: "booking.paid_from_wallet",
+    targetType: "booking",
+    targetId: bookingId,
+    detail: { memberId, amountMinor: res.amountMinor },
+  });
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  return { ok: true };
 }

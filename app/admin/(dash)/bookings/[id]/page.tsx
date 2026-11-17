@@ -23,6 +23,9 @@ import {
 import { CancelBookingButton } from "@/components/admin/cancel-booking-button";
 import { DeskPaymentButton, UndoDeskPayment } from "@/components/admin/desk-payment-button";
 import { RefundControls } from "@/components/admin/refund-controls";
+import { ChargeWalletButton } from "@/components/admin/charge-wallet-button";
+import { db } from "@/lib/db/client";
+import { walletBalance } from "@/lib/domain/wallet";
 import { paymentMethodLabel } from "@/lib/invoice/payment-method";
 import { owesRefund } from "@/lib/domain/refunds";
 import { isManager, requireAdminAccess } from "@/lib/admin/auth";
@@ -74,6 +77,7 @@ export default async function BookingDetailPage({
     booking.reservations.some((r) => r.status === "confirmed") &&
     Boolean(quote?.totalMinor);
   const pay = booking.payment;
+  const wallet = canMarkPaid && booking.memberId ? await walletBalance(db, booking.memberId) : 0;
   const refundLabel = pay?.refundStatus
     ? REFUND_LABEL[pay.refundStatus]
     : pay?.status === "refund_due"
@@ -226,8 +230,11 @@ export default async function BookingDetailPage({
               <Badge variant="outline">Pay at desk</Badge>
             )}
             {canMarkPaid && quote && (
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <DeskPaymentButton bookingId={booking.id} amount={rupees(quote.totalMinor)} />
+                {booking.memberId && wallet >= quote.totalMinor && (
+                  <ChargeWalletButton bookingId={booking.id} memberId={booking.memberId} balance={rupees(wallet)} />
+                )}
               </div>
             )}
           </CardContent>
