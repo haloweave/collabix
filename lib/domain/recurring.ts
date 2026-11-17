@@ -53,8 +53,9 @@ export async function holdSeries(
 
   const dates = seriesDates(input.date, input.every, input.count);
   const held: { bookingId: string; totalMinor: number }[] = [];
+  // Each date is a fresh hold; one idempotency key can't cover several bookings.
+  const base: HoldInput = { ...input, idempotencyKey: undefined };
   for (const date of dates) {
-    const { every: _every, count: _count, idempotencyKey: _key, ...base } = input;
     const res = await holdReservation(db, { ...base, date }, now);
     if (!res.ok) {
       await releaseHolds(db, held.map((h) => h.bookingId));
