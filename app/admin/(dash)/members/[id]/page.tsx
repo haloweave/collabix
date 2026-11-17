@@ -25,6 +25,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BookingStatusBadge } from "@/components/admin/booking-status-badge";
+import { WalletFundsButton } from "@/components/admin/wallet-funds-button";
+import { db } from "@/lib/db/client";
+import { walletBalance, walletHistory } from "@/lib/domain/wallet";
+import { WALLET_KIND_LABEL } from "@/lib/wallet-labels";
+import { paymentMethodLabel } from "@/lib/invoice/payment-method";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +105,10 @@ export default async function MemberDetailPage({
 
       <Suspense fallback={<CardSkeleton lines={2} />}>
         <MemberMemberships memberId={member.id} />
+      </Suspense>
+
+      <Suspense fallback={<CardSkeleton lines={2} />}>
+        <MemberWallet memberId={member.id} canManage={canManageRoles} />
       </Suspense>
 
       <MemberEditor
@@ -212,6 +221,53 @@ async function MemberMemberships({ memberId }: { memberId: string }) {
           showMember={false}
           empty="No monthly or annual pass yet."
         />
+      </CardContent>
+    </Card>
+  );
+}
+
+async function MemberWallet({ memberId, canManage }: { memberId: string; canManage: boolean }) {
+  const [balance, history] = await Promise.all([walletBalance(db, memberId), walletHistory(db, memberId, 20)]);
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+        <div>
+          <CardTitle>Wallet</CardTitle>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{rupees(balance)}</p>
+        </div>
+        <WalletFundsButton memberId={memberId} canManage={canManage} />
+      </CardHeader>
+      <CardContent>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No wallet activity yet.</p>
+        ) : (
+          <ul className="divide-y border-t text-sm">
+            {history.map((e) => (
+              <li key={e.id} className="flex items-start justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {WALLET_KIND_LABEL[e.kind] ?? e.kind}
+                    {e.method ? ` · ${paymentMethodLabel(e.method)}` : ""}
+                    {e.bookingId && (
+                      <Link href={`/admin/bookings/${e.bookingId}`} className="ml-1 text-xs font-normal underline underline-offset-4">
+                        booking
+                      </Link>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {istDateTime(e.createdAt)}
+                    {e.createdBy ? ` · ${e.createdBy}` : ""}
+                    {e.note ? ` · ${e.note}` : ""}
+                  </p>
+                </div>
+                <span className={`shrink-0 font-medium tabular-nums ${e.amountMinor < 0 ? "text-muted-foreground" : ""}`}>
+                  {e.amountMinor < 0 ? "− " : "+ "}
+                  {rupees(Math.abs(e.amountMinor))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );
