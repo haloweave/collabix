@@ -37,11 +37,21 @@ export type CreateOrderInput = {
   note?: string;
 };
 
+export type GatewayRefund = {
+  cfRefundId: string | null;
+  /** SUCCESS | PENDING | CANCELLED | ONHOLD | FAILED */
+  status: string;
+  raw: unknown;
+};
+
 export interface CashfreeGateway {
   mode: CashfreeMode;
   createOrder(input: CreateOrderInput): Promise<GatewayOrder>;
   fetchOrder(orderId: string): Promise<GatewayOrder>;
   fetchPayments(orderId: string): Promise<GatewayPayment[]>;
+  /** Refund a paid order. `refundId` is ours and makes a retry idempotent. */
+  createRefund(input: { orderId: string; refundId: string; amountRupees: number; note?: string }): Promise<GatewayRefund>;
+  fetchRefund(orderId: string, refundId: string): Promise<GatewayRefund>;
 }
 
 export function cashfreeMode(): CashfreeMode {
@@ -108,6 +118,25 @@ export function getCashfreeGateway(): CashfreeGateway | null {
         method: p.payment_group ?? null,
         raw: p,
       }));
+    },
+    async createRefund(input) {
+      const d = (
+        await sdk.PGOrderCreateRefund(
+          input.orderId,
+          {
+            refund_amount: input.amountRupees,
+            refund_id: input.refundId,
+            ...(input.note ? { refund_note: input.note } : {}),
+          },
+          undefined,
+          input.refundId,
+        )
+      ).data;
+      return { cfRefundId: d.cf_refund_id ?? null, status: d.refund_status ?? "PENDING", raw: d };
+    },
+    async fetchRefund(orderId, refundId) {
+      const d = (await sdk.PGOrderFetchRefund(orderId, refundId)).data;
+      return { cfRefundId: d.cf_refund_id ?? null, status: d.refund_status ?? "PENDING", raw: d };
     },
   };
 }
