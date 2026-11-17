@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_ORIGIN } from "@/lib/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   title: "Collabix · Work Lounge",
   description:
     "Collabix Work Lounge — a premium managed office and coworking space in Bengaluru. Where serious work happens.",
-  metadataBase: new URL("https://collabix.co.in"),
+  metadataBase: new URL(SITE_ORIGIN),
   openGraph: {
     title: "Collabix · Work Lounge",
     description:
