@@ -45,14 +45,16 @@ async function safely(what: string, fn: () => Promise<void>) {
  */
 export async function sendCancellationEmail(
   bookingId: string,
-  opts: { byStaff: boolean; refundMinor?: number | null },
+  opts: { byStaff: boolean; refundMinor?: number | null; refundedToWallet?: boolean },
 ): Promise<void> {
   await safely("cancellation", async () => {
     const v = await getTicketView(db, { bookingId });
     if (!v) return; // never confirmed: nothing was promised, nothing to say
-    const refund = opts.refundMinor
-      ? `You paid ${rupees(opts.refundMinor)}. Our team will be in touch about your refund; you'll get another email once it's on its way.`
-      : undefined;
+    const refund = !opts.refundMinor
+      ? undefined
+      : opts.refundedToWallet
+        ? `${rupees(opts.refundMinor)} is back in your Collabix wallet, ready for your next booking.`
+        : `You paid ${rupees(opts.refundMinor)}. Our team will be in touch about your refund; you'll get another email once it's on its way.`;
     await send(v, "Booking cancelled", {
       heading: "Booking cancelled",
       intro: opts.byStaff

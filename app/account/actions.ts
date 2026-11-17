@@ -68,7 +68,7 @@ export async function cancelOwnBooking(
 
   const res = await cancelBookingRecord(db, { bookingId, by: "member" });
   if (!res.ok) return { ok: false, error: "Booking not found." };
-  await sendCancellationEmail(bookingId, { byStaff: false, refundMinor: res.refund?.amountMinor });
+  await sendCancellationEmail(bookingId, { byStaff: false, refundMinor: res.refund?.amountMinor, refundedToWallet: res.refund?.settled });
 
   revalidatePath("/account");
   return { ok: true };

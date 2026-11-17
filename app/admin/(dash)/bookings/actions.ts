@@ -30,7 +30,7 @@ export async function cancelBooking(bookingId: string) {
     targetId: bookingId,
     detail: res.refund ? { refundDueMinor: res.refund.amountMinor } : undefined,
   });
-  await sendCancellationEmail(bookingId, { byStaff: true, refundMinor: res.refund?.amountMinor });
+  await sendCancellationEmail(bookingId, { byStaff: true, refundMinor: res.refund?.amountMinor, refundedToWallet: res.refund?.settled });
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
