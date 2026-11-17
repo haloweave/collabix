@@ -9,6 +9,7 @@
 
 import {
   boolean,
+  customType,
   index,
   uniqueIndex,
   integer,
@@ -223,6 +224,36 @@ export const walletEntry = pgTable(
     // A booking is paid from, and refunded to, a wallet at most once.
     uniqueIndex("wallet_entry_booking_kind_uq").on(t.bookingId, t.kind),
   ],
+);
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
+
+// Identity / KYC documents a member (or staff for them) uploaded: Aadhaar,
+// PAN, passport, GST certificate… Kept in the database, never in a public
+// bucket, and served only to the owner and staff (lib/domain/documents.ts).
+// status: pending → verified | rejected.
+export const memberDocument = pgTable(
+  "member_document",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    docType: text("doc_type").notNull(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    content: bytea("content").notNull(),
+    status: text("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    uploadedBy: text("uploaded_by").notNull(), // 'member' or a staff email
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("member_document_user_idx").on(t.userId, t.createdAt)],
 );
 
 // Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
