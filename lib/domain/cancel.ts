@@ -6,12 +6,14 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import * as schema from "../db/schema";
 import type { Db } from "./reservations";
+import { refundToWallet } from "./wallet";
 
 export type CancelResult =
   | {
       ok: true;
-      /** The payment now owing a refund, if the booking was paid. */
-      refund: { paymentId: string; provider: string; amountMinor: number } | null;
+      /** The payment now owing a refund, if the booking was paid. `settled`:
+       * already refunded (a wallet payment goes straight back to the wallet). */
+      refund: { paymentId: string; provider: string; amountMinor: number; settled: boolean } | null;
     }
   | { ok: false; error: "not_found" | "already_cancelled" };
 
@@ -59,10 +61,28 @@ export async function cancelBookingRecord(
         id: schema.payment.id,
         provider: schema.payment.provider,
         amountMinor: schema.payment.amountMinor,
+        memberId: schema.payment.memberId,
       });
+    if (!paid) return { ok: true, refund: null };
+
+    // Wallet money goes straight back to the wallet: nothing for staff to do.
+    let settled = false;
+    if (paid.provider === "wallet" && paid.memberId) {
+      await refundToWallet(tx, {
+        bookingId: input.bookingId,
+        userId: paid.memberId,
+        amountMinor: paid.amountMinor,
+        by: input.by,
+      });
+      await tx
+        .update(schema.payment)
+        .set({ refundStatus: "refunded", refundReference: "wallet", refundedAt: now })
+        .where(eq(schema.payment.id, paid.id));
+      settled = true;
+    }
     return {
       ok: true,
-      refund: paid ? { paymentId: paid.id, provider: paid.provider, amountMinor: paid.amountMinor } : null,
+      refund: { paymentId: paid.id, provider: paid.provider, amountMinor: paid.amountMinor, settled },
     };
   });
 }
