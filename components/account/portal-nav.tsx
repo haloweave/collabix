@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { title: "My bookings", href: "/account", exact: true },
   { title: "Invoices", href: "/account/invoices" },
+  { title: "Wallet", href: "/account/wallet" },
   { title: "Profile", href: "/account/profile" },
 ];
 
