@@ -5,6 +5,16 @@ import { OfferingIcon } from "@/components/site/offering-icon";
 import { offeringHref, offerings } from "@/lib/offerings";
 // Menu items the space cards above don't already cover.
 const BEYOND = ["day-pass", "virtual-office", "gst-accounting", "company-registration", "websites-apps"];
+// The full amenities list, grouped the way the Collabix team describes it.
+const CATEGORIES: { title: string; items: string[] }[] = [
+  { title: "Workspace Facilities", items: ["Dedicated desks and hot desks", "Ergonomic chairs and workstations", "Private cabins and shared seating", "Air-conditioned office space"] },
+  { title: "Meeting & Conference", items: ["Meeting rooms", "Conference rooms", "Display screens", "Video conferencing facilities"] },
+  { title: "Reception & Admin Services", items: ["Professional reception area", "Visitor management", "Mail and courier handling", "Business address facility"] },
+  { title: "Food & Refreshments", items: ["Pantry access", "Tea and coffee", "Drinking water", "Refrigerator and microwave"] },
+  { title: "IT & Connectivity", items: ["High-speed Wi-Fi", "Power backup", "Charging points", "Printing, scanning and photocopying"] },
+  { title: "Security & Maintenance", items: ["CCTV surveillance", "Access control systems", "Housekeeping and cleaning", "Security personnel", "Fire safety systems"] },
+];
+const EXTRAS = ["24/7 workspace access", "Lounge areas", "Phone booths & private calling rooms", "Training & seminar rooms", "Networking events", "Locker facilities"];
 export const metadata: Metadata = {title: "Collabix \u00b7 Amenities"};
 export default function Page() { return <>
 
@@ -117,6 +127,28 @@ export default function Page() { return <>
 
   
   <section className="pad-sm section-ivory">
+    <div className="wrap">
+      <div className="sec-head reveal">
+        <span className="eyebrow">The full list</span>
+        <h2 className="section-title"><span className="thin">Everything on site, </span>at a glance.</h2>
+      </div>
+      <div className="amen-cats reveal d1">
+        {CATEGORIES.map((c, i) => (
+          <div key={c.title} className="amen-cat">
+            <span className="num">{String(i + 1).padStart(2, "0")}</span>
+            <h3>{c.title}</h3>
+            <ul>{c.items.map((item) => <li key={item}>{item}</li>)}</ul>
+          </div>
+        ))}
+      </div>
+      <div className="amen-extras reveal d2">
+        <span className="lab">Also on site</span>
+        {EXTRAS.map((x) => <span key={x} className="chip">{x}</span>)}
+      </div>
+    </div>
+  </section>
+
+  <section className="pad-sm section-ivory-dark">
     <div className="wrap">
       <div className="sec-head reveal">
         <span className="eyebrow">Beyond the desk</span>
