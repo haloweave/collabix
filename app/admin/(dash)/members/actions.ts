@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import * as authSchema from "@/lib/db/auth-schema";
-import { requireManager, requireStaff } from "@/lib/admin/auth";
+import { isManager, requireManager, requireStaff } from "@/lib/admin/auth";
+import { addWalletEntry } from "@/lib/domain/wallet";
 import { logAudit } from "@/lib/admin/audit";
 import { toAccountPhone } from "@/lib/admin/member-lookup";
 
@@ -105,4 +106,43 @@ export async function updateMemberRole(id: string, role: string) {
   });
   revalidatePath(`/admin/members/${id}`);
   revalidatePath("/admin/members");
+}
+
+const WALLET_ERRORS: Record<string, string> = {
+  bad_amount: "Enter an amount above zero (up to ₹2,00,000).",
+  bad_method: "Pick how the customer paid.",
+  would_go_negative: "That would take the balance below zero.",
+};
+
+/**
+ * Add to (or correct) a member's wallet. Front-desk staff record top-ups they
+ * took payment for; free credit and corrections are for managers only.
+ */
+export async function addWalletFunds(input: {
+  memberId: string;
+  kind: "topup" | "credit" | "adjust";
+  amountRupees: number;
+  method?: string;
+  note?: string;
+}): Promise<{ ok: true; balanceMinor: number } | { ok: false; error: string }> {
+  const staff = await requireStaff();
+  if (input.kind !== "topup" && !isManager(staff.role))
+    return { ok: false, error: "Only a manager can give credit or correct a balance." };
+  const res = await addWalletEntry(db, {
+    userId: input.memberId,
+    kind: input.kind,
+    amountMinor: Math.round(input.amountRupees * 100),
+    method: input.method,
+    note: input.note,
+    by: staff.email,
+  });
+  if (!res.ok) return { ok: false, error: WALLET_ERRORS[res.error] ?? "Could not update the wallet." };
+  await logAudit({
+    action: `wallet.${input.kind}`,
+    targetType: "member",
+    targetId: input.memberId,
+    detail: { amountMinor: Math.round(input.amountRupees * 100), method: input.method ?? null, note: input.note?.trim() || null },
+  });
+  revalidatePath(`/admin/members/${input.memberId}`);
+  return res;
 }
