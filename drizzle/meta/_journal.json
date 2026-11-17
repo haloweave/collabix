@@ -120,6 +120,13 @@
       "when": 1794921894582,
       "tag": "0016_booking_cancel_refund",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794922242675,
+      "tag": "0017_booking_notifications",
+      "breakpoints": true
     }
   ]
 }

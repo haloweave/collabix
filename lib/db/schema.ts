@@ -122,6 +122,12 @@ export const booking = pgTable("booking", {
   // staff member's email.
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   cancelledBy: text("cancelled_by"),
+  // Scheduled-job stamps (lib/domain/notifications.ts), each set once so a
+  // re-run never emails twice.
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  renewalReminderSentAt: timestamp("renewal_reminder_sent_at", { withTimezone: true }),
+  // A single-day booking that ended with nobody checked in.
+  noShowAt: timestamp("no_show_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
