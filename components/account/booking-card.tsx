@@ -113,6 +113,11 @@ export function BookingCard({ b }: { b: MyBooking }) {
               {bookingTitle(b)}
             </h3>
             <StageChip stage={b.stage} />
+            {b.noShow && b.stage === "completed" && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                Missed
+              </span>
+            )}
           </div>
           <p className="mt-0.5 text-sm text-navy/70">{ticketWhen(b)}</p>
           <p className="text-xs text-navy/50">

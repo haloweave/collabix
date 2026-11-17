@@ -26,6 +26,8 @@ export type MyBooking = {
   paid: boolean;
   /** Refund progress after a paid booking was cancelled: due | pending | refunded | failed. */
   refundStatus: string | null;
+  /** Ended without a check-in (flagged by the daily job). */
+  noShow: boolean;
 };
 
 /**
@@ -38,7 +40,7 @@ export async function getMyBookings(
   now = new Date(),
 ): Promise<MyBooking[]> {
   const rows = await sql`
-    SELECT b.id, b.status, b.ticket_token, b.ticket_code, b.invoice_no,
+    SELECT b.id, b.status, b.no_show_at, b.ticket_token, b.ticket_code, b.invoice_no,
       min(r.start_at) AS start_at,
       max(r.end_at) AS end_at,
       count(r.id)::int AS seats,
@@ -92,6 +94,7 @@ export async function getMyBookings(
       invoiceNo: (r.invoice_no as string) ?? null,
       paid: Boolean(r.paid),
       refundStatus: (r.refund_status as string) ?? null,
+      noShow: r.no_show_at != null,
     });
   }
   return out;
