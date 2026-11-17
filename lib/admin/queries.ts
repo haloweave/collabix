@@ -631,6 +631,10 @@ export type ReportSummary = {
   totalRevenueMinor: number;
   totalBookings: number;
   totalSeats: number;
+  /** Short bookings in the range that ended with nobody checked in. */
+  noShows: number;
+  /** Money handed back in the range (by refund date). */
+  refundedMinor: number;
   byPlan: { plan: string; bookings: number; revenueMinor: number }[];
 };
 
@@ -640,7 +644,7 @@ export async function getReportSummary(
 ): Promise<ReportSummary> {
   const { from, toEnd } = istRangeIso(fromStr, toStr);
 
-  const [byPlanRows, seatsRows] = await Promise.all([
+  const [byPlanRows, seatsRows, noShowRows, refundRows] = await Promise.all([
     sql`SELECT plan, count(*)::int AS bookings, COALESCE(SUM(total), 0)::bigint AS revenue
         FROM (
           SELECT DISTINCT ON (r.booking_id) rp.name AS plan,
@@ -657,6 +661,13 @@ export async function getReportSummary(
         JOIN booking b ON b.id = r.booking_id
         WHERE r.status = 'confirmed' AND b.status = 'active'
           AND r.start_at >= ${from}::timestamptz AND r.start_at < ${toEnd}::timestamptz`,
+    sql`SELECT count(*)::int AS n FROM booking b
+        WHERE b.no_show_at IS NOT NULL AND b.status = 'active'
+          AND EXISTS (SELECT 1 FROM reservation r WHERE r.booking_id = b.id
+            AND r.start_at >= ${from}::timestamptz AND r.start_at < ${toEnd}::timestamptz)`,
+    sql`SELECT COALESCE(SUM(refund_amount_minor), 0)::bigint AS n FROM payment
+        WHERE refund_status = 'refunded'
+          AND refunded_at >= ${from}::timestamptz AND refunded_at < ${toEnd}::timestamptz`,
   ]);
 
   const byPlan = byPlanRows.map((r: Record<string, unknown>) => ({
@@ -671,6 +682,8 @@ export async function getReportSummary(
     totalRevenueMinor: byPlan.reduce((s, p) => s + p.revenueMinor, 0),
     totalBookings: byPlan.reduce((s, p) => s + p.bookings, 0),
     totalSeats: n(seatsRows[0]?.n),
+    noShows: n(noShowRows[0]?.n),
+    refundedMinor: n(refundRows[0]?.n),
     byPlan,
   };
 }

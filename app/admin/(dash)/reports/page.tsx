@@ -105,8 +105,8 @@ export default async function ReportsPage({
 
 function ReportSummarySkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-4">
-      {Array.from({ length: 3 }).map((_, i) => (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
+      {Array.from({ length: 5 }).map((_, i) => (
         <Card key={i}>
           <CardHeader className="pb-2">
             <Skeleton className="h-4 w-20" />
@@ -127,7 +127,7 @@ async function ReportSummary({
 }) {
   const report = await dataPromise;
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
       <Card>
         <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
@@ -156,6 +156,26 @@ async function ReportSummary({
         </CardHeader>
         <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
           {report.totalSeats}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
+            No-shows
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
+          {report.noShows}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="px-3 pb-1 pt-3 sm:p-6 sm:pb-2">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
+            Refunded
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3 text-base font-semibold tabular-nums sm:p-6 sm:pt-0 sm:text-2xl">
+          {rupees(report.refundedMinor)}
         </CardContent>
       </Card>
     </div>
