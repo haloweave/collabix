@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BOOKABLE, bookableProduct } from "@/lib/tariff";
 import { HALF_DAY_HOURS, MAX_DURATION, PASS_DAY } from "@/lib/domain/booking";
 import { createWalkIn } from "@/app/admin/(dash)/bookings/actions";
+import { MAX_OCCURRENCES, REPEAT_EVERY, seriesDates, type RepeatEvery } from "@/lib/recurrence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +42,8 @@ export function WalkInForm({ today }: { today: string }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [coupon, setCoupon] = useState("");
+  const [repeat, setRepeat] = useState<"none" | RepeatEvery>("none");
+  const [times, setTimes] = useState("4");
   const [pending, startTransition] = useTransition();
   const product = bookableProduct(productKey)!;
 
@@ -61,12 +64,13 @@ export function WalkInForm({ today }: { today: string }) {
         customerEmail: email,
         phone,
         couponCode: coupon,
+        repeat: repeat === "none" ? undefined : { every: repeat, count: Number(times) },
       });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success("Booking created.");
+      toast.success(repeat === "none" ? "Booking created." : `${times} bookings created.`);
       router.push(`/admin/bookings/${res.bookingId}`);
     });
   }
@@ -153,6 +157,43 @@ export function WalkInForm({ today }: { today: string }) {
             )}
           </div>
           )}
+
+          <div className="grid grid-cols-[1fr_auto] gap-3 sm:col-span-2 sm:grid-cols-[1fr_7rem_2fr] sm:items-end">
+            <label className="grid gap-1.5 text-sm">
+              <span className="text-muted-foreground">Repeat</span>
+              <Select value={repeat} onValueChange={(v) => setRepeat(v as typeof repeat)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Doesn&apos;t repeat</SelectItem>
+                  {REPEAT_EVERY.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            {repeat !== "none" && (
+              <label className="grid gap-1.5 text-sm">
+                <span className="text-muted-foreground">Times</span>
+                <Input
+                  type="number"
+                  min={2}
+                  max={MAX_OCCURRENCES}
+                  value={times}
+                  onChange={(e) => setTimes(e.target.value)}
+                />
+              </label>
+            )}
+            {repeat !== "none" && Number(times) >= 2 && Number(times) <= MAX_OCCURRENCES && (
+              <p className="col-span-2 text-xs text-muted-foreground sm:col-span-1 sm:pb-2.5">
+                Last date {seriesDates(date, repeat, Number(times)).at(-1)}. Each date is its own booking and
+                ticket; if any date is taken, nothing is booked.
+              </p>
+            )}
+          </div>
 
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Customer name</span>
