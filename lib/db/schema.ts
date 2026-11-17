@@ -130,10 +130,13 @@ export const booking = pgTable("booking", {
   renewalReminderSentAt: timestamp("renewal_reminder_sent_at", { withTimezone: true }),
   // A single-day booking that ended with nobody checked in.
   noShowAt: timestamp("no_show_at", { withTimezone: true }),
+  // Bookings made together as a repeating series (lib/domain/recurring.ts)
+  // share this id; each is still its own booking, ticket and invoice.
+  seriesId: uuid("series_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [index("booking_series_idx").on(t.seriesId)]);
 
 // One row per online payment attempt (see lib/domain/payments.ts). A booking
 // may carry several (a retry after a failed attempt is a new order). status:

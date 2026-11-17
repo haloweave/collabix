@@ -141,6 +141,13 @@
       "when": 1794922663206,
       "tag": "0019_member_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794922828692,
+      "tag": "0020_booking_series",
+      "breakpoints": true
     }
   ]
 }
