@@ -41,8 +41,8 @@ export function CancelMyBooking({
           <DialogDescription>{summary}</DialogDescription>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Your seat is released straight away and your ticket stops working. For
-          questions about a refund, call us on{" "}
+          Your seat is released straight away and your ticket stops working. If
+          you paid, we&apos;ll email you about your refund. Questions? Call us on{" "}
           <a href="tel:+919632771444" className="font-medium text-navy underline underline-offset-4">
             +91 96327 71444
           </a>

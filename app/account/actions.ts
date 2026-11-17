@@ -2,11 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, sql } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import * as authSchema from "@/lib/db/auth-schema";
 import { getMemberSession } from "@/lib/account/auth";
+import { cancelBookingRecord } from "@/lib/domain/cancel";
+import { sendCancellationEmail } from "@/lib/booking-emails";
 import { isValidGstin, normalizeGstin } from "@/lib/invoice/gstin";
 
 export async function updateOwnProfile(name: string) {
@@ -64,21 +66,9 @@ export async function cancelOwnBooking(
   if (new Date(b.start_at as string) <= new Date())
     return { ok: false, error: "This booking has already started." };
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(schema.reservation)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          eq(schema.reservation.bookingId, bookingId),
-          inArray(schema.reservation.status, ["held", "confirmed"]),
-        ),
-      );
-    await tx
-      .update(schema.booking)
-      .set({ status: "cancelled" })
-      .where(eq(schema.booking.id, bookingId));
-  });
+  const res = await cancelBookingRecord(db, { bookingId, by: "member" });
+  if (!res.ok) return { ok: false, error: "Booking not found." };
+  await sendCancellationEmail(bookingId, { byStaff: false, refundMinor: res.refund?.amountMinor });
 
   revalidatePath("/account");
   return { ok: true };
