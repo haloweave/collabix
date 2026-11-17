@@ -26,6 +26,10 @@ import {
 } from "@/components/ui/table";
 import { BookingStatusBadge } from "@/components/admin/booking-status-badge";
 import { WalletFundsButton } from "@/components/admin/wallet-funds-button";
+import { DocumentPanel } from "@/components/documents/document-panel";
+import { toDocumentItem } from "@/lib/document-item";
+import { kycStatusOf, listDocuments } from "@/lib/domain/documents";
+import { KYC_LABEL } from "@/lib/document-labels";
 import { db } from "@/lib/db/client";
 import { walletBalance, walletHistory } from "@/lib/domain/wallet";
 import { WALLET_KIND_LABEL } from "@/lib/wallet-labels";
@@ -105,6 +109,10 @@ export default async function MemberDetailPage({
 
       <Suspense fallback={<CardSkeleton lines={2} />}>
         <MemberMemberships memberId={member.id} />
+      </Suspense>
+
+      <Suspense fallback={<CardSkeleton lines={2} />}>
+        <MemberDocuments memberId={member.id} canDelete={canManageRoles} />
       </Suspense>
 
       <Suspense fallback={<CardSkeleton lines={2} />}>
@@ -268,6 +276,29 @@ async function MemberWallet({ memberId, canManage }: { memberId: string; canMana
             ))}
           </ul>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+async function MemberDocuments({ memberId, canDelete }: { memberId: string; canDelete: boolean }) {
+  const docs = await listDocuments(db, memberId);
+  const kyc = kycStatusOf(docs);
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle>ID &amp; KYC</CardTitle>
+        <Badge variant={kyc === "verified" ? "default" : kyc === "rejected" ? "destructive" : "outline"}>
+          {KYC_LABEL[kyc]}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <DocumentPanel
+          mode="staff"
+          memberId={memberId}
+          canDelete={canDelete}
+          docs={docs.map(toDocumentItem)}
+        />
       </CardContent>
     </Card>
   );
