@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/table";
 import { CancelBookingButton } from "@/components/admin/cancel-booking-button";
 import { DeskPaymentButton, UndoDeskPayment } from "@/components/admin/desk-payment-button";
+import { RefundControls } from "@/components/admin/refund-controls";
 import { paymentMethodLabel } from "@/lib/invoice/payment-method";
+import { owesRefund } from "@/lib/domain/refunds";
+import { isManager, requireAdminAccess } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +37,7 @@ const RES_VARIANT: Record<string, "default" | "secondary" | "outline" | "destruc
 };
 
 // How an online payment reads to staff. refund_due is loud on purpose: Cashfree
-// took the money but the seat was lost, so someone has to refund it by hand.
+// took the money but the seat was lost, so it has to be refunded.
 const PAY_LABEL: Record<string, { text: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   paid: { text: "Paid online", variant: "default" },
   created: { text: "Payment started", variant: "secondary" },
@@ -43,13 +46,21 @@ const PAY_LABEL: Record<string, { text: string; variant: "default" | "secondary"
   refund_due: { text: "Refund due", variant: "destructive" },
 };
 
+// The refund side of a paid payment once its booking is cancelled.
+const REFUND_LABEL: Record<string, { text: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  due: { text: "Refund due", variant: "destructive" },
+  failed: { text: "Refund failed", variant: "destructive" },
+  pending: { text: "Refund processing", variant: "secondary" },
+  refunded: { text: "Refunded", variant: "outline" },
+};
+
 export default async function BookingDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const booking = await getBooking(id);
+  const [staff, booking] = await Promise.all([requireAdminAccess(), getBooking(id)]);
   if (!booking) notFound();
 
   // Every reservation carries the same booking-wide quote; use the first.
@@ -62,6 +73,17 @@ export default async function BookingDetailPage({
     booking.payment?.status !== "paid" &&
     booking.reservations.some((r) => r.status === "confirmed") &&
     Boolean(quote?.totalMinor);
+  const pay = booking.payment;
+  const refundLabel = pay?.refundStatus
+    ? REFUND_LABEL[pay.refundStatus]
+    : pay?.status === "refund_due"
+      ? REFUND_LABEL.due
+      : null;
+  // A lost-seat payment (status refund_due) shows its refund progress in place.
+  const payLabel =
+    pay?.status === "refund_due" && pay.refundStatus ? REFUND_LABEL[pay.refundStatus] : pay ? PAY_LABEL[pay.status] : undefined;
+  const canRefund = Boolean(pay && owesRefund(pay) && isManager(staff.role));
+  const refundAmount = pay ? rupees(pay.refundAmountMinor ?? pay.amountMinor) : "";
 
   return (
     <div className="space-y-6">
@@ -154,8 +176,8 @@ export default async function BookingDetailPage({
           <CardContent className="space-y-1 text-sm">
             {booking.payment ? (
               <>
-                <Badge variant={PAY_LABEL[booking.payment.status]?.variant ?? "outline"}>
-                  {paidAtDesk ? "Paid at desk" : (PAY_LABEL[booking.payment.status]?.text ?? booking.payment.status)}
+                <Badge variant={payLabel?.variant ?? "outline"}>
+                  {paidAtDesk ? "Paid at desk" : (payLabel?.text ?? booking.payment.status)}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
                   {rupees(booking.payment.amountMinor)}
@@ -167,7 +189,28 @@ export default async function BookingDetailPage({
                     ? booking.payment.reference
                     : (booking.payment.cfPaymentId ?? booking.payment.orderId)}
                 </p>
-                {paidAtDesk && <UndoDeskPayment bookingId={booking.id} />}
+                {paidAtDesk && !pay?.refundStatus && <UndoDeskPayment bookingId={booking.id} />}
+                {refundLabel && pay?.status !== "refund_due" && (
+                  <div className="space-y-1 border-t pt-2">
+                    <Badge variant={refundLabel.variant}>{refundLabel.text}</Badge>
+                    <p className="text-xs text-muted-foreground">
+                      {refundAmount}
+                      {pay?.refundedAt ? ` · ${istDateTime(pay.refundedAt)}` : ""}
+                      {pay?.refundReference ? ` · ${pay.refundReference}` : ""}
+                    </p>
+                  </div>
+                )}
+                {pay && canRefund && (
+                  <RefundControls
+                    bookingId={booking.id}
+                    paymentId={pay.id}
+                    online={pay.provider === "cashfree"}
+                    amount={refundAmount}
+                  />
+                )}
+                {pay && owesRefund(pay) && !isManager(staff.role) && (
+                  <p className="text-xs text-muted-foreground">A manager can refund this.</p>
+                )}
               </>
             ) : (
               <Badge variant="outline">Pay at desk</Badge>

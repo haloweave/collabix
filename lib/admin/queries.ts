@@ -250,6 +250,12 @@ export type BookingDetail = {
 };
 
 export type BookingPayment = {
+  id: string;
+  /** null | due | pending | refunded | failed (lib/domain/refunds.ts). */
+  refundStatus: string | null;
+  refundAmountMinor: number | null;
+  refundReference: string | null;
+  refundedAt: Date | null;
   status: "created" | "paid" | "failed" | "expired" | "refund_due";
   /** 'cashfree' online, or 'desk' when staff recorded it (lib/domain/desk-payment.ts). */
   provider: string;
@@ -275,8 +281,9 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     WHERE r.booking_id = ${id}
     ORDER BY res.code`;
   const [pay] = await sql`
-    SELECT status, provider, raw->>'reference' AS reference, order_id, cf_payment_id,
-           payment_method, amount_minor, paid_at, created_at
+    SELECT id, status, provider, raw->>'reference' AS reference, order_id, cf_payment_id,
+           payment_method, amount_minor, paid_at, created_at,
+           refund_status, refund_amount_minor, refund_reference, refunded_at
     FROM payment WHERE booking_id = ${id}
     ORDER BY (status = 'paid') DESC, created_at DESC LIMIT 1`;
   return {
@@ -291,6 +298,11 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     invoiceNo: (b.invoice_no as string) ?? null,
     payment: pay
       ? {
+          id: pay.id as string,
+          refundStatus: (pay.refund_status as string) ?? null,
+          refundAmountMinor: pay.refund_amount_minor == null ? null : Number(pay.refund_amount_minor),
+          refundReference: (pay.refund_reference as string) ?? null,
+          refundedAt: pay.refunded_at ? new Date(pay.refunded_at as string) : null,
           status: pay.status as BookingPayment["status"],
           provider: pay.provider as string,
           reference: (pay.reference as string) ?? null,
