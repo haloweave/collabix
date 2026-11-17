@@ -14,30 +14,29 @@ Reviewed 2026-09-16. Sources: `../demo-site/pricing.html` (the actual developmen
 
 ## All proposed capabilities
 
-| Proposal requirement | Current state | Production implementation |
+| Proposal requirement | Current state | Where |
 | --- | --- | --- |
-| Branded home and amenities | Implemented | Verify final copy, photography, capacity and hours |
-| Responsive desktop/mobile booking | Implemented preview | Connect to server availability and authenticated booking |
-| Floorplan seat selection | Implemented preview | Resource IDs and server availability, same IDs across rate plans |
-| Live availability, hold, confirm, double-booking prevention | Not implemented | Transactional resource reservations and expiring holds |
-| Hourly/daily bookings | Preview | Server rate plans, opening hours, holidays, minimum/maximum duration |
-| Recurring bookings | Not implemented | Booking series expanded into validated occurrences; atomic conflict policy |
-| Admin dashboard and occupancy calendar | Not implemented | Authenticated staff views of reservations and operational exceptions |
-| Visitor check-in/out and visitor log | Not implemented | Visitor + Visit records, host, timestamps, staff actions |
-| Member records, profiles, ID/KYC and history | Not implemented | Member profile, private document storage, access audit and retention policy |
-| Member login, verification and access control | Not implemented | Managed auth, verified identity and server-side membership checks |
-| Membership plans, credits and wallet | Not implemented | Plan entitlements, subscriptions and append-only credit ledger |
-| Pricing, discounts and coupons | Indicative hourly rates only | Server quotes, versioned price snapshots, coupon limits/redemption transactions |
-| UPI/cards/net-banking payment gateway | Not implemented | Gateway adapter, checkout order, signed webhook and reconciliation |
-| Payment verification | Not implemented | Match provider order, currency and amount; never trust browser success |
-| Zoho Books GST invoices | Not implemented | Invoice adapter, tax profile and idempotent invoice creation after verified payment |
-| Email and WhatsApp automation | Not implemented | Durable outbox, templates, consent and delivery status |
-| Cancellation and no-show reminders | Not implemented | Policy snapshots, scheduled jobs, refunds and auditable status transitions |
-| Revenue, occupancy and activity reporting | Not implemented | Paid/refunded ledger totals; occupancy measured against actual opening intervals |
-| Staff roles and permissions | Not implemented | Member, receptionist, manager and owner capabilities enforced on the server |
-| Secure backend, database, auth and deployment | Next.js frontend only | Managed Postgres, migrations, secret management, backup/restore and monitoring |
-| SEO metadata, sitemap and search readiness | Preview metadata only | Production domain confirmation, canonical URLs and sitemap at launch |
-| Hosting/SSL/CDN, mailboxes | Existing app; configuration not audited | Confirm Vercel deployment, DNS and chosen email provider |
+| Branded home and amenities | Implemented | `app/(site)` |
+| Responsive desktop/mobile booking | Implemented | `app/(site)/book` |
+| Floorplan seat selection | Implemented | `app/(site)/book/floor-map.tsx`, `lib/floorplan.ts` |
+| Live availability, hold, confirm, double-booking prevention | Implemented | `lib/domain/reservations.ts`, exclusion constraint in `drizzle/0001` |
+| Hourly/daily bookings, monthly/annual passes | Implemented | `lib/domain/booking.ts`, `lib/domain/term.ts` |
+| Recurring bookings | Implemented (staff walk-ins: daily, weekdays, weekly; all-or-nothing) | `lib/domain/recurring.ts` |
+| Admin dashboard and occupancy calendar | Implemented | `app/admin/(dash)` |
+| Visitor check-in/out and visitor log | Implemented | `app/admin/(dash)/reception`, QR scan |
+| Member records, profiles, ID/KYC and history | Implemented (documents stored privately in Postgres, staff review, audited views) | `lib/domain/documents.ts` |
+| Member login, verification and access control | Implemented (email/phone OTP, password for staff) | `lib/auth.ts` |
+| Membership plans, credits and wallet | Implemented (passes + append-only wallet ledger: top-up, credit, spend, refund) | `lib/domain/wallet.ts` |
+| Pricing, discounts and coupons | Implemented | `lib/tariff.ts`, `lib/domain/coupon.ts` |
+| UPI/cards/net-banking payment gateway + verification | Implemented (Cashfree, webhook, server-side settlement) | `lib/domain/payments.ts` |
+| GST invoices | Implemented in-house (CBX/FY numbering, PDF); Zoho Books not connected by choice | `lib/invoice` |
+| Email automation | Implemented (tickets, cancellations, refunds, reminders, no-shows, renewals) — needs SMTP env vars to send | `lib/booking-emails.ts` |
+| WhatsApp automation | Not implemented by choice | — |
+| Cancellations, refunds, reminders and no-shows | Implemented (daily Vercel Cron) | `lib/domain/cancel.ts`, `lib/domain/refunds.ts`, `lib/jobs/daily.ts` |
+| Revenue, occupancy and activity reporting | Implemented (incl. no-shows and refunds) | `app/admin/(dash)/reports`, audit log |
+| Staff roles and permissions | Implemented (member, reception, staff, manager, owner) | `lib/admin/auth.ts` |
+| Secure backend, database, auth and deployment | Implemented (Supabase Postgres, Vercel) | |
+| SEO metadata, sitemap and search readiness | Implemented | `app/sitemap.ts`, `app/robots.ts` |
 
 ## Open-source shortlist
 
