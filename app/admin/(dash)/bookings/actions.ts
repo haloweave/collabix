@@ -8,7 +8,9 @@ import { holdBody } from "@/lib/api/validation";
 import {
   confirmBooking,
   holdReservation,
+  type HoldInput,
 } from "@/lib/domain/reservations";
+import { holdSeries, releaseHolds, upcomingInSeries, type RepeatEvery } from "@/lib/domain/recurring";
 import { cancelBookingRecord } from "@/lib/domain/cancel";
 import { recordManualRefund, refundOnline } from "@/lib/domain/refunds";
 import { getCashfreeGateway } from "@/lib/payments/cashfree";
@@ -114,6 +116,8 @@ export async function createWalkIn(input: {
   customerEmail: string;
   phone: string;
   couponCode?: string;
+  /** Repeat the same booking on later dates (each its own booking). */
+  repeat?: { every: RepeatEvery; count: number };
 }): Promise<WalkInResult> {
   await requireStaff();
 
@@ -123,6 +127,14 @@ export async function createWalkIn(input: {
   if (!phone) return { ok: false, error: "Enter the customer's 10-digit mobile number." };
   const email = parsed.data.customerEmail.toLowerCase();
   const memberId = await findMemberByContact(email, phone);
+
+  if (input.repeat) {
+    return createSeries(
+      { ...parsed.data, customerEmail: email, holdMinutes: 5 },
+      input.repeat,
+      memberId ?? undefined,
+    );
+  }
 
   const held = await holdReservation(db, {
     ...parsed.data,
@@ -152,6 +164,72 @@ export async function createWalkIn(input: {
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   return { ok: true, bookingId: held.bookingId };
+}
+
+const fmtDate = (d: string) =>
+  new Date(`${d}T00:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+
+/** Hold every date of a walk-in series, then confirm them all. */
+async function createSeries(
+  hold: HoldInput,
+  repeat: { every: RepeatEvery; count: number },
+  memberId: string | undefined,
+): Promise<WalkInResult> {
+  const held = await holdSeries(db, { ...hold, ...repeat });
+  if (!held.ok) {
+    if (held.error === "bad_count") return { ok: false, error: "Repeat between 2 and 12 times." };
+    const why = WALK_IN_ERRORS[held.error] ?? held.error;
+    return { ok: false, error: held.date ? `${fmtDate(held.date)}: ${why} Nothing was booked.` : why };
+  }
+
+  const confirmed: string[] = [];
+  for (const bookingId of held.bookingIds) {
+    const c = await confirmBooking(db, { bookingId, memberId });
+    if (!c.ok) {
+      // Holds are minutes old, so this is near-impossible; undo the series cleanly.
+      for (const id of confirmed) await cancelBookingRecord(db, { bookingId: id, by: "system" });
+      await releaseHolds(db, held.bookingIds.filter((id) => !confirmed.includes(id)));
+      return { ok: false, error: "Could not confirm every date. Nothing was booked." };
+    }
+    confirmed.push(bookingId);
+  }
+
+  await logAudit({
+    action: "booking.create_series",
+    targetType: "booking",
+    targetId: held.bookingIds[0],
+    detail: {
+      seriesId: held.seriesId,
+      productKey: hold.productKey,
+      every: repeat.every,
+      dates: held.dates,
+      totalMinor: held.totalMinor,
+    },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/admin/bookings");
+  return { ok: true, bookingId: held.bookingIds[0] };
+}
+
+/** Cancel every date of a series that hasn't started yet. */
+export async function cancelSeriesRemaining(seriesId: string): Promise<{ ok: true; cancelled: number }> {
+  const staff = await requireStaff();
+  const ids = await upcomingInSeries(db, seriesId);
+  let cancelled = 0;
+  for (const bookingId of ids) {
+    const res = await cancelBookingRecord(db, { bookingId, by: staff.email });
+    if (!res.ok) continue;
+    cancelled++;
+    await sendCancellationEmail(bookingId, {
+      byStaff: true,
+      refundMinor: res.refund?.amountMinor,
+      refundedToWallet: res.refund?.settled,
+    });
+  }
+  await logAudit({ action: "booking.cancel_series", targetType: "series", targetId: seriesId, detail: { cancelled } });
+  revalidatePath("/admin/bookings");
+  for (const id of ids) revalidatePath(`/admin/bookings/${id}`);
+  return { ok: true, cancelled };
 }
 
 const DESK_PAYMENT_ERRORS: Record<string, string> = {
