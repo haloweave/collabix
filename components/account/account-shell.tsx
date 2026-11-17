@@ -10,6 +10,7 @@ import { authClient } from "@/lib/auth-client";
 const LINKS: [string, string][] = [
   ["/account", "My bookings"],
   ["/account/invoices", "Invoices"],
+  ["/account/wallet", "Wallet"],
   ["/account/profile", "Profile"],
 ];
 
