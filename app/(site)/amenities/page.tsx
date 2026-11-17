@@ -72,7 +72,7 @@ export default function Page() { return <>
         </article>
 
         <article className="amen-card reveal d2">
-          <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/booth.jpg" alt="Focus and phone booths" /></div>
+          <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/phone-booths.jpg" alt="Focus and phone booths" /></div>
           <div className="txt"><span className="num">06</span><h3>Focus &amp; Phone Booths</h3>
             <p>Sound-isolated booths for one-on-ones and private calls — step in, close the door, concentrate.</p></div>
         </article>
