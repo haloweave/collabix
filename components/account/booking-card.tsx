@@ -27,7 +27,17 @@ export const bookingTitle = (b: MyBooking) => b.plan ?? "Booking";
 /** The seat wording, unless it only repeats the title (rooms), plus a separator. */
 const seatsLine = (b: MyBooking) => (ticketSeats(b) === bookingTitle(b) ? "" : `${ticketSeats(b)} · `);
 
+const REFUND_WORDS: Record<string, string> = {
+  due: "Refund pending",
+  failed: "Refund pending",
+  pending: "Refund on its way",
+  refunded: "Refunded",
+};
+
 export function bookingAmount(b: MyBooking): string {
+  if (b.stage === "cancelled") {
+    return `${rupees(b.totalMinor)} · ${b.refundStatus ? REFUND_WORDS[b.refundStatus] : b.paid ? "Paid" : "Not charged"}`;
+  }
   return `${rupees(b.totalMinor)} · ${b.paid ? "Paid" : "Pay at desk"}`;
 }
 

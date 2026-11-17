@@ -24,6 +24,8 @@ export type MyBooking = {
   invoiceNo: string | null;
   /** Settled online through Cashfree. */
   paid: boolean;
+  /** Refund progress after a paid booking was cancelled: due | pending | refunded | failed. */
+  refundStatus: string | null;
 };
 
 /**
@@ -46,7 +48,9 @@ export async function getMyBookings(
       (array_agg(r.quote_snapshot->>'totalMinor'))[1]::bigint AS total_minor,
       bool_or(r.status = 'confirmed') AS confirmed,
       bool_or(r.status = 'held' AND r.hold_expires_at > now()) AS pending,
-      EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid
+      EXISTS (SELECT 1 FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid') AS paid,
+      (SELECT p.refund_status FROM payment p WHERE p.booking_id = b.id AND p.status = 'paid'
+        ORDER BY p.paid_at DESC LIMIT 1) AS refund_status
     FROM booking b
     JOIN reservation r ON r.booking_id = b.id
     JOIN resource res ON res.id = r.resource_id
@@ -87,6 +91,7 @@ export async function getMyBookings(
       ticketCode: (r.ticket_code as string) ?? null,
       invoiceNo: (r.invoice_no as string) ?? null,
       paid: Boolean(r.paid),
+      refundStatus: (r.refund_status as string) ?? null,
     });
   }
   return out;
