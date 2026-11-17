@@ -1,51 +1,89 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import * as schema from "@/lib/db/schema";
-import { requireStaff } from "@/lib/admin/auth";
+import { requireManager, requireStaff } from "@/lib/admin/auth";
 import { logAudit } from "@/lib/admin/audit";
 import { holdBody } from "@/lib/api/validation";
 import {
   confirmBooking,
   holdReservation,
 } from "@/lib/domain/reservations";
+import { cancelBookingRecord } from "@/lib/domain/cancel";
+import { recordManualRefund, refundOnline } from "@/lib/domain/refunds";
+import { getCashfreeGateway } from "@/lib/payments/cashfree";
+import { sendCancellationEmail, sendRefundEmail } from "@/lib/booking-emails";
 import { recordDeskPayment, removeDeskPayment } from "@/lib/domain/desk-payment";
 import { findMemberByContact, toAccountPhone } from "@/lib/admin/member-lookup";
 
-// Cancel a whole booking: mark it cancelled and release every held/confirmed
-// reservation under it (status='cancelled' drops out of the no-overlap
-// exclusion constraint, freeing the seat for others). Expired/already-cancelled
-// reservations are left untouched.
+// Cancel a whole booking: release its seats, flag any payment for refund and
+// tell the customer. The refund itself is a separate step (refundBooking).
 export async function cancelBooking(bookingId: string) {
-  await requireStaff();
+  const staff = await requireStaff();
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(schema.reservation)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          eq(schema.reservation.bookingId, bookingId),
-          inArray(schema.reservation.status, ["held", "confirmed"]),
-        ),
-      );
-    await tx
-      .update(schema.booking)
-      .set({ status: "cancelled" })
-      .where(eq(schema.booking.id, bookingId));
-  });
+  const res = await cancelBookingRecord(db, { bookingId, by: staff.email });
+  if (!res.ok) return;
 
   await logAudit({
     action: "booking.cancel",
     targetType: "booking",
     targetId: bookingId,
+    detail: res.refund ? { refundDueMinor: res.refund.amountMinor } : undefined,
   });
+  await sendCancellationEmail(bookingId, { byStaff: true, refundMinor: res.refund?.amountMinor });
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   revalidatePath(`/admin/bookings/${bookingId}`);
+}
+
+const REFUND_ERRORS: Record<string, string> = {
+  not_found: "That payment no longer exists.",
+  nothing_owed: "Nothing is owed on this payment.",
+  not_online: "This was paid at the desk. Hand the money back and record it instead.",
+  gateway_error: "Cashfree didn't accept the refund. Try again in a minute.",
+  gateway_failed: "Cashfree declined the refund. Check the Cashfree dashboard.",
+  no_gateway: "Online payments aren't configured on this server.",
+};
+
+export type RefundActionResult = { ok: true; status: "refunded" | "pending" } | { ok: false; error: string };
+
+/** Refund an online payment through Cashfree (managers and owners only). */
+export async function refundOnlinePayment(bookingId: string, paymentId: string): Promise<RefundActionResult> {
+  const staff = await requireManager();
+  const gw = getCashfreeGateway();
+  if (!gw) return { ok: false, error: REFUND_ERRORS.no_gateway };
+  const res = await refundOnline(db, gw, { paymentId, by: staff.email });
+  if (!res.ok) return { ok: false, error: REFUND_ERRORS[res.error] ?? "Could not refund." };
+  await logAudit({
+    action: "payment.refund_online",
+    targetType: "booking",
+    targetId: bookingId,
+    detail: { paymentId, amountMinor: res.amountMinor, status: res.status },
+  });
+  await sendRefundEmail(bookingId, { amountMinor: res.amountMinor, online: true, settled: res.status === "refunded" });
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  return { ok: true, status: res.status };
+}
+
+/** Record money handed back outside Cashfree (managers and owners only). */
+export async function recordRefund(
+  bookingId: string,
+  paymentId: string,
+  reference: string,
+): Promise<RefundActionResult> {
+  await requireManager();
+  const res = await recordManualRefund(db, { paymentId, reference });
+  if (!res.ok) return { ok: false, error: REFUND_ERRORS[res.error] ?? "Could not record the refund." };
+  await logAudit({
+    action: "payment.refund_manual",
+    targetType: "booking",
+    targetId: bookingId,
+    detail: { paymentId, amountMinor: res.amountMinor, reference: reference.trim() || null },
+  });
+  await sendRefundEmail(bookingId, { amountMinor: res.amountMinor, online: false, settled: true });
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  return { ok: true, status: "refunded" };
 }
 
 const WALK_IN_ERRORS: Record<string, string> = {
