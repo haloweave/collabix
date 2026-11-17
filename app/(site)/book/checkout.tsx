@@ -88,6 +88,20 @@ export function useCheckout() {
   const [couponBusy, setCouponBusy] = useState(false);
   const { data: session } = authClient.useSession();
   const account = accountFrom(session?.user);
+  // Prepaid wallet balance, fetched on the Pay step once the guest is signed in.
+  const [walletMinor, setWalletMinor] = useState<number | null>(null);
+  const signedIn = Boolean(session?.user);
+  useEffect(() => {
+    if (step !== 3 || !signedIn) return;
+    let live = true;
+    fetch("/api/wallet")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => live && setWalletMinor(typeof d?.balanceMinor === "number" ? d.balanceMinor : null))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [step, signedIn]);
 
   const phoneE164 =
     phone.replace(/\D/g, "").length === 10
@@ -270,6 +284,40 @@ export function useCheckout() {
     }
   }
 
+  /** Pay from the prepaid wallet: charged and confirmed in one server step. */
+  async function payWithWallet() {
+    if (!bookingId) return;
+    setBusy(true);
+    setError(null);
+    setPayPhase("confirming");
+    try {
+      const r = await fetch("/api/bookings/pay-wallet", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        setWalletMinor(data.balanceMinor ?? null);
+        setTicketToken(data.ticketToken ?? null);
+        setStep(4); // Done
+        return;
+      }
+      setError(
+        data.error === "insufficient_funds"
+          ? "Your wallet doesn't have enough for this booking. Pay online instead."
+          : data.error === "hold_expired"
+            ? "Your hold expired. Please start again."
+            : "We couldn't pay from your wallet. Nothing was charged. Please try again.",
+      );
+    } catch {
+      setError("We couldn't pay from your wallet. Nothing was charged. Please try again.");
+    } finally {
+      setPayPhase("idle");
+      setBusy(false);
+    }
+  }
+
   async function settle(attempt = 0, dismissed = false): Promise<void> {
     const c = await fetch("/api/bookings/confirm", {
       method: "POST",
@@ -365,6 +413,8 @@ export function useCheckout() {
     sendOtp,
     verifyOtp,
     startPayment,
+    walletMinor,
+    payWithWallet,
     reset,
   };
 }
@@ -684,6 +734,24 @@ export function CheckoutSteps({
                     : "Pay →"}
             </button>
           </div>
+          {co.walletMinor != null && co.walletMinor > 0 && quote && (
+            co.walletMinor >= quote.totalMinor ? (
+              <div className="step-actions">
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={co.payWithWallet}
+                  disabled={busy || remaining === 0}
+                >
+                  Pay from wallet · {rupees(co.walletMinor)} available
+                </button>
+              </div>
+            ) : (
+              <p className="avail-hint">
+                Your wallet has {rupees(co.walletMinor)}, not enough for this booking.
+              </p>
+            )
+          )}
           <p className="avail-hint">
             Secure payment by Cashfree · UPI, cards, net banking. Your
             e-ticket arrives by email.
