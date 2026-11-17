@@ -10,6 +10,7 @@
 import {
   boolean,
   index,
+  uniqueIndex,
   integer,
   jsonb,
   pgEnum,
@@ -195,6 +196,34 @@ export const billingProfile = pgTable("billing_profile", {
     .notNull()
     .defaultNow(),
 });
+
+// Prepaid wallet: an append-only ledger per customer account; the balance is
+// the sum of amount_minor (see lib/domain/wallet.ts). kind: topup (money
+// taken at the desk) | credit (complimentary, e.g. a plan perk) | adjust
+// (manager correction, either sign) | spend (paid a booking, negative) |
+// refund (a cancelled wallet-paid booking, positive).
+export const walletEntry = pgTable(
+  "wallet_entry",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull(),
+    amountMinor: integer("amount_minor").notNull(),
+    kind: text("kind").notNull(),
+    bookingId: uuid("booking_id").references(() => booking.id),
+    // How a top-up was paid (cash/upi/card/bank_transfer) or a free-text reason.
+    method: text("method"),
+    note: text("note"),
+    createdBy: text("created_by"), // actor email, or 'member'
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("wallet_entry_user_idx").on(t.userId, t.createdAt),
+    // A booking is paid from, and refunded to, a wallet at most once.
+    uniqueIndex("wallet_entry_booking_kind_uq").on(t.bookingId, t.kind),
+  ],
+);
 
 // Front-desk visitor / guest sign-in log. Standalone (a visitor need not be a
 // member); staff record who they are and who they're here to see.
