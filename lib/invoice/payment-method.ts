@@ -10,7 +10,7 @@ const METHOD: Record<string, string> = {
   netbanking: "Net banking",
   net_banking: "Net banking",
   app: "Wallet",
-  wallet: "Wallet",
+  wallet: "Collabix wallet",
 };
 
 export const paymentMethodLabel = (m: string | null | undefined) =>
