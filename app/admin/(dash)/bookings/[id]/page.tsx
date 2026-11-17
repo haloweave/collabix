@@ -141,7 +141,17 @@ export default async function BookingDetailPage({
           </CardHeader>
           <CardContent>
             {booking.status === "cancelled" ? (
-              <Badge variant="destructive">Cancelled</Badge>
+              <div className="space-y-1">
+                <Badge variant="destructive">Cancelled</Badge>
+                {booking.cancelledAt && (
+                  <p className="text-xs text-muted-foreground">
+                    {istDateTime(booking.cancelledAt)}
+                    {booking.cancelledBy && ` · by ${booking.cancelledBy === "member" ? "the customer" : booking.cancelledBy}`}
+                  </p>
+                )}
+              </div>
+            ) : booking.noShowAt ? (
+              <Badge variant="outline">No-show</Badge>
             ) : (
               <Badge>Active</Badge>
             )}

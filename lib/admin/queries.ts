@@ -235,6 +235,11 @@ export type BookingDetail = {
   ticketCode: string | null;
   /** Tax invoice number, once confirmed (see lib/domain/invoice-number.ts). */
   invoiceNo: string | null;
+  /** Set by the daily job when a short booking ended with nobody checked in. */
+  noShowAt: Date | null;
+  cancelledAt: Date | null;
+  /** 'member', 'system' or the staff member's email. */
+  cancelledBy: string | null;
   /** Latest online payment attempt, if the guest paid (or tried to) online. */
   payment: BookingPayment | null;
   reservations: {
@@ -296,6 +301,9 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     ticketToken: (b.ticket_token as string) ?? null,
     ticketCode: (b.ticket_code as string) ?? null,
     invoiceNo: (b.invoice_no as string) ?? null,
+    noShowAt: b.no_show_at ? new Date(b.no_show_at as string) : null,
+    cancelledAt: b.cancelled_at ? new Date(b.cancelled_at as string) : null,
+    cancelledBy: (b.cancelled_by as string) ?? null,
     payment: pay
       ? {
           id: pay.id as string,
