@@ -240,6 +240,8 @@ export type BookingDetail = {
   cancelledAt: Date | null;
   /** 'member', 'system' or the staff member's email. */
   cancelledBy: string | null;
+  /** The other dates of a repeating series this booking belongs to. */
+  series: { id: string; dates: { bookingId: string; startAt: Date; status: "active" | "cancelled"; upcoming: boolean }[] } | null;
   /** Latest online payment attempt, if the guest paid (or tried to) online. */
   payment: BookingPayment | null;
   reservations: {
@@ -304,6 +306,23 @@ export async function getBooking(id: string): Promise<BookingDetail | null> {
     noShowAt: b.no_show_at ? new Date(b.no_show_at as string) : null,
     cancelledAt: b.cancelled_at ? new Date(b.cancelled_at as string) : null,
     cancelledBy: (b.cancelled_by as string) ?? null,
+    series: b.series_id
+      ? {
+          id: b.series_id as string,
+          dates: (
+            await sql`
+              SELECT b.id, b.status, min(r.start_at) AS start_at, min(r.start_at) > now() AS upcoming
+              FROM booking b JOIN reservation r ON r.booking_id = b.id
+              WHERE b.series_id = ${b.series_id as string}
+              GROUP BY b.id ORDER BY min(r.start_at)`
+          ).map((r: Record<string, unknown>) => ({
+            bookingId: r.id as string,
+            startAt: new Date(r.start_at as string),
+            status: r.status as "active" | "cancelled",
+            upcoming: Boolean(r.upcoming),
+          })),
+        }
+      : null,
     payment: pay
       ? {
           id: pay.id as string,

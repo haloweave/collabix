@@ -24,6 +24,7 @@ import { CancelBookingButton } from "@/components/admin/cancel-booking-button";
 import { DeskPaymentButton, UndoDeskPayment } from "@/components/admin/desk-payment-button";
 import { RefundControls } from "@/components/admin/refund-controls";
 import { ChargeWalletButton } from "@/components/admin/charge-wallet-button";
+import { CancelSeriesButton } from "@/components/admin/cancel-series-button";
 import { db } from "@/lib/db/client";
 import { walletBalance } from "@/lib/domain/wallet";
 import { paymentMethodLabel } from "@/lib/invoice/payment-method";
@@ -240,6 +241,40 @@ export default async function BookingDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {booking.series && (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle>Repeating series</CardTitle>
+              <CardDescription>
+                Date {booking.series.dates.findIndex((d) => d.bookingId === booking.id) + 1} of{" "}
+                {booking.series.dates.length}. Each date is its own booking.
+              </CardDescription>
+            </div>
+            <CancelSeriesButton
+              seriesId={booking.series.id}
+              remaining={
+                booking.series.dates.filter((d) => d.status === "active" && d.upcoming).length
+              }
+            />
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {booking.series.dates.map((d) => (
+              <Link
+                key={d.bookingId}
+                href={`/admin/bookings/${d.bookingId}`}
+                aria-current={d.bookingId === booking.id ? "page" : undefined}
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+                  d.bookingId === booking.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"
+                } ${d.status === "cancelled" ? "line-through opacity-60" : ""}`}
+              >
+                {istDate(d.startAt)}
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
