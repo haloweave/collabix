@@ -22,6 +22,7 @@ Reviewed 2026-09-16. Sources: `../demo-site/pricing.html` (the actual developmen
 | Live availability, hold, confirm, double-booking prevention | Implemented | `lib/domain/reservations.ts`, exclusion constraint in `drizzle/0001` |
 | Hourly/daily bookings, monthly/annual passes | Implemented | `lib/domain/booking.ts`, `lib/domain/term.ts` |
 | Recurring bookings | Implemented (staff walk-ins: daily, weekdays, weekly; all-or-nothing) | `lib/domain/recurring.ts` |
+| Staff blocking specific desks | Implemented (walk-in desk picker; exact desks or refused, across a series) | `components/admin/desk-picker.tsx`, `exactSeats` in `lib/domain/reservations.ts` |
 | Admin dashboard and occupancy calendar | Implemented | `app/admin/(dash)` |
 | Visitor check-in/out and visitor log | Implemented | `app/admin/(dash)/reception`, QR scan |
 | Member records, profiles, ID/KYC and history | Implemented (documents stored privately in Postgres, staff review, audited views) | `lib/domain/documents.ts` |
