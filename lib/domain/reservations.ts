@@ -34,6 +34,9 @@ export type HoldInput = {
   people?: number;
   /** Passes only: specific free desks to use; otherwise desks are auto-assigned. */
   resourceIds?: string[];
+  /** Staff picks: book exactly `resourceIds` (one per person) or refuse —
+   * never swap in a different desk. Guests leave it off and get a fallback. */
+  exactSeats?: boolean;
   customerName: string;
   customerEmail: string;
   idempotencyKey?: string;
@@ -239,7 +242,11 @@ export async function holdReservation(
   } else {
     const picked = [...new Set(input.resourceIds ?? [])];
     const freeIds = new Set(free.map((s) => s.resourceId));
-    if (picked.length === people && picked.every((id) => freeIds.has(id))) {
+    if (input.exactSeats) {
+      if (picked.length !== people) return { ok: false, error: "seat_count" };
+      if (!picked.every((id) => freeIds.has(id))) return { ok: false, error: "seat_taken" };
+      resourceIds = picked;
+    } else if (picked.length === people && picked.every((id) => freeIds.has(id))) {
       resourceIds = picked;
     } else {
       const codes = autoAssignDesks(free.map((s) => s.code), people);

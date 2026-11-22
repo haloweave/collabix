@@ -83,6 +83,38 @@ describe("day passes", () => {
   });
 });
 
+describe("staff picking exact desks", () => {
+  const desk = async (code: string) => (await slots(dayPass)).find((s) => s.code === code)!;
+
+  test("an exact pick reserves that desk", async () => {
+    const d = await desk("D-04");
+    const held = await holdReservation(db, { ...dayPass, people: 1, resourceIds: [d.resourceId], exactSeats: true, ...guest });
+    expect(held.ok).toBe(true);
+    expect((await desk("D-04")).available).toBe(false);
+  });
+
+  test("an exact pick of a taken desk is refused instead of swapped", async () => {
+    const d = await desk("D-04");
+    const first = await holdReservation(db, { ...dayPass, people: 1, resourceIds: [d.resourceId], ...guest });
+    expect(first.ok).toBe(true);
+    const second = await holdReservation(db, { ...dayPass, people: 1, resourceIds: [d.resourceId], exactSeats: true, ...guest });
+    expect(second).toEqual({ ok: false, error: "seat_taken" });
+  });
+
+  test("an exact pick must name one desk per person", async () => {
+    const d = await desk("D-04");
+    const r = await holdReservation(db, { ...dayPass, people: 2, resourceIds: [d.resourceId], exactSeats: true, ...guest });
+    expect(r).toEqual({ ok: false, error: "seat_count" });
+  });
+
+  test("without exactSeats a taken pick still falls back to a free desk (guest flow)", async () => {
+    const d = await desk("D-04");
+    await holdReservation(db, { ...dayPass, people: 1, resourceIds: [d.resourceId], ...guest });
+    const again = await holdReservation(db, { ...dayPass, people: 1, resourceIds: [d.resourceId], ...guest });
+    expect(again.ok).toBe(true);
+  });
+});
+
 describe("rooms", () => {
   test("a room product only ever reserves its own room", async () => {
     const m02 = (await slots(room(10, 2, "meeting-4")))[0];
