@@ -7,10 +7,13 @@ import { logAudit } from "@/lib/admin/audit";
 import { holdBody } from "@/lib/api/validation";
 import {
   confirmBooking,
+  getAvailability,
   holdReservation,
   type HoldInput,
 } from "@/lib/domain/reservations";
 import { holdSeries, releaseHolds, upcomingInSeries, type RepeatEvery } from "@/lib/domain/recurring";
+import { MAX_OCCURRENCES, seriesDates } from "@/lib/recurrence";
+import { bookableProduct } from "@/lib/tariff";
 import { cancelBookingRecord } from "@/lib/domain/cancel";
 import { recordManualRefund, refundOnline } from "@/lib/domain/refunds";
 import { getCashfreeGateway } from "@/lib/payments/cashfree";
@@ -92,6 +95,8 @@ export async function recordRefund(
 const WALK_IN_ERRORS: Record<string, string> = {
   not_enough_desks: "Not enough free desks for that day.",
   seat_unavailable: "That room is already booked for that time.",
+  seat_taken: "A desk you picked is already taken for that time.",
+  seat_count: "Pick one desk for each person, or leave it on any free desk.",
   closed_date: "Collabix is closed on that date.",
   invalid_coupon: "That coupon code isn't active.",
   coupon_covers_total: "That coupon leaves nothing to pay.",
@@ -101,8 +106,35 @@ export type WalkInResult =
   | { ok: true; bookingId: string }
   | { ok: false; error: string };
 
-// Staff-created (walk-in) booking: auto-pick the first N available seats for the
-// window, hold them, and confirm immediately — same engine as the customer flow
+export type WalkInDesk = { resourceId: string; code: string; available: boolean };
+
+// The desks a walk-in pass could use, each free only if it's free on every
+// date of the booking (all of a repeating series), so staff can block a
+// particular desk. Rooms have no choice of seat, so they get an empty list.
+export async function walkInDesks(input: {
+  productKey: string;
+  date: string;
+  start?: number;
+  repeat?: { every: RepeatEvery; count: number };
+}): Promise<WalkInDesk[]> {
+  await requireStaff();
+  if (bookableProduct(input.productKey)?.kind !== "pass") return [];
+  const count = input.repeat ? Math.min(Math.max(1, input.repeat.count), MAX_OCCURRENCES) : 1;
+  const dates = input.repeat ? seriesDates(input.date, input.repeat.every, count) : [input.date];
+  let desks: WalkInDesk[] | null = null;
+  for (const date of dates) {
+    const r = await getAvailability(db, { productKey: input.productKey, date, start: input.start });
+    if (!r.ok) return [];
+    const free = new Map(r.resources.map((s) => [s.resourceId, s.available]));
+    desks = (desks ?? r.resources.map(({ resourceId, code }) => ({ resourceId, code, available: true }))).map(
+      (d) => ({ ...d, available: d.available && (free.get(d.resourceId) ?? false) }),
+    );
+  }
+  return desks ?? [];
+}
+
+// Staff-created (walk-in) booking: use the desks staff picked, or auto-pick the
+// first N available seats for the window, hold them, and confirm immediately — same engine as the customer flow
 // but without the OTP step. All-or-nothing on availability. The mobile is
 // required (customers sign in by mobile only) and links the booking to their
 // account when one matches.
@@ -116,6 +148,8 @@ export async function createWalkIn(input: {
   customerEmail: string;
   phone: string;
   couponCode?: string;
+  /** Passes: book exactly these desks (one per person); omit to auto-assign. */
+  resourceIds?: string[];
   /** Repeat the same booking on later dates (each its own booking). */
   repeat?: { every: RepeatEvery; count: number };
 }): Promise<WalkInResult> {
@@ -127,10 +161,11 @@ export async function createWalkIn(input: {
   if (!phone) return { ok: false, error: "Enter the customer's 10-digit mobile number." };
   const email = parsed.data.customerEmail.toLowerCase();
   const memberId = await findMemberByContact(email, phone);
+  const exactSeats = (parsed.data.resourceIds?.length ?? 0) > 0;
 
   if (input.repeat) {
     return createSeries(
-      { ...parsed.data, customerEmail: email, holdMinutes: 5 },
+      { ...parsed.data, customerEmail: email, holdMinutes: 5, exactSeats },
       input.repeat,
       memberId ?? undefined,
     );
@@ -140,6 +175,7 @@ export async function createWalkIn(input: {
     ...parsed.data,
     customerEmail: email,
     holdMinutes: 5,
+    exactSeats,
   });
   if (!held.ok) return { ok: false, error: WALK_IN_ERRORS[held.error] ?? held.error };
 
@@ -153,6 +189,7 @@ export async function createWalkIn(input: {
     detail: {
       productKey: parsed.data.productKey,
       people: parsed.data.people,
+      seats: exactSeats ? parsed.data.resourceIds : undefined,
       date: parsed.data.date,
       start: parsed.data.start,
       duration: parsed.data.duration,
