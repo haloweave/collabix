@@ -7,6 +7,7 @@ import { BOOKABLE, bookableProduct } from "@/lib/tariff";
 import { HALF_DAY_HOURS, MAX_DURATION, PASS_DAY } from "@/lib/domain/booking";
 import { createWalkIn } from "@/app/admin/(dash)/bookings/actions";
 import { MAX_OCCURRENCES, REPEAT_EVERY, seriesDates, type RepeatEvery } from "@/lib/recurrence";
+import { DeskPicker } from "@/components/admin/desk-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +45,7 @@ export function WalkInForm({ today }: { today: string }) {
   const [coupon, setCoupon] = useState("");
   const [repeat, setRepeat] = useState<"none" | RepeatEvery>("none");
   const [times, setTimes] = useState("4");
+  const [desks, setDesks] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const product = bookableProduct(productKey)!;
 
@@ -51,6 +53,11 @@ export function WalkInForm({ today }: { today: string }) {
     e.preventDefault();
     if (!name.trim() || !email.trim() || phone.replace(/\D/g, "").length < 10) {
       toast.error("Enter the customer's name, email and mobile number.");
+      return;
+    }
+    const seats = product.kind === "pass" ? desks : [];
+    if (seats.length > 0 && seats.length !== Number(people)) {
+      toast.error(`Pick ${people} desk${people === "1" ? "" : "s"}, or clear them to use any free desk.`);
       return;
     }
     startTransition(async () => {
@@ -64,6 +71,7 @@ export function WalkInForm({ today }: { today: string }) {
         customerEmail: email,
         phone,
         couponCode: coupon,
+        resourceIds: seats.length > 0 ? seats : undefined,
         repeat: repeat === "none" ? undefined : { every: repeat, count: Number(times) },
       });
       if (!res.ok) {
@@ -194,6 +202,18 @@ export function WalkInForm({ today }: { today: string }) {
               </p>
             )}
           </div>
+
+          {product.kind === "pass" && (
+            <DeskPicker
+              productKey={productKey}
+              date={date}
+              start={Number(start)}
+              repeat={repeat === "none" ? undefined : { every: repeat, count: Number(times) }}
+              people={Math.max(1, Number(people) || 1)}
+              value={desks}
+              onChange={setDesks}
+            />
+          )}
 
           <label className="grid gap-1.5 text-sm">
             <span className="text-muted-foreground">Customer name</span>
