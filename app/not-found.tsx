@@ -7,7 +7,7 @@ import "./(site)/home.css";
 
 export const metadata: Metadata = { title: "Collabix · Page not found" };
 
-const popular = ["dedicated-desk", "meeting-rooms", "day-pass", "gst-accounting"].map((slug) => offerings.find((o) => o.slug === slug)!);
+const popular = ["hot-desk", "meeting-rooms", "day-pass", "gst-accounting"].map((slug) => offerings.find((o) => o.slug === slug)!);
 
 /** Site-wide 404: unmatched URLs and notFound() from the marketing pages. */
 export default function NotFound() {

@@ -32,6 +32,26 @@ export const offeringGroups: { id: OfferingGroup; label: string }[] = [
 
 export const offerings: Offering[] = [
   {
+    slug: "hot-desk",
+    group: "workspaces",
+    title: "Hot Desk",
+    blurb: "Any open desk on a flexible monthly plan",
+    icon: "M3 10h18M5 10v9M19 10v9M8 6h8v4H8z",
+    kicker: "Flexible",
+    headline: "Sit anywhere. Start working.",
+    lead: "A seat in the open lounge on a monthly plan. Take any desk that's free, plug in and go, with Wi-Fi, prints and the café included.",
+    photo: { src: "/collabix/img/photos/openoffice.jpg", alt: "Open-plan hot desk area" },
+    highlights: [
+      { title: "Any free desk", text: "Choose from 28 shared desks on a calm, naturally lit floor." },
+      { title: "1 Gbps Wi-Fi", text: "Enterprise fibre with wired backup, so calls don't drop." },
+      { title: "10 pages of prints", text: "Printing included every month." },
+      { title: "Café & pantry", text: "Barista coffee and a stocked pantry a few steps away." },
+      { title: "Open 24/7", text: "Open around the clock, every day, so you can work whenever suits you." },
+      { title: "Room to grow", text: "Move up to a dedicated desk or a cabin whenever you're ready." },
+    ],
+    book: "/book/passes?plan=hot-desk",
+  },
+  {
     slug: "dedicated-desk",
     group: "workspaces",
     title: "Dedicated Desk",
@@ -79,10 +99,10 @@ export const offerings: Offering[] = [
     icon: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3M8 17h6",
     kicker: "Monthly · Annual",
     headline: "Your desk or cabin, for months or years.",
-    lead: "Pick your own fixed desk or a private cabin, choose how long and when to start, and pay online. Your space is held for the whole term.",
+    lead: "Pick a hot desk, your own fixed desk or a private cabin, choose how long and when to start, and pay online. Your space is held for the whole term.",
     photo: { src: "/collabix/img/photos/lounge.jpg", alt: "The Collabix work lounge" },
     highlights: [
-      { title: "Five plans", text: "Dedicated Desk or Dedicated Desk Pro, or a Base, Pro or Enterprise cabin for four." },
+      { title: "Six plans", text: "Hot Desk Flexi, Dedicated Desk and Dedicated Desk Pro, or a Base, Pro or Enterprise cabin for four." },
       { title: "Monthly or annual", text: "Book 1 to 11 months at the monthly rate, or 1 to 3 years at the annual rate." },
       { title: "Start when you like", text: "Pick any start date up to 90 days ahead; we show what's free for the whole term." },
       { title: "Pay online", text: "Pay securely by UPI, card or net banking and get your confirmation by email." },
