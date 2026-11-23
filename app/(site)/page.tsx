@@ -33,7 +33,7 @@ export default function Page() { return <div className="home">
         <div className="hero-meta reveal d4">
           <div className="item"><div className="k">28</div><div className="l">Shared desks</div></div>
           <div className="item"><div className="k">04</div><div className="l">Private cabins</div></div>
-          <div className="item"><div className="k">02</div><div className="l">Meeting rooms</div></div>
+          <div className="item"><div className="k">02</div><div className="l">Cabins &amp; boardroom</div></div>
           <div className="item"><div className="k">24·7</div><div className="l">Open · Every day</div></div>
         </div>
       </div>
@@ -84,11 +84,11 @@ export default function Page() { return <div className="home">
         </Link>
 
         <Link className="space-card reveal d1" href="/spaces/meeting-rooms">
-          <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="Boardroom meeting room" /></div>
+          <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="The boardroom" /></div>
           <div className="body">
-            <span className="kicker">4-seater &amp; boardroom</span>
-            <h3>Meeting Rooms</h3>
-            <p>A 4-seat room with TV and whiteboard, and an 8-seat boardroom with integrated VC.</p>
+            <span className="kicker">Cabins &amp; boardroom</span>
+            <h3>By the Hour</h3>
+            <p>A private 4-seat cabin with TV and whiteboard, or the 8-seat boardroom with integrated VC.</p>
             <div className="price"><span className="per">{fromHour}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
@@ -148,7 +148,7 @@ export default function Page() { return <div className="home">
         </div>
         <div className="cell">
           <div className="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="14" rx="1.5"></rect><path d="M3 9h18M8 22h8"></path></svg></div>
-          <h4>Meeting Rooms</h4><p>A 4-seater and a boardroom with VC.</p>
+          <h4>Cabins &amp; Boardroom</h4><p>Private cabins and a boardroom with VC, by the hour.</p>
         </div>
         <Link className="cell" href="/services/gst-accounting">
           <div className="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"></path></svg></div>

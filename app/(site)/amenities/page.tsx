@@ -8,7 +8,7 @@ const BEYOND = ["day-pass", "virtual-office", "gst-accounting", "company-registr
 // The full amenities list, grouped the way the Collabix team describes it.
 const CATEGORIES: { title: string; items: string[] }[] = [
   { title: "Workspace Facilities", items: ["Dedicated desks and hot desks", "Ergonomic chairs and workstations", "Private cabins and shared seating", "Air-conditioned office space"] },
-  { title: "Meeting & Conference", items: ["Meeting rooms", "Conference rooms", "Display screens", "Video conferencing facilities"] },
+  { title: "Meeting & Conference", items: ["Private cabins", "Boardroom", "Display screens", "Video conferencing facilities"] },
   { title: "Reception & Admin Services", items: ["Professional reception area", "Visitor management", "Mail and courier handling", "Business address facility"] },
   { title: "Food & Refreshments", items: ["Pantry access", "Tea and coffee", "Drinking water", "Refrigerator and microwave"] },
   { title: "IT & Connectivity", items: ["High-speed Wi-Fi", "Power backup", "Charging points", "Printing, scanning and photocopying"] },
@@ -53,9 +53,9 @@ export default function Page() { return <>
         </article>
 
         <article className="amen-card reveal d2">
-          <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="Meeting rooms" /></div>
-          <div className="txt"><span className="num">03</span><h3>Meeting &amp; Boardrooms</h3>
-            <p>A compact 4-seat meeting room with TV and whiteboard, and an 8-seat boardroom with integrated VC and an interactive panel — bookable by the hour.</p>
+          <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/meeting.jpg" alt="The boardroom" /></div>
+          <div className="txt"><span className="num">03</span><h3>Cabins &amp; Boardroom</h3>
+            <p>Private 4-seat cabins with TV and whiteboard, and an 8-seat boardroom with integrated VC and an interactive panel — bookable by the hour or the day.</p>
             <Link className="link-arw amen-link" href="/spaces/meeting-rooms">Book a room <span className="arw">→</span></Link></div>
         </article>
 

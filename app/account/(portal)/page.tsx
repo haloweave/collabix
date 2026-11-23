@@ -47,7 +47,7 @@ export default async function MyBookingsPage() {
         <div className="rounded-2xl border border-dashed border-navy/20 bg-white/60 px-6 py-12 text-center">
           <p className="text-lg font-semibold text-navy">No bookings yet</p>
           <p className="!mx-auto !mt-1 max-w-sm text-sm text-navy/60">
-            Grab a day pass or a meeting room and it will show up here, with your
+            Grab a day pass or a cabin and it will show up here, with your
             ticket and invoice.
           </p>
           <div className="!mt-5 flex flex-wrap justify-center gap-3">

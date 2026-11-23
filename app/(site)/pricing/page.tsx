@@ -14,7 +14,7 @@ export default function Pricing() {
       <div className="wrap">
         <span className="eyebrow">Membership &amp; Services Tariff 2026</span>
         <h1>Space to work. Room to grow.</h1>
-        <p className="lead">Monthly desks and cabins, meeting rooms by the hour, day passes, virtual office plans and business services. All prices are before 18% GST.</p>
+        <p className="lead">Monthly desks and cabins, cabins and the boardroom by the hour, day passes, virtual office plans and business services. All prices are before 18% GST.</p>
         {early && <p className="tf-early-banner">Early Bird pricing for bookings before {EARLY_BIRD_DEADLINE}</p>}
       </div>
     </section>

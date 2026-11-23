@@ -3,7 +3,7 @@ import SiteShell from "@/components/site/site-shell";
 import "./home.css";
 export const metadata: Metadata = {
  title: "Collabix · Work Lounge",
- description: "Explore hot desks, dedicated desks, private cabins and meeting rooms at Collabix, Bengaluru.",
+ description: "Explore hot desks, dedicated desks, private cabins and the boardroom at Collabix, Bengaluru.",
  openGraph: { title: "Collabix · Work Lounge", description: "A premium managed work lounge in Bengaluru. Where serious work happens." },
 };
 // No session read here: touching cookies would make every marketing page

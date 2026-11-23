@@ -135,7 +135,7 @@ export function priceBooking(
 
 /** Day passes cover the standard working day; a Half Day Pass is a 4-hour block inside it. */
 export const PASS_DAY = { start: 8, end: 20 } as const;
-/** A meeting room booked for the full day: the pass day's 12 hours
+/** A cabin or the boardroom booked for the full day: the pass day's 12 hours
  * (08:00–20:00), priced at the hourly rate with no after-hours charge. */
 export const ROOM_FULL_DAY = { start: PASS_DAY.start, duration: PASS_DAY.end - PASS_DAY.start } as const;
 export const HALF_DAY_HOURS = 4;

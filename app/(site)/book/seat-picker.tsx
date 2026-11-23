@@ -121,7 +121,7 @@ export function useSeatPicks(
 }
 
 /** The floor map, always shown: tap free spaces to choose them. `switchTo`
- * spaces are tappable too but change what's being booked (a meeting room
+ * spaces are tappable too but change what's being booked (a cabin
  * from a day pass, say) via `onSwitch`; `current` marks the space the booking
  * already holds (a room booking's own room). */
 export function SeatPicker({

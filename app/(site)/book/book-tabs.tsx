@@ -6,7 +6,7 @@ import { SALE_TERM_PLANS, money, termMonthlyMinor } from "@/lib/tariff";
 export function BookTabs({ current }: { current: "day" | "term" }) {
   const from = Math.min(...SALE_TERM_PLANS.map((p) => termMonthlyMinor(p)));
   const tabs = [
-    { id: "day", href: "/book", label: "Day passes & meeting rooms", short: "Day & hourly" },
+    { id: "day", href: "/book", label: "Day passes, cabins & boardroom", short: "Day & hourly" },
     { id: "term", href: "/book/passes", label: "Monthly & annual passes", short: "Monthly & annual", from: `from ${money(from / 100)}/mo` },
   ] as const;
   return (
