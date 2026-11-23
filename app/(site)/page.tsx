@@ -3,7 +3,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { bookableProduct, findTermPlan, money, productPriceMinor, termMonthlyMinor, type TermPlanKey } from "@/lib/tariff";
 // Starting prices for the space cards, straight from the tariff.
-const fromMonth = (k: TermPlanKey) => `From ${money(termMonthlyMinor(findTermPlan(k)!) / 100)} / month`;
+// The cheapest of the given plans still on sale, or a Sold out badge.
+const fromMonth = (...keys: TermPlanKey[]) => {
+  const prices = keys.map((k) => findTermPlan(k)!).filter((p) => p.onSale).map((p) => termMonthlyMinor(p));
+  return prices.length
+    ? `From ${money(Math.min(...prices) / 100)} / month`
+    : <span className="sold-badge">Sold out</span>;
+};
 const fromHour = `From ${money(productPriceMinor(bookableProduct("meeting-4")!) / 100)} / hour`;
 export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Bengaluru"};
 export default function Page() { return <div className="home">
@@ -72,7 +78,7 @@ export default function Page() { return <div className="home">
             <span className="kicker">Private · 4 people</span>
             <h3>Private Cabin</h3>
             <p>An enclosed cabin for a team of four, with standard fit-out — ready to move in.</p>
-            <div className="price"><span className="per">{fromMonth("cabin-base")}</span>
+            <div className="price"><span className="per">{fromMonth("cabin-base", "cabin-pro", "cabin-enterprise")}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
