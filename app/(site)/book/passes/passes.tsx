@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { SALE_TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
+import { SALE_TERM_PLANS, TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerms, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
@@ -53,7 +53,7 @@ type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
 
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
-    // A link to a plan that's no longer sold opens on the Dedicated Desk.
+    // A link to a sold-out plan opens on the Dedicated Desk.
     cart: { [(findTermPlan(initialPlan ?? "")?.onSale && initialPlan) || "dedicated-desk"]: 1 },
     unit: "month",
     count: DEFAULT_MONTHS,
@@ -261,12 +261,15 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                         </span>
                       </span>
                       <div className="plan-list">
-                        {SALE_TERM_PLANS.filter((p) => p.space === g.space).map((p) => {
+                        {TERM_PLANS.filter((p) => p.space === g.space).map((p) => {
                           const n = choice.cart[p.key] ?? 0;
                           return (
-                            <div key={p.key} className={`plan-row ${n > 0 ? "sel" : ""}`}>
+                            <div key={p.key} className={`plan-row ${n > 0 ? "sel" : ""} ${p.onSale ? "" : "soldout"}`}>
                               <div className="plan-info">
-                                <span className="pn">{p.name}</span>
+                                <span className="pn">
+                                  {p.name}
+                                  {!p.onSale && <span className="sold-badge">Sold out</span>}
+                                </span>
                                 <span className="pd">{p.blurb}</span>
                               </div>
                               <span className="pp">
@@ -275,6 +278,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                                   : money(termMonthlyMinor(p) / 100)}
                                 <span className="per"> / {choice.unit}</span>
                               </span>
+                              {p.onSale ? (
                               <div className="stepper" role="group" aria-label={`${p.name}: number of ${g.space}s`}>
                                 <button
                                   type="button"
@@ -294,6 +298,9 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                                   +
                                 </button>
                               </div>
+                              ) : (
+                                <span className="stepper-sold" aria-hidden="true">Booked</span>
+                              )}
                             </div>
                           );
                         })}
