@@ -54,7 +54,9 @@ export type ContextShape = {
 
 export type Slot = { resourceId: string; code: string; available: boolean };
 
-export type SeatState = "available" | "selected" | "unavailable" | "context";
+/** "view": free, but not part of this booking (e.g. a cabin on the day-pass
+ * map), so it's shown for information and isn't clickable. */
+export type SeatState = "available" | "selected" | "unavailable" | "view" | "context";
 
 export type RenderSeat = Seat & {
   resourceId: string | null;
@@ -235,12 +237,19 @@ export const seatByCode = new Map(seats().map((s) => [s.code, s]));
 export function renderSeats(
   slots: Slot[],
   selectedResourceIds: string[],
+  /** Spaces outside this booking whose free/booked state is still shown. */
+  shown: Slot[] = [],
 ): RenderSeat[] {
   const byCode = new Map(slots.map((s) => [s.code, s]));
+  const shownByCode = new Map(shown.map((s) => [s.code, s]));
   const selected = new Set(selectedResourceIds);
   return seats().map((seat) => {
     const slot = byCode.get(seat.code);
-    if (!slot) return { ...seat, resourceId: null, state: "context" };
+    if (!slot) {
+      const view = shownByCode.get(seat.code);
+      if (!view) return { ...seat, resourceId: null, state: "context" };
+      return { ...seat, resourceId: null, state: view.available ? "view" : "unavailable" };
+    }
     let state: SeatState = slot.available ? "available" : "unavailable";
     if (selected.has(slot.resourceId)) state = "selected";
     return { ...seat, resourceId: slot.resourceId, state };

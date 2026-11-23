@@ -105,6 +105,23 @@ describe("floor geometry", () => {
   });
 });
 
+describe("renderSeats — spaces shown but not part of this booking", () => {
+  test("a booked cabin shows as unavailable, a free one as view-only", () => {
+    const out = renderSeats([], [], [
+      { resourceId: "c1", code: "C-01", available: true },
+      { resourceId: "c2", code: "C-02", available: false },
+    ]);
+    expect(out.find((s) => s.code === "C-01")).toMatchObject({ state: "view", resourceId: null });
+    expect(out.find((s) => s.code === "C-02")).toMatchObject({ state: "unavailable", resourceId: null });
+    expect(out.find((s) => s.code === "C-03")!.state).toBe("context");
+  });
+
+  test("a bookable slot wins over the same code shown view-only", () => {
+    const slot = { resourceId: "c1", code: "C-01", available: true };
+    expect(renderSeats([slot], [], [slot]).find((s) => s.code === "C-01")!.state).toBe("available");
+  });
+});
+
 describe("renderSeats — availability join", () => {
   const anyDeskCode = () =>
     seats().find((s) => s.kind === "desk")!.code;
