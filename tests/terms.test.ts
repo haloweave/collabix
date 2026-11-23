@@ -61,10 +61,10 @@ describe("monthly & annual passes", () => {
   });
 
   test("a cabin term takes a cabin, never a meeting room", async () => {
-    const held = await holdTerm(db, { ...months("cabin-pro", 1), ...guest });
+    const held = await holdTerm(db, { ...months("cabin-enterprise", 1), ...guest });
     if (!held.ok) throw new Error(held.error);
     expect(await heldCode(held.reservationIds[0])).toMatch(/^C-0[1-4]$/);
-    expect(await free(months("cabin-base", 1))).toBe(3);
+    expect(await free(months("cabin-enterprise", 1))).toBe(3);
   });
 
   test("a team term holds one desk per space, all for the whole term", async () => {
@@ -79,12 +79,12 @@ describe("monthly & annual passes", () => {
   });
 
   test("a cabin term can take several cabins, but not more than are free", async () => {
-    const two = await holdTerm(db, { ...months("cabin-base", 1), spaces: 2, ...guest });
+    const two = await holdTerm(db, { ...months("cabin-enterprise", 1), spaces: 2, ...guest });
     if (!two.ok) throw new Error(two.error);
     expect((await Promise.all(two.reservationIds.map(heldCode))).every((c) => /^C-0[1-4]$/.test(c))).toBe(true);
-    const three = await holdTerm(db, { ...months("cabin-base", 1), spaces: 3, ...guest });
+    const three = await holdTerm(db, { ...months("cabin-enterprise", 1), spaces: 3, ...guest });
     expect(three).toEqual({ ok: false, error: "seat_unavailable" });
-    expect(await free(months("cabin-base", 1))).toBe(2);
+    expect(await free(months("cabin-enterprise", 1))).toBe(2);
   });
 
   test("an annual term is priced from the Annual column", async () => {
@@ -114,9 +114,9 @@ describe("monthly & annual passes", () => {
   });
 
   test("back-to-back terms on the same cabin do not overlap", async () => {
-    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-base", 1), ...guest });
-    expect(await free(months("cabin-base", 1))).toBe(0);
-    expect(await free(months("cabin-base", 1, addMonths(START, 1)))).toBe(4);
+    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-enterprise", 1), ...guest });
+    expect(await free(months("cabin-enterprise", 1))).toBe(0);
+    expect(await free(months("cabin-enterprise", 1, addMonths(START, 1)))).toBe(4);
   });
 
   test("a held term confirms like any booking", async () => {
@@ -136,8 +136,9 @@ describe("monthly & annual passes", () => {
     expect(r.ok).toBe(false);
   });
 
-  test("Hot Desk Flexi is no longer sold, alone or in a mix", async () => {
-    expect(await holdTerm(db, { ...months("hot-desk", 1), ...guest })).toEqual({ ok: false, error: "unknown_plan" });
+  test("sold-out plans can't be booked, alone or in a mix", async () => {
+    for (const plan of ["hot-desk", "cabin-base", "cabin-pro"])
+      expect(await holdTerm(db, { ...months(plan, 1), ...guest })).toEqual({ ok: false, error: "unknown_plan" });
     const mixed = await holdTerm(db, {
       items: [{ planKey: "dedicated-desk", spaces: 1 }, { planKey: "hot-desk", spaces: 1 }],
       date: START,
@@ -149,7 +150,7 @@ describe("monthly & annual passes", () => {
   });
 
   test("meeting-room availability ignores cabin terms", async () => {
-    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-base", 1), ...guest });
+    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-enterprise", 1), ...guest });
     const r = await getAvailability(db, { productKey: "boardroom", date: START, start: 10, duration: 1 });
     expect(r.ok && r.resources.every((s) => s.available)).toBe(true);
   });
@@ -186,7 +187,7 @@ describe("a mix of plans in one booking", () => {
     const held = await holdTerm(
       db,
       mix([
-        { planKey: "cabin-base", spaces: 1 },
+        { planKey: "cabin-enterprise", spaces: 1 },
         { planKey: "dedicated-desk", spaces: 2 },
         { planKey: "dedicated-desk-pro", spaces: 1 },
       ]),
@@ -194,17 +195,17 @@ describe("a mix of plans in one booking", () => {
     if (!held.ok) throw new Error(held.error);
     expect(held.reservationIds).toHaveLength(4);
     const byPlan = await heldByPlan(held.bookingId);
-    expect(byPlan["cabin-base"]).toHaveLength(1);
-    expect(byPlan["cabin-base"][0]).toMatch(/^C-0[1-4]$/);
+    expect(byPlan["cabin-enterprise"]).toHaveLength(1);
+    expect(byPlan["cabin-enterprise"][0]).toMatch(/^C-0[1-4]$/);
     expect(byPlan["dedicated-desk"]).toHaveLength(2);
     expect(byPlan["dedicated-desk-pro"]).toHaveLength(1);
     expect(new Set(Object.values(byPlan).flat()).size).toBe(4);
-    // (₹10,000 + ₹8,500 × 2 + ₹24,000) × 3 months, + 18% GST.
-    expect(held.quote.subtotalMinor).toBe(15300000);
-    expect(held.quote.totalMinor).toBe(18054000);
+    // (₹10,000 + ₹8,500 × 2 + ₹40,000) × 3 months, + 18% GST.
+    expect(held.quote.subtotalMinor).toBe(20100000);
+    expect(held.quote.totalMinor).toBe(23718000);
     expect(held.quote.lines).toHaveLength(3);
     expect(await free(months("dedicated-desk", 1))).toBe(25);
-    expect(await free(months("cabin-base", 1))).toBe(3);
+    expect(await free(months("cabin-enterprise", 1))).toBe(3);
     expect((await confirmBooking(db, { bookingId: held.bookingId })).ok).toBe(true);
   });
 
@@ -214,23 +215,23 @@ describe("a mix of plans in one booking", () => {
       ...mix([
         { planKey: "dedicated-desk", spaces: 1 },
         { planKey: "dedicated-desk-pro", spaces: 1 },
-        { planKey: "cabin-pro", spaces: 1 },
+        { planKey: "cabin-enterprise", spaces: 1 },
       ]),
       resourceIds: picks,
     });
     if (!held.ok) throw new Error(held.error);
     const byPlan = await heldByPlan(held.bookingId);
     expect([...byPlan["dedicated-desk"], ...byPlan["dedicated-desk-pro"]].sort()).toEqual(["D-11", "D-12"]);
-    expect(byPlan["cabin-pro"]).toEqual(["C-03"]);
+    expect(byPlan["cabin-enterprise"]).toEqual(["C-03"]);
   });
 
   test("the whole mix is refused if any part of it is not free", async () => {
-    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-base", 1), ...guest });
+    for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-enterprise", 1), ...guest });
     const held = await holdTerm(
       db,
       mix([
         { planKey: "dedicated-desk", spaces: 2 },
-        { planKey: "cabin-base", spaces: 1 },
+        { planKey: "cabin-enterprise", spaces: 1 },
       ], 1),
     );
     expect(held).toEqual({ ok: false, error: "seat_unavailable" });
