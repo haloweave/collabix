@@ -873,6 +873,9 @@
 .collabix-site .fm-unavailable .fm-room-chair {stroke:var(--taken-line);fill:#fff;}
 .collabix-site .fm-unavailable .fm-desk-num,
 .collabix-site .fm-unavailable .fm-room-label {fill:var(--taken-ink);}
+.collabix-site .fm-ctx-booth rect {fill:var(--taken-fill);stroke:var(--taken-line);stroke-width:2;}
+.collabix-site .fm-ctx-booth .fm-ctx-label {fill:var(--taken-ink);font-weight:600;}
+.collabix-site .fm-booth-tag {font-size:13px;letter-spacing:.12em;}
 .collabix-site .fm-booked-tag {fill:var(--taken-ink);font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:.18em;text-anchor:middle;}
 /* Free, but not part of this booking (a cabin on a day pass): light green,
  * dashed, not pickable. */

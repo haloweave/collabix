@@ -47,6 +47,10 @@ export default function FloorMap({
               <text x={s.x + s.w / 2} y={s.y + s.h / 2 + (s.labelDy ?? 0)} className="fm-ctx-label">
                 {s.label}
               </text>
+              {/* The booths aren't sold online; they show as booked. */}
+              {s.kind === "booth" && (
+                <text x={s.x + s.w / 2} y={s.y + s.h - 14} className="fm-booked-tag fm-booth-tag">BOOKED</text>
+              )}
             </g>
           ))}
 
