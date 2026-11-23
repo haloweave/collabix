@@ -43,7 +43,9 @@ export function useSeatPicks(
 ) {
   const limits: PickLimits = typeof count === "number" ? { desk: count, cabin: 0 } : count;
   const [picks, setPicks] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
-  const choosing = allowed && slots.length > 0;
+  // "Select my space": ticked by default so the map shows; untick to let us pick.
+  const [selectOwn, setSelectOwn] = useState(true);
+  const choosing = allowed && selectOwn && slots.length > 0;
   const nounById = new Map(slots.map((s) => [s.resourceId, nounOf(s.code)]));
   const ofNoun = (ids: string[], noun: Noun) => ids.filter((id) => nounById.get(id) === noun).length;
 
@@ -89,7 +91,11 @@ export function useSeatPicks(
   }
 
   return {
+    /** Whether this booking has spaces to pick at all (not a room booking). */
+    pickable: allowed && slots.length > 0,
     choosing,
+    selectOwn,
+    setSelectOwn,
     limits,
     picked,
     codes: [...deskCodes, ...cabinCodes],
@@ -129,7 +135,23 @@ export function SeatPicker({
   /** Replaces the hint under the map. */
   status?: string;
 }) {
-  if (!picks.choosing && switchTo.length === 0) return null;
+  if (!picks.pickable && switchTo.length === 0) return null;
+  const toggle = picks.pickable && (
+    <label className="auto-toggle">
+      <input type="checkbox" checked={picks.selectOwn} onChange={(e) => picks.setSelectOwn(e.target.checked)} />
+      Select my space
+    </label>
+  );
+  if (picks.pickable && !picks.selectOwn) {
+    return (
+      <>
+        {toggle}
+        <p className="avail-hint" role="status">
+          We&apos;ll pick the best free space for you. Tick the box to choose on the floor map.
+        </p>
+      </>
+    );
+  }
   const kinds = (["desk", "cabin"] as const).filter((noun) => slots.some((s) => nounOf(s.code) === noun));
   const tapWhat = kinds.map((noun) => `a ${noun}`).join(" or ");
   const status =
@@ -145,6 +167,7 @@ export function SeatPicker({
   };
   return (
     <>
+      {toggle}
       <FloorMap
         slots={[...(picks.choosing ? slots : []), ...switchTo]}
         shown={shown}
