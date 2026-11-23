@@ -121,7 +121,9 @@ export const rooms: Room[] = [
   { code: "C-01", kind: "room", zone: "Cabins", label: "Cabin 1", capacity: 3, x: 1155, y: 18, w: 215, h: 240 },
   { code: "C-02", kind: "room", zone: "Cabins", label: "Cabin 2", capacity: 4, x: 1155, y: 263, w: 215, h: 245 },
   { code: "C-03", kind: "room", zone: "Cabins", label: "Cabin 3", capacity: 4, x: 925, y: 673, w: 255, h: 225 },
-  { code: "C-04", kind: "room", zone: "Cabins", label: "Cabin 4", capacity: 4, x: 925, y: 903, w: 255, h: 222 },
+  // Cabin 4 is used as a meeting room (2026-11-23); its code stays C-04 so its
+  // booking carries on unchanged.
+  { code: "C-04", kind: "room", zone: "Cabins", label: "Meeting Room", capacity: 4, x: 925, y: 903, w: 255, h: 222 },
 ];
 
 export type Box = { x: number; y: number; w: number; h: number };
@@ -166,7 +168,7 @@ export const roomSeating: Record<string, RoomSeating> = {
   "C-04": {
     table: { x: 932, y: 984, w: 156, h: 64 },
     chairs: [[970, 952], [1056, 952], [970, 1080], [1056, 1080]],
-    label: { x: 1136, y: 1022 },
+    label: { x: 1136, y: 1010, lines: ["Meeting", "Room"] },
   },
 };
 
