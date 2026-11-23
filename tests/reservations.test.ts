@@ -83,18 +83,25 @@ describe("day passes", () => {
   });
 });
 
-describe("day-pass availability shows the cabins too", () => {
-  test("cabins come back with their state for the window; rooms don't", async () => {
+describe("availability reports every other space too", () => {
+  test("a day pass gets the rooms and cabins with their state for the window", async () => {
+    await holdReservation(db, { ...room(10, 2), ...guest });
     const r = await getAvailability(db, dayPass);
     if (!r.ok) throw new Error(r.error);
-    expect(r.cabins.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04"]);
-    expect(r.cabins.every((c) => c.available)).toBe(true);
-    expect(r.resources.some((c) => c.code.startsWith("C-"))).toBe(false);
+    expect(r.others.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04", "M-01", "M-02"]);
+    expect(r.others.find((c) => c.code === "M-02")!.available).toBe(false);
+    expect(r.others.find((c) => c.code === "M-01")!.available).toBe(true);
+    expect(r.resources.every((c) => c.code.startsWith("D-"))).toBe(true);
   });
 
-  test("a room product reports no cabins", async () => {
+  test("a room gets the desks, cabins and the other room", async () => {
     const r = await getAvailability(db, room(10, 1));
-    expect(r.ok && r.cabins).toEqual([]);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.resources.map((c) => c.code)).toEqual(["M-02"]);
+    const codes = r.others.map((c) => c.code);
+    expect(codes).toContain("M-01");
+    expect(codes).toContain("D-01");
+    expect(codes).not.toContain("M-02");
   });
 });
 

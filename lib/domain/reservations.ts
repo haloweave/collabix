@@ -139,9 +139,9 @@ export type AvailabilityResult =
       ok: true;
       window: WindowInput;
       resources: Slot[];
-      /** Passes only: each cabin's state for the window, shown on the map
-       * but not bookable on a pass. Empty for rooms. */
-      cabins: Slot[];
+      /** Every other enabled space (cabins, rooms, and desks for a room
+       * booking) with its state for the same window, for the floor map. */
+      others: Slot[];
     }
   | { ok: false; error: string };
 
@@ -166,16 +166,19 @@ async function productSlots(db: Db, product: BookableProduct, window: WindowInpu
   return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
 }
 
-/** The enabled cabins, each marked free or taken for the window. */
-async function cabinSlots(db: Db, window: WindowInput): Promise<Slot[]> {
+/** Every enabled space not in `exclude`, each marked free or taken for the window. */
+async function otherSlots(db: Db, window: WindowInput, exclude: Slot[]): Promise<Slot[]> {
   const { startAt, endAt } = toUtcWindow(window);
-  const cabins = await db
+  const skip = new Set(exclude.map((s) => s.resourceId));
+  const all = await db
     .select()
     .from(schema.resource)
-    .where(and(eq(schema.resource.enabled, true), like(schema.resource.code, "C-%")))
+    .where(eq(schema.resource.enabled, true))
     .orderBy(schema.resource.code);
   const taken = await takenResourceIds(db, startAt, endAt);
-  return cabins.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
+  return all
+    .filter((r) => !skip.has(r.id))
+    .map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
 }
 
 /** Resources with a held or confirmed reservation overlapping [startAt, endAt). */
@@ -203,11 +206,9 @@ export async function getAvailability(
   if (!product) return { ok: false, error: "unknown_product" };
   const w = productWindow(product, input, now);
   if (!w.ok) return w;
-  const [resources, cabins] = await Promise.all([
-    productSlots(db, product, w.window),
-    product.kind === "pass" ? cabinSlots(db, w.window) : Promise.resolve([]),
-  ]);
-  return { ok: true, window: w.window, resources, cabins };
+  const resources = await productSlots(db, product, w.window);
+  const others = await otherSlots(db, w.window, resources);
+  return { ok: true, window: w.window, resources, others };
 }
 
 export async function holdReservation(
