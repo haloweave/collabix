@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
+import { SALE_TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerms, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
@@ -53,7 +53,8 @@ type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
 
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
-    cart: { [findTermPlan(initialPlan ?? "")?.key ?? "hot-desk"]: 1 },
+    // A link to a plan that's no longer sold opens on the Dedicated Desk.
+    cart: { [(findTermPlan(initialPlan ?? "")?.onSale && initialPlan) || "dedicated-desk"]: 1 },
     unit: "month",
     count: DEFAULT_MONTHS,
     date: istDay(),
@@ -63,7 +64,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const label = STEPS[step];
 
   // The booking: every plan with at least one desk or cabin, in tariff order.
-  const items = TERM_PLANS.map((plan) => ({ plan, spaces: choice.cart[plan.key] ?? 0 })).filter((i) => i.spaces > 0);
+  const items = SALE_TERM_PLANS.map((plan) => ({ plan, spaces: choice.cart[plan.key] ?? 0 })).filter((i) => i.spaces > 0);
   const sum = (pred: (p: TermPlan) => boolean) => items.reduce((n, i) => n + (pred(i.plan) ? i.spaces : 0), 0);
   const wanted = { desk: sum((p) => p.space === "desk"), cabin: sum((p) => p.space === "cabin") };
   const fixedDesks = sum((p) => p.space === "desk" && !isFlexi(p));
@@ -100,7 +101,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
           return r.json();
         })
         .then((d) => d.resources ?? []);
-    Promise.all([load("hot-desk"), load("cabin-base")])
+    Promise.all([load("dedicated-desk"), load("cabin-base")])
       .then(([desks, cabins]) => {
         if (cancelled) return;
         setAvail({ key: availKey, desks, cabins });
@@ -260,7 +261,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                         </span>
                       </span>
                       <div className="plan-list">
-                        {TERM_PLANS.filter((p) => p.space === g.space).map((p) => {
+                        {SALE_TERM_PLANS.filter((p) => p.space === g.space).map((p) => {
                           const n = choice.cart[p.key] ?? 0;
                           return (
                             <div key={p.key} className={`plan-row ${n > 0 ? "sel" : ""}`}>
