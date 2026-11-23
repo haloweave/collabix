@@ -21,8 +21,9 @@ export const pickedText = (codes: string[], noun: Noun) =>
  * tapped. Tapping fills a place the booking already has; when every place of
  * that kind is picked, `grow` adds one more to the booking (a desk or a
  * cabin), and untapping a pick that grew the booking shrinks it again. Places
- * left unpicked are assigned by the server. Picks are tagged with the window
- * they were made for, so a change of day, time or term starts them afresh.
+ * left unpicked are assigned by the server. Picks survive a change of day,
+ * time or term as long as the spaces are still free then; `prefer` is a space
+ * to start picked (the cabin tapped on another product's map).
  * `count` is a number of desks, or how many desks and cabins when a booking
  * takes both. */
 export function useSeatPicks(
@@ -33,16 +34,19 @@ export function useSeatPicks(
     allowed = true,
     grow,
     shrink,
+    prefer,
   }: {
     allowed?: boolean;
     /** Add one more of this kind to the booking; false if it can't. */
     grow?: (noun: Noun) => boolean;
     /** Take one of this kind back out of the booking. */
     shrink?: (noun: Noun) => void;
+    /** A resource to start picked until the guest taps something. */
+    prefer?: string | null;
   } = {},
 ) {
   const limits: PickLimits = typeof count === "number" ? { desk: count, cabin: 0 } : count;
-  const [picks, setPicks] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
+  const [picks, setPicks] = useState<{ touched: boolean; ids: string[] }>({ touched: false, ids: [] });
   // "Select my space": ticked by default so the map shows; untick to let us pick.
   const [selectOwn, setSelectOwn] = useState(true);
   const choosing = allowed && selectOwn && slots.length > 0;
@@ -59,8 +63,12 @@ export function useSeatPicks(
 
   // Only picks that are still free.
   const picked =
-    choosing && picks.key === availKey
-      ? trim(picks.ids.filter((id) => slots.some((s) => s.resourceId === id && s.available)))
+    choosing
+      ? trim(
+          (picks.touched ? picks.ids : prefer ? [prefer] : []).filter((id) =>
+            slots.some((s) => s.resourceId === id && s.available),
+          ),
+        )
       : [];
   const codesOf = (noun: Noun) =>
     picked
@@ -77,16 +85,16 @@ export function useSeatPicks(
       // A pick that filled the last place of its kind came from a tap that
       // grew the booking, so releasing it shrinks the booking back.
       if (shrink && ofNoun(picked, noun) === limits[noun]) shrink(noun);
-      setPicks({ key: availKey, ids: picked.filter((p) => p !== id) });
+      setPicks({ touched: true, ids: picked.filter((p) => p !== id) });
       return;
     }
     if (ofNoun(picked, noun) < limits[noun]) {
-      setPicks({ key: availKey, ids: [...picked, id] });
+      setPicks({ touched: true, ids: [...picked, id] });
     } else if (grow?.(noun)) {
-      setPicks({ key: availKey, ids: [...picked, id] });
+      setPicks({ touched: true, ids: [...picked, id] });
     } else {
       // Can't grow: the new pick replaces the earliest of its kind.
-      setPicks({ key: availKey, ids: trim([...picked, id]) });
+      setPicks({ touched: true, ids: trim([...picked, id]) });
     }
   }
 
@@ -108,7 +116,7 @@ export function useSeatPicks(
     /** How many places of the booking are left for the server to assign. */
     unpicked: limits.desk + limits.cabin - picked.length,
     toggle,
-    reset: () => setPicks({ key: "", ids: [] }),
+    reset: () => setPicks({ touched: false, ids: [] }),
   };
 }
 

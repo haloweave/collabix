@@ -71,35 +71,52 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const free =
     avail && avail.key === availKey ? avail.slots.filter((s) => s.available).length : null;
   const maxPeople = Math.max(1, Math.min(MAX_PEOPLE, free ?? MAX_PEOPLE));
-  const slots = avail && avail.key === availKey ? avail.slots : [];
-  const others = avail && avail.key === availKey ? avail.others : [];
-  // The map is a way in to every product: on a day pass the meeting rooms can
-  // be tapped to book them instead; on a room booking, the other room or a
-  // desk switches to that. Cabins aren't sold by the day, so they're shown only.
-  const roomProduct = (code: string) => BOOKABLE.find((p) => p.roomCode === code);
+  // While a new day, time or length loads, keep showing the last map for the
+  // same product so it doesn't vanish and reappear.
+  const mapAvail = avail && avail.key.split("|")[0] === product.key ? avail : null;
+  const slots = mapAvail?.slots ?? [];
+  const others = mapAvail?.others ?? [];
+  // Hourly cabins can be any of several cabins, picked on the map like desks;
+  // the boardroom is a single room.
+  const multiRoom = product.kind === "room" && (product.roomCodes?.length ?? 0) > 1;
+  // The map is a way in to every product: on a day pass the cabins and the
+  // boardroom can be tapped to book them by the hour; on a room booking, the
+  // other rooms or a desk switch to that.
+  const roomProduct = (code: string) => BOOKABLE.find((p) => p.roomCodes?.includes(code));
   const switchTo = [
     ...others.filter((s) => roomProduct(s.code) || (!isPass && s.code.startsWith("D-"))),
-    // A room booking's own room: tapping it does nothing, it's already chosen.
-    ...(isPass ? [] : slots),
+    // A single room's own room: tapping it does nothing, it's already chosen.
+    ...(isPass || multiRoom ? [] : slots),
   ];
   const shownOnly = others.filter((s) => !switchTo.includes(s));
-  const current = isPass ? [] : slots.filter((s) => s.available).map((s) => s.resourceId);
+  const current = isPass || multiRoom ? [] : slots.filter((s) => s.available).map((s) => s.resourceId);
+  const [prefer, setPrefer] = useState<string | null>(null);
   function switchProduct(slot: Slot) {
     const room = roomProduct(slot.code);
-    if (room && room.key !== product.key) updateChoice({ productKey: room.key });
-    else if (!room && slot.code.startsWith("D-")) updateChoice({ productKey: "day-full" });
+    if (room && room.key !== product.key) {
+      // Start the new booking with the tapped cabin picked.
+      picks.reset();
+      setPrefer(slot.resourceId);
+      updateChoice({ productKey: room.key });
+    } else if (!room && slot.code.startsWith("D-")) {
+      picks.reset();
+      setPrefer(slot.resourceId);
+      updateChoice({ productKey: "day-full" });
+    }
   }
   // Tapping a desk when everyone already has one adds a person; releasing
-  // that desk takes them off again (never below one).
-  const picks = useSeatPicks(availKey, slots, choice.people, {
-    allowed: isPass,
+  // that desk takes them off again (never below one). An hourly cabin is one
+  // cabin: tapping another swaps it.
+  const picks = useSeatPicks(availKey, slots, isPass ? choice.people : { desk: 0, cabin: multiRoom ? 1 : 0 }, {
+    allowed: isPass || multiRoom,
+    prefer,
     grow: () => {
-      if (choice.people >= maxPeople) return false;
+      if (!isPass || choice.people >= maxPeople) return false;
       updateChoice({ people: choice.people + 1 });
       return true;
     },
     shrink: () => {
-      if (choice.people > 1) updateChoice({ people: choice.people - 1 });
+      if (isPass && choice.people > 1) updateChoice({ people: choice.people - 1 });
     },
   });
   useEffect(() => {
@@ -235,7 +252,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   freeDesks={isPass ? free : null}
                   maxPeople={maxPeople}
                 />
-                {win && avail?.key === availKey && (isPass ? !!free : true) && (
+                {win && mapAvail && (isPass ? free !== 0 : true) && (
                   <SeatPicker
                     picks={picks}
                     slots={slots}
@@ -244,15 +261,19 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                     onSwitch={switchProduct}
                     current={current}
                     status={
-                      isPass
+                      isPass || multiRoom
                         ? undefined
-                        : `${product.name} is highlighted. Tap the other room or a desk on the map to book that instead.`
+                        : `${product.name} is highlighted. Tap a cabin or a desk on the map to book that instead.`
                     }
                   />
                 )}
                 {win && free === 0 && (
                   <p className="avail-hint" role="status">
-                    {isPass ? "No desks free that day. Please pick another day." : `${product.name} is booked at that time. Please pick another time.`}
+                    {isPass
+                      ? "No desks free that day. Please pick another day."
+                      : multiRoom
+                        ? "No cabins free at that time. Please pick another time."
+                        : `${product.name} is booked at that time. Please pick another time.`}
                   </p>
                 )}
                 {win && isPass && free != null && free > 0 && free < choice.people && (

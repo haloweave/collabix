@@ -57,13 +57,16 @@ function openingPlan(key?: string): TermPlanKey {
   return (SALE_TERM_PLANS.find((p) => p.space === (asked?.space ?? "desk")) ?? SALE_TERM_PLANS[0]).key;
 }
 
-// Meeting rooms are booked by the hour or day, never for a term: on this map
-// they show as available and a tap opens that room's booking on the day page.
-const ROOM_LINKS: Slot[] = BOOKABLE.filter((p) => p.roomCode).map((p) => ({
-  resourceId: `room:${p.key}`,
-  code: p.roomCode!,
-  available: true,
-}));
+// The boardroom is booked by the hour or day, never for a term: on this map
+// it shows as available and a tap opens its booking on the day page.
+// (Cabins are on this map as cabins; only the boardroom links away.)
+const ROOM_LINKS: Slot[] = BOOKABLE.flatMap((p) =>
+  (p.roomCodes ?? []).filter((code) => !code.startsWith("C-")).map((code) => ({
+    resourceId: `room:${p.key}`,
+    code,
+    available: true,
+  })),
+);
 const openRoom = (slot: Slot) => {
   window.location.href = `/book?product=${slot.resourceId.slice("room:".length)}`;
 };
