@@ -106,26 +106,51 @@ export function useSeatPicks(
   };
 }
 
-/** The floor map, always shown: tap free spaces to choose them. */
+/** The floor map, always shown: tap free spaces to choose them. `switchTo`
+ * spaces are tappable too but change what's being booked (a meeting room
+ * from a day pass, say) via `onSwitch`; `current` marks the space the booking
+ * already holds (a room booking's own room). */
 export function SeatPicker({
   picks,
   slots,
   shown,
+  switchTo = [],
+  onSwitch,
+  current = [],
+  status: statusText,
 }: {
   picks: ReturnType<typeof useSeatPicks>;
   slots: Slot[];
   /** Spaces to show free or booked without being pickable. */
   shown?: Slot[];
+  switchTo?: Slot[];
+  onSwitch?: (slot: Slot) => void;
+  current?: string[];
+  /** Replaces the hint under the map. */
+  status?: string;
 }) {
-  if (!picks.choosing) return null;
+  if (!picks.choosing && switchTo.length === 0) return null;
   const kinds = (["desk", "cabin"] as const).filter((noun) => slots.some((s) => nounOf(s.code) === noun));
   const tapWhat = kinds.map((noun) => `a ${noun}`).join(" or ");
-  const status = picks.picked.length
-    ? `You've chosen ${picks.text}.${picks.unpicked > 0 ? ` We'll pick the other ${picks.unpicked} for you.` : ""}`
-    : `Tap ${tapWhat} on the map to choose it, or leave it to us and we'll pick for you.`;
+  const status =
+    statusText ??
+    (picks.picked.length
+      ? `You've chosen ${picks.text}.${picks.unpicked > 0 ? ` We'll pick the other ${picks.unpicked} for you.` : ""}`
+      : `Tap ${tapWhat} on the map to choose it, or leave it to us and we'll pick for you.`);
+  const switchIds = new Map(switchTo.map((s) => [s.resourceId, s]));
+  const select = (id: string) => {
+    const target = switchIds.get(id);
+    if (target) onSwitch?.(target);
+    else picks.toggle(id);
+  };
   return (
     <>
-      <FloorMap slots={slots} shown={shown} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
+      <FloorMap
+        slots={[...(picks.choosing ? slots : []), ...switchTo]}
+        shown={shown}
+        selectedResourceIds={[...picks.picked, ...current]}
+        onSelect={select}
+      />
       <p className="avail-hint" role="status">
         {status}
       </p>

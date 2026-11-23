@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { bookableProduct, type BookableProduct } from "@/lib/tariff";
+import { BOOKABLE, bookableProduct, type BookableProduct } from "@/lib/tariff";
 import { priceBooking, productWindow, type WindowInput } from "@/lib/domain/booking";
 import StepChoose, { type Choice } from "./step-choose";
 import { BookTabs } from "./book-tabs";
@@ -49,7 +49,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const { step, setStep, quote, error, setError } = co;
 
   // Availability, tagged with the window it was fetched for.
-  const [avail, setAvail] = useState<{ key: string; slots: Slot[]; cabins: Slot[] } | null>(null);
+  const [avail, setAvail] = useState<{ key: string; slots: Slot[]; others: Slot[] } | null>(null);
   // The window the server held. Steps after Book show this, not a window
   // recomputed from the clock (which goes null once the start time passes).
   const [heldWin, setHeldWin] = useState<WindowInput | null>(null);
@@ -72,7 +72,23 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     avail && avail.key === availKey ? avail.slots.filter((s) => s.available).length : null;
   const maxPeople = Math.max(1, Math.min(MAX_PEOPLE, free ?? MAX_PEOPLE));
   const slots = avail && avail.key === availKey ? avail.slots : [];
-  const cabins = avail && avail.key === availKey ? avail.cabins : [];
+  const others = avail && avail.key === availKey ? avail.others : [];
+  // The map is a way in to every product: on a day pass the meeting rooms can
+  // be tapped to book them instead; on a room booking, the other room or a
+  // desk switches to that. Cabins aren't sold by the day, so they're shown only.
+  const roomProduct = (code: string) => BOOKABLE.find((p) => p.roomCode === code);
+  const switchTo = [
+    ...others.filter((s) => roomProduct(s.code) || (!isPass && s.code.startsWith("D-"))),
+    // A room booking's own room: tapping it does nothing, it's already chosen.
+    ...(isPass ? [] : slots),
+  ];
+  const shownOnly = others.filter((s) => !switchTo.includes(s));
+  const current = isPass ? [] : slots.filter((s) => s.available).map((s) => s.resourceId);
+  function switchProduct(slot: Slot) {
+    const room = roomProduct(slot.code);
+    if (room && room.key !== product.key) updateChoice({ productKey: room.key });
+    else if (!room && slot.code.startsWith("D-")) updateChoice({ productKey: "day-full" });
+  }
   // Tapping a desk when everyone already has one adds a person; releasing
   // that desk takes them off again (never below one).
   const picks = useSeatPicks(availKey, slots, choice.people, {
@@ -98,7 +114,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       })
       .then((d) => {
         if (cancelled) return;
-        setAvail({ key: availKey, slots: d.resources ?? [], cabins: d.cabins ?? [] });
+        setAvail({ key: availKey, slots: d.resources ?? [], others: d.others ?? [] });
         setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
@@ -219,8 +235,20 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   freeDesks={isPass ? free : null}
                   maxPeople={maxPeople}
                 />
-                {isPass && win && !!free && (
-                  <SeatPicker picks={picks} slots={slots} shown={cabins} />
+                {win && avail?.key === availKey && (isPass ? !!free : true) && (
+                  <SeatPicker
+                    picks={picks}
+                    slots={slots}
+                    shown={shownOnly}
+                    switchTo={switchTo}
+                    onSwitch={switchProduct}
+                    current={current}
+                    status={
+                      isPass
+                        ? undefined
+                        : `${product.name} is highlighted. Tap the other room or a desk on the map to book that instead.`
+                    }
+                  />
                 )}
                 {win && free === 0 && (
                   <p className="avail-hint" role="status">
