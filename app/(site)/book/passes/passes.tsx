@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { SALE_TERM_PLANS, TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
+import { BOOKABLE, SALE_TERM_PLANS, TERM_PLANS, findTermPlan, money, termMonthlyMinor, type TermPlan, type TermPlanKey } from "@/lib/tariff";
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerms, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
@@ -56,6 +56,17 @@ function openingPlan(key?: string): TermPlanKey {
   if (asked?.onSale) return asked.key;
   return (SALE_TERM_PLANS.find((p) => p.space === (asked?.space ?? "desk")) ?? SALE_TERM_PLANS[0]).key;
 }
+
+// Meeting rooms are booked by the hour or day, never for a term: on this map
+// they show as available and a tap opens that room's booking on the day page.
+const ROOM_LINKS: Slot[] = BOOKABLE.filter((p) => p.roomCode).map((p) => ({
+  resourceId: `room:${p.key}`,
+  code: p.roomCode!,
+  available: true,
+}));
+const openRoom = (slot: Slot) => {
+  window.location.href = `/book?product=${slot.resourceId.slice("room:".length)}`;
+};
 
 type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
 
@@ -366,7 +377,9 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                       Please choose fewer, another start date or a shorter term.
                     </p>
                   ))}
-                {win && live && <SeatPicker picks={picks} slots={slots} shown={shownOnly} />}
+                {win && live && (
+                  <SeatPicker picks={picks} slots={slots} shown={shownOnly} switchTo={ROOM_LINKS} onSwitch={openRoom} />
+                )}
                 <p className="avail-hint">
                   Once you&#39;ve paid, our team will be in touch about the agreement and
                   security deposit.
