@@ -17,5 +17,5 @@ export async function GET(req: Request) {
   }
   const result = await getAvailability(db, parsed.data);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-  return NextResponse.json({ window: result.window, resources: result.resources });
+  return NextResponse.json({ window: result.window, resources: result.resources, cabins: result.cabins });
 }

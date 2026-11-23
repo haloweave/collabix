@@ -83,6 +83,21 @@ describe("day passes", () => {
   });
 });
 
+describe("day-pass availability shows the cabins too", () => {
+  test("cabins come back with their state for the window; rooms don't", async () => {
+    const r = await getAvailability(db, dayPass);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.cabins.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04"]);
+    expect(r.cabins.every((c) => c.available)).toBe(true);
+    expect(r.resources.some((c) => c.code.startsWith("C-"))).toBe(false);
+  });
+
+  test("a room product reports no cabins", async () => {
+    const r = await getAvailability(db, room(10, 1));
+    expect(r.ok && r.cabins).toEqual([]);
+  });
+});
+
 describe("staff picking exact desks", () => {
   const desk = async (code: string) => (await slots(dayPass)).find((s) => s.code === code)!;
 

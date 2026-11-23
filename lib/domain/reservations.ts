@@ -135,7 +135,14 @@ export type AvailabilityInput = {
 };
 
 export type AvailabilityResult =
-  | { ok: true; window: WindowInput; resources: Slot[] }
+  | {
+      ok: true;
+      window: WindowInput;
+      resources: Slot[];
+      /** Passes only: each cabin's state for the window, shown on the map
+       * but not bookable on a pass. Empty for rooms. */
+      cabins: Slot[];
+    }
   | { ok: false; error: string };
 
 /** The resources a product can use in a window, each marked free or taken.
@@ -157,6 +164,18 @@ async function productSlots(db: Db, product: BookableProduct, window: WindowInpu
 
   const taken = await takenResourceIds(db, startAt, endAt);
   return resources.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
+}
+
+/** The enabled cabins, each marked free or taken for the window. */
+async function cabinSlots(db: Db, window: WindowInput): Promise<Slot[]> {
+  const { startAt, endAt } = toUtcWindow(window);
+  const cabins = await db
+    .select()
+    .from(schema.resource)
+    .where(and(eq(schema.resource.enabled, true), like(schema.resource.code, "C-%")))
+    .orderBy(schema.resource.code);
+  const taken = await takenResourceIds(db, startAt, endAt);
+  return cabins.map((r) => ({ resourceId: r.id, code: r.code, available: !taken.has(r.id) }));
 }
 
 /** Resources with a held or confirmed reservation overlapping [startAt, endAt). */
@@ -184,7 +203,11 @@ export async function getAvailability(
   if (!product) return { ok: false, error: "unknown_product" };
   const w = productWindow(product, input, now);
   if (!w.ok) return w;
-  return { ok: true, window: w.window, resources: await productSlots(db, product, w.window) };
+  const [resources, cabins] = await Promise.all([
+    productSlots(db, product, w.window),
+    product.kind === "pass" ? cabinSlots(db, w.window) : Promise.resolve([]),
+  ]);
+  return { ok: true, window: w.window, resources, cabins };
 }
 
 export async function holdReservation(
