@@ -7,7 +7,7 @@ import { offeringHref, offerings } from "@/lib/offerings";
 const BEYOND = ["day-pass", "virtual-office", "gst-accounting", "company-registration", "websites-apps"];
 // The full amenities list, grouped the way the Collabix team describes it.
 const CATEGORIES: { title: string; items: string[] }[] = [
-  { title: "Workspace Facilities", items: ["Dedicated desks and hot desks", "Ergonomic chairs and workstations", "Private cabins and shared seating", "Air-conditioned office space"] },
+  { title: "Workspace Facilities", items: ["Dedicated desks and day-pass desks", "Ergonomic chairs and workstations", "Private cabins and shared seating", "Air-conditioned office space"] },
   { title: "Meeting & Conference", items: ["Meeting rooms", "Conference rooms", "Display screens", "Video conferencing facilities"] },
   { title: "Reception & Admin Services", items: ["Professional reception area", "Visitor management", "Mail and courier handling", "Business address facility"] },
   { title: "Food & Refreshments", items: ["Pantry access", "Tea and coffee", "Drinking water", "Refrigerator and microwave"] },
@@ -41,8 +41,8 @@ export default function Page() { return <>
         <article className="amen-card reveal">
           <div className="ph"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/hero.jpg" alt="Open work lounge" /></div>
           <div className="txt"><span className="num">01</span><h3>Open Work Lounge</h3>
-            <p>28 shared desks on a calm, ivory-toned floor — hot desks and dedicated seats, natural light, low hum, room to think.</p>
-            <Link className="link-arw amen-link" href="/spaces/hot-desk">Hot desk &amp; dedicated desk plans <span className="arw">→</span></Link></div>
+            <p>28 shared desks on a calm, ivory-toned floor — day passes and dedicated seats, natural light, low hum, room to think.</p>
+            <Link className="link-arw amen-link" href="/spaces/dedicated-desk">Dedicated desk plans <span className="arw">→</span></Link></div>
         </article>
 
         <article className="amen-card reveal d1">

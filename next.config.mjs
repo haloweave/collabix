@@ -23,6 +23,8 @@ const nextConfig = {
       // before the move; Next forwards the query string (order_id) as well.
       { source: "/booking", destination: "/book", permanent: true },
       { source: "/booking/:path*", destination: "/book/:path*", permanent: true },
+      // Hot Desk Flexi stopped being sold (2026-11-23); its page is gone.
+      { source: "/spaces/hot-desk", destination: "/spaces/dedicated-desk", permanent: true },
     ];
   },
 };
