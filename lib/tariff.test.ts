@@ -82,16 +82,10 @@ describe("monthly & annual term plans", () => {
     expect(REGISTRY_PLANS.find((p) => p.key === "cabin-base")?.appliesToKind).toBe("room");
   });
 
-  test("Hot Desk Flexi is no longer sold but still resolves for existing bookings", () => {
-    expect(findTermPlan("hot-desk")).toMatchObject({ onSale: false });
-    expect(SALE_TERM_PLANS.map((p) => p.key)).toEqual([
-      "dedicated-desk",
-      "dedicated-desk-pro",
-      "cabin-base",
-      "cabin-pro",
-      "cabin-enterprise",
-    ]);
-    const desks = tariff.find((s) => s.id === "desks")!;
-    expect(desks.rows.find((r) => r.name === "Hot Desk Flexi")?.retired).toBe(true);
+  test("sold-out plans stay listed but can't be booked", () => {
+    for (const key of ["hot-desk", "cabin-base", "cabin-pro"]) expect(findTermPlan(key)).toMatchObject({ onSale: false });
+    expect(SALE_TERM_PLANS.map((p) => p.key)).toEqual(["dedicated-desk", "dedicated-desk-pro", "cabin-enterprise"]);
+    const soldOut = tariff.flatMap((s) => s.rows).filter((r) => r.soldOut).map((r) => r.name);
+    expect(soldOut).toEqual(["Hot Desk Flexi", "Cabin · Base", "Cabin · Pro"]);
   });
 });

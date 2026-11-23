@@ -15,6 +15,7 @@
   --graphite:    #4A4F58;   /* Graphite Grey — structure/text  */
   --concrete:    #D9D6D1;   /* Soft Concrete — neutral texture */
   --white:       #FFFFFF;
+  --booked:      #C8463A;   /* Booked / sold out — taken spaces and plans */
 
   --ink:         #16202f;   /* deep text on ivory              */
   --line:        rgba(11, 31, 58, 0.12);
@@ -927,6 +928,8 @@
 .collabix-site .tf-head .kicker { font-family:var(--font-mono); font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
 .collabix-site .tf-table { min-width:560px; }
 .collabix-site .tf-table .tf-early { color:var(--gold); }
+.collabix-site .sold-badge { display:inline-block; margin-left:.6rem; padding:.18em .7em; border-radius:999px; background:var(--booked); color:#fff; font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; vertical-align:.15em; }
+.collabix-site .tf-soldout td.num { color:var(--graphite); opacity:.6; }
 .collabix-site .tf-note { margin-top:.8rem; }
 .collabix-site .tf-notes { background:var(--ivory-dark); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:var(--radius); padding:1.4rem 1.6rem; }
 .collabix-site .tf-notes h3 { font-size:1rem; color:var(--navy); margin-bottom:.6rem; }

@@ -5,7 +5,7 @@ const unitLabel: Record<TariffSection["unit"], string> = { month: "/ month", hou
 
 /** One tariff section as a price table. The Early Bird column shows only when `showEarly` is set. */
 export function TariffTable({ section, showEarly }: { section: TariffSection; showEarly: boolean }) {
-  const rows = section.rows.filter((r) => !r.retired);
+  const { rows } = section;
   const hasEarly = showEarly && rows.some((r) => r.earlyBird != null);
   const hasAnnual = rows.some((r) => r.annual != null);
   const per = unitLabel[section.unit];
@@ -22,8 +22,12 @@ export function TariffTable({ section, showEarly }: { section: TariffSection; sh
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.name}>
-              <td className="svc">{r.name}<small>{r.includes}</small></td>
+            <tr key={r.name} className={r.soldOut ? "tf-soldout" : undefined}>
+              <td className="svc">
+                {r.name}
+                {r.soldOut && <span className="sold-badge">Sold out</span>}
+                <small>{r.includes}</small>
+              </td>
               <td className="num">{money(r.standard)}</td>
               {hasEarly && <td className="num tf-early">{r.earlyBird != null ? money(r.earlyBird) : "—"}</td>}
               {hasAnnual && <td className="num">{r.annual != null ? money(r.annual) : "—"}</td>}

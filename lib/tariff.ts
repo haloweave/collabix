@@ -26,9 +26,8 @@ export type TariffRow = {
   standard: number;
   earlyBird?: number;
   annual?: number;
-  /** No longer sold: hidden from /pricing and booking, kept so existing
-   * bookings on the plan still resolve. */
-  retired?: true;
+  /** Sold out: still listed (marked sold out) but can't be booked. */
+  soldOut?: true;
 };
 
 export type TariffSection = {
@@ -49,7 +48,7 @@ export const tariff: TariffSection[] = [
     subtitle: "28 desks · Open 24/7",
     unit: "month",
     rows: [
-      { name: "Hot Desk Flexi", includes: "Any desk + 10 pages of prints", standard: 6000, earlyBird: 5400, annual: 72000, retired: true },
+      { name: "Hot Desk Flexi", includes: "Any desk + 10 pages of prints", standard: 6000, earlyBird: 5400, annual: 72000, soldOut: true },
       { name: "Dedicated Desk", includes: "Fixed seat + locker + 2 credits + 20 pages of prints", standard: 8500, earlyBird: 7700, annual: 102000 },
       { name: "Dedicated Desk Pro", includes: "Fixed seat + locker + 4 credits + 1 guest pass + 30 pages of prints", standard: 10000, earlyBird: 9000, annual: 120000 },
     ],
@@ -61,8 +60,8 @@ export const tariff: TariffSection[] = [
     subtitle: "4 people per cabin",
     unit: "month",
     rows: [
-      { name: "Cabin · Base", includes: "Standard fit-out + 30 pages of prints", standard: 24000, earlyBird: 21600, annual: 288000 },
-      { name: "Cabin · Pro", includes: "Standard fit-out + 2 credits + 30 pages of prints", standard: 34000, earlyBird: 30800, annual: 408000 },
+      { name: "Cabin · Base", includes: "Standard fit-out + 30 pages of prints", standard: 24000, earlyBird: 21600, annual: 288000, soldOut: true },
+      { name: "Cabin · Pro", includes: "Standard fit-out + 2 credits + 30 pages of prints", standard: 34000, earlyBird: 30800, annual: 408000, soldOut: true },
       { name: "Cabin · Enterprise", includes: "Standard fit-out + 4 credits + 2 guest passes + 30 pages of prints", standard: 40000, earlyBird: 36000, annual: 480000 },
     ],
     note: "Annual plans: 15% off + 50% waiver on security deposit.",
@@ -220,7 +219,7 @@ export type TermPlan = {
   monthlyMinor: number;
   earlyBirdMinor: number | null;
   annualMinor: number;
-  /** False once the tariff row is retired: no new bookings. */
+  /** False while the tariff row is sold out: listed, but no new bookings. */
   onSale: boolean;
 };
 
@@ -236,7 +235,7 @@ function termPlan(key: TermPlanKey, sectionId: "desks" | "cabins", rowName: stri
     monthlyMinor: row.standard * 100,
     earlyBirdMinor: row.earlyBird != null ? row.earlyBird * 100 : null,
     annualMinor: row.annual * 100,
-    onSale: !row.retired,
+    onSale: !row.soldOut,
   };
 }
 
