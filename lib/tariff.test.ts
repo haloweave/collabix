@@ -2,11 +2,13 @@ import { describe, expect, test } from "vitest";
 import {
   BOOKABLE,
   REGISTRY_PLANS,
+  SALE_TERM_PLANS,
   TERM_PLANS,
   bookableProduct,
   findTermPlan,
   productPriceMinor,
   rateForCode,
+  tariff,
   termMonthlyMinor,
 } from "./tariff";
 
@@ -78,5 +80,18 @@ describe("monthly & annual term plans", () => {
     const keys = new Set(REGISTRY_PLANS.map((p) => p.key));
     for (const p of TERM_PLANS) expect(keys.has(p.key)).toBe(true);
     expect(REGISTRY_PLANS.find((p) => p.key === "cabin-base")?.appliesToKind).toBe("room");
+  });
+
+  test("Hot Desk Flexi is no longer sold but still resolves for existing bookings", () => {
+    expect(findTermPlan("hot-desk")).toMatchObject({ onSale: false });
+    expect(SALE_TERM_PLANS.map((p) => p.key)).toEqual([
+      "dedicated-desk",
+      "dedicated-desk-pro",
+      "cabin-base",
+      "cabin-pro",
+      "cabin-enterprise",
+    ]);
+    const desks = tariff.find((s) => s.id === "desks")!;
+    expect(desks.rows.find((r) => r.name === "Hot Desk Flexi")?.retired).toBe(true);
   });
 });

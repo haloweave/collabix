@@ -26,6 +26,9 @@ export type TariffRow = {
   standard: number;
   earlyBird?: number;
   annual?: number;
+  /** No longer sold: hidden from /pricing and booking, kept so existing
+   * bookings on the plan still resolve. */
+  retired?: true;
 };
 
 export type TariffSection = {
@@ -46,7 +49,7 @@ export const tariff: TariffSection[] = [
     subtitle: "28 desks · Open 24/7",
     unit: "month",
     rows: [
-      { name: "Hot Desk Flexi", includes: "Any desk + 10 pages of prints", standard: 6000, earlyBird: 5400, annual: 72000 },
+      { name: "Hot Desk Flexi", includes: "Any desk + 10 pages of prints", standard: 6000, earlyBird: 5400, annual: 72000, retired: true },
       { name: "Dedicated Desk", includes: "Fixed seat + locker + 2 credits + 20 pages of prints", standard: 8500, earlyBird: 7700, annual: 102000 },
       { name: "Dedicated Desk Pro", includes: "Fixed seat + locker + 4 credits + 1 guest pass + 30 pages of prints", standard: 10000, earlyBird: 9000, annual: 120000 },
     ],
@@ -217,6 +220,8 @@ export type TermPlan = {
   monthlyMinor: number;
   earlyBirdMinor: number | null;
   annualMinor: number;
+  /** False once the tariff row is retired: no new bookings. */
+  onSale: boolean;
 };
 
 function termPlan(key: TermPlanKey, sectionId: "desks" | "cabins", rowName: string): TermPlan {
@@ -231,6 +236,7 @@ function termPlan(key: TermPlanKey, sectionId: "desks" | "cabins", rowName: stri
     monthlyMinor: row.standard * 100,
     earlyBirdMinor: row.earlyBird != null ? row.earlyBird * 100 : null,
     annualMinor: row.annual * 100,
+    onSale: !row.retired,
   };
 }
 
@@ -242,6 +248,9 @@ export const TERM_PLANS: readonly TermPlan[] = [
   termPlan("cabin-pro", "cabins", "Cabin · Pro"),
   termPlan("cabin-enterprise", "cabins", "Cabin · Enterprise"),
 ];
+
+/** The term plans that can be booked now, in tariff order. */
+export const SALE_TERM_PLANS: readonly TermPlan[] = TERM_PLANS.filter((p) => p.onSale);
 
 export function findTermPlan(key: string): TermPlan | undefined {
   return TERM_PLANS.find((p) => p.key === key);
