@@ -850,13 +850,21 @@
 .collabix-site .fm-selected .fm-desk-num,
 .collabix-site .fm-selected .fm-room-label {fill:var(--navy);}
 /* Unavailable — greyed out, non-interactive. */
+/* Booked: a bold brick red so taken spaces read at a glance, not as disabled. */
 .collabix-site .fm-unavailable .fm-desk,
 .collabix-site .fm-unavailable .fm-chair,
-.collabix-site .fm-unavailable .fm-room {fill:#e7e2d8;stroke:#c9c2b4;}
+.collabix-site .fm-unavailable .fm-room {fill:var(--booked);stroke:#a3342a;}
+.collabix-site .fm-unavailable .fm-room {fill:rgba(200,70,58,.14);stroke:var(--booked);stroke-width:3;}
 .collabix-site .fm-unavailable .fm-room-table,
-.collabix-site .fm-unavailable .fm-room-chair {stroke:#c9c2b4;fill:#e7e2d8;}
-.collabix-site .fm-unavailable .fm-desk-num,
-.collabix-site .fm-unavailable .fm-room-label {fill:#a9a293;}
+.collabix-site .fm-unavailable .fm-room-chair {stroke:var(--booked);fill:rgba(200,70,58,.22);}
+.collabix-site .fm-unavailable .fm-desk-num {fill:#fff;}
+.collabix-site .fm-unavailable .fm-room-label {fill:var(--booked);}
+.collabix-site .fm-booked-tag {fill:var(--booked);font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:.18em;text-anchor:middle;}
+/* Free, but not part of this booking (a cabin on a day pass): shown, not pickable. */
+.collabix-site .fm-view .fm-room {fill:#fff;stroke:var(--gold);stroke-width:2.5;stroke-dasharray:10 6;}
+.collabix-site .fm-view .fm-room-table,
+.collabix-site .fm-view .fm-room-chair {stroke:var(--gold);fill:none;}
+.collabix-site .fm-view .fm-room-label {fill:var(--navy);}
 /* Context seats (wrong type for the chosen product) — faint. */
 .collabix-site .fm-context .fm-desk,
 .collabix-site .fm-context .fm-chair,
@@ -871,7 +879,7 @@
 .collabix-site .floor-legend .lg::before {content:"";width:14px;height:14px;border-radius:4px;}
 .collabix-site .floor-legend .lg-avail::before {border:2px solid var(--gold);background:#fff;}
 .collabix-site .floor-legend .lg-sel::before {background:var(--gold);}
-.collabix-site .floor-legend .lg-taken::before {background:#e7e2d8;border:1px solid #c9c2b4;}
+.collabix-site .floor-legend .lg-taken::before {background:var(--booked);border:1px solid #a3342a;}
 .collabix-site .link-btn {background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;}
 .collabix-site .booking-error {background:#fbeaea;border:1px solid #e5b3b3;color:#8a2b2b;border-radius:var(--radius);padding:.7rem 1rem;font-size:.86rem;margin:.4rem 0 1rem;}
 .collabix-site .hold-timer {display:flex;align-items:center;gap:.9rem;border:1px solid var(--line-gold);border-radius:var(--radius);padding:.7rem 1rem;margin:0 0 1.5rem;}

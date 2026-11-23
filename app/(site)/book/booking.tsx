@@ -49,7 +49,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const { step, setStep, quote, error, setError } = co;
 
   // Availability, tagged with the window it was fetched for.
-  const [avail, setAvail] = useState<{ key: string; slots: Slot[] } | null>(null);
+  const [avail, setAvail] = useState<{ key: string; slots: Slot[]; cabins: Slot[] } | null>(null);
   // The window the server held. Steps after Book show this, not a window
   // recomputed from the clock (which goes null once the start time passes).
   const [heldWin, setHeldWin] = useState<WindowInput | null>(null);
@@ -72,6 +72,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     avail && avail.key === availKey ? avail.slots.filter((s) => s.available).length : null;
   const maxPeople = Math.max(1, Math.min(MAX_PEOPLE, free ?? MAX_PEOPLE));
   const slots = avail && avail.key === availKey ? avail.slots : [];
+  const cabins = avail && avail.key === availKey ? avail.cabins : [];
   const picks = useSeatPicks(availKey, slots, choice.people, isPass);
   useEffect(() => {
     if (step !== 0 || !availKey) return;
@@ -85,7 +86,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       })
       .then((d) => {
         if (cancelled) return;
-        setAvail({ key: availKey, slots: d.resources ?? [] });
+        setAvail({ key: availKey, slots: d.resources ?? [], cabins: d.cabins ?? [] });
         setError((e) => (e === AVAIL_ERROR ? null : e));
       })
       .catch(() => {
@@ -206,7 +207,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
                   maxPeople={maxPeople}
                 />
                 {isPass && win && !!free && (
-                  <SeatPicker picks={picks} slots={slots} />
+                  <SeatPicker picks={picks} slots={slots} shown={cabins} />
                 )}
                 {win && free === 0 && (
                   <p className="avail-hint" role="status">

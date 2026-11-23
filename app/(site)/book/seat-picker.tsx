@@ -91,7 +91,16 @@ export function useSeatPicks(
 }
 
 /** The "pick for me" checkbox and, when it is unticked, the floor map. */
-export function SeatPicker({ picks, slots }: { picks: ReturnType<typeof useSeatPicks>; slots: Slot[] }) {
+export function SeatPicker({
+  picks,
+  slots,
+  shown,
+}: {
+  picks: ReturnType<typeof useSeatPicks>;
+  slots: Slot[];
+  /** Spaces to show free or booked without being pickable. */
+  shown?: Slot[];
+}) {
   const { limits } = picks;
   const total = limits.desk + limits.cabin;
   if (total === 0) return null;
@@ -108,7 +117,7 @@ export function SeatPicker({ picks, slots }: { picks: ReturnType<typeof useSeatP
       </label>
       {picks.choosing && (
         <>
-          <FloorMap slots={slots} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
+          <FloorMap slots={slots} shown={shown} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
           <p className="avail-hint" role="status">
             {picks.complete
               ? `You've chosen ${picks.text}.`

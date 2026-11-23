@@ -7,19 +7,22 @@ type Slot = { resourceId: string; code: string; available: boolean };
 // An interactive floor map: seat and room glyphs placed where the architect's
 // plan puts them, colour-coded from live availability. Only resources
 // present in `slots` (i.e. matching the chosen space type) are interactive;
-// everything else is drawn faint for orientation.
+// `shown` spaces (cabins on a day pass) display free or booked but can't be
+// picked; everything else is drawn faint for orientation.
 export default function FloorMap({
   slots,
   selectedResourceIds,
   onSelect,
   priceLabel,
+  shown = [],
 }: {
   slots: Slot[];
   selectedResourceIds: string[];
   onSelect: (resourceId: string) => void;
   priceLabel?: string;
+  shown?: Slot[];
 }) {
-  const seats = renderSeats(slots, selectedResourceIds);
+  const seats = renderSeats(slots, selectedResourceIds, shown);
 
   return (
     <div className="floor-map">
@@ -84,7 +87,7 @@ export default function FloorMap({
       <div className="floor-legend" aria-hidden="true">
         <span className="lg lg-avail">Available</span>
         <span className="lg lg-sel">Selected</span>
-        <span className="lg lg-taken">Taken</span>
+        <span className="lg lg-taken">Booked</span>
       </div>
     </div>
   );
@@ -95,7 +98,7 @@ function interactiveProps(
   onSelect: (id: string) => void,
   priceLabel?: string,
 ) {
-  const bookable = seat.state !== "context";
+  const bookable = seat.state !== "context" && seat.state !== "view";
   const enabled = seat.state === "available" || seat.state === "selected";
   return {
     className: `fm-seat fm-${seat.state}`,
@@ -105,7 +108,7 @@ function interactiveProps(
     "aria-disabled": bookable && !enabled ? true : undefined,
     "aria-label": bookable
       ? `${seat.label ?? seat.code}${
-          seat.state === "unavailable" ? ", taken" : ""
+          seat.state === "unavailable" ? ", booked" : ""
         }${priceLabel && enabled ? `, ${priceLabel}` : ""}`
       : undefined,
     onClick: enabled && seat.resourceId ? () => onSelect(seat.resourceId!) : undefined,
@@ -123,7 +126,8 @@ function interactiveProps(
 
 // One string, as <title> takes a single text child.
 function seatTitle(seat: RenderSeat, priceLabel?: string) {
-  const taken = seat.state === "unavailable" ? " — taken" : "";
+  const taken =
+    seat.state === "unavailable" ? " — booked" : seat.state === "view" ? " — free · book on Monthly & annual passes" : "";
   const price =
     priceLabel && (seat.state === "available" || seat.state === "selected") ? ` · ${priceLabel}` : "";
   return `${seat.label ?? seat.code}${taken}${price}`;
@@ -204,6 +208,9 @@ function RoomGlyph({
           </tspan>
         ))}
       </text>
+      {seat.state === "unavailable" && (
+        <text x={x + w / 2} y={y + h - 22} className="fm-booked-tag">BOOKED</text>
+      )}
     </g>
   );
 }
