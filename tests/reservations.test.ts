@@ -98,6 +98,21 @@ describe("day-pass availability shows the cabins too", () => {
   });
 });
 
+describe("guests picking some of their desks", () => {
+  const desk = async (code: string) => (await slots(dayPass)).find((s) => s.code === code)!;
+  const takenCodes = async () => (await slots(dayPass)).filter((s) => !s.available).map((s) => s.code);
+
+  test("a pass for 3 with one desk picked keeps that desk and adds two more", async () => {
+    const d = await desk("D-12");
+    const held = await holdReservation(db, { ...dayPass, people: 3, resourceIds: [d.resourceId], ...guest });
+    if (!held.ok) throw new Error(held.error);
+    expect(held.reservationIds).toHaveLength(3);
+    const taken = await takenCodes();
+    expect(taken).toContain("D-12");
+    expect(taken).toHaveLength(3);
+  });
+});
+
 describe("staff picking exact desks", () => {
   const desk = async (code: string) => (await slots(dayPass)).find((s) => s.code === code)!;
 

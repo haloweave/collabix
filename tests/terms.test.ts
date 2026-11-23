@@ -225,6 +225,40 @@ describe("a mix of plans in one booking", () => {
     expect(byPlan["cabin-enterprise"]).toEqual(["C-03"]);
   });
 
+  test("a partial pick keeps the picked spaces and auto-assigns the rest", async () => {
+    const picks = await Promise.all(["D-12", "C-03"].map(idOf));
+    const held = await holdTerm(db, {
+      ...mix([
+        { planKey: "dedicated-desk", spaces: 2 },
+        { planKey: "cabin-enterprise", spaces: 2 },
+      ]),
+      resourceIds: picks,
+    });
+    if (!held.ok) throw new Error(held.error);
+    const byPlan = await heldByPlan(held.bookingId);
+    expect(byPlan["dedicated-desk"]).toContain("D-12");
+    expect(byPlan["dedicated-desk"]).toHaveLength(2);
+    expect(byPlan["cabin-enterprise"]).toContain("C-03");
+    expect(byPlan["cabin-enterprise"]).toHaveLength(2);
+  });
+
+  test("a taken pick is dropped but the free picks are kept", async () => {
+    const [d12, c03] = await Promise.all(["D-12", "C-03"].map(idOf));
+    const first = await holdTerm(db, { ...mix([{ planKey: "cabin-enterprise", spaces: 1 }]), resourceIds: [c03] });
+    if (!first.ok) throw new Error(first.error);
+    const held = await holdTerm(db, {
+      ...mix([
+        { planKey: "dedicated-desk", spaces: 1 },
+        { planKey: "cabin-enterprise", spaces: 1 },
+      ]),
+      resourceIds: [d12, c03],
+    });
+    if (!held.ok) throw new Error(held.error);
+    const byPlan = await heldByPlan(held.bookingId);
+    expect(byPlan["dedicated-desk"]).toEqual(["D-12"]);
+    expect(byPlan["cabin-enterprise"]).not.toContain("C-03");
+  });
+
   test("the whole mix is refused if any part of it is not free", async () => {
     for (let i = 0; i < 4; i++) await holdTerm(db, { ...months("cabin-enterprise", 1), ...guest });
     const held = await holdTerm(

@@ -254,7 +254,7 @@ export async function holdReservation(
   }
 
   // Pick the resources server-side: a room product only ever gets its room;
-  // a pass gets one free desk per person (the guest's picks if all are free).
+  // a pass gets one free desk per person (the guest's free picks, then auto).
   const slots = await productSlots(db, product, window);
   const free = slots.filter((s) => s.available);
   let resourceIds: string[];
@@ -269,13 +269,14 @@ export async function holdReservation(
       if (picked.length !== people) return { ok: false, error: "seat_count" };
       if (!picked.every((id) => freeIds.has(id))) return { ok: false, error: "seat_taken" };
       resourceIds = picked;
-    } else if (picked.length === people && picked.every((id) => freeIds.has(id))) {
-      resourceIds = picked;
     } else {
-      const codes = autoAssignDesks(free.map((s) => s.code), people);
-      if (codes.length < people) return { ok: false, error: "not_enough_desks" };
-      const idByCode = new Map(free.map((s) => [s.code, s.resourceId]));
-      resourceIds = codes.map((c) => idByCode.get(c)!);
+      // Keep the guest's picks that are still free; auto-assign the rest.
+      const keep = picked.filter((id) => freeIds.has(id)).slice(0, people);
+      const rest = free.filter((s) => !keep.includes(s.resourceId));
+      const codes = autoAssignDesks(rest.map((s) => s.code), people - keep.length);
+      if (keep.length + codes.length < people) return { ok: false, error: "not_enough_desks" };
+      const idByCode = new Map(rest.map((s) => [s.code, s.resourceId]));
+      resourceIds = [...keep, ...codes.map((c) => idByCode.get(c)!)];
     }
   }
 
@@ -426,35 +427,26 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
     return { ok: false, error: "seat_unavailable" };
   }
 
-  // The guest's picks count only if every one is free. Picked desks go to the
-  // fixed-desk plans (or to every desk, when there is one per desk); the rest
-  // are clustered for the team, and cabins without a pick are taken in order.
+  // The guest's picks that are still free are kept, desks first to the
+  // fixed-desk plans; whatever wasn't picked is clustered for the team, and
+  // cabins without a pick are taken in order.
   const freeIds = new Set([...freeDesks, ...freeCabins].map((s) => s.resourceId));
-  const asked = [...new Set(input.resourceIds ?? [])];
-  const picked = new Set(asked.every((id) => freeIds.has(id)) ? asked : []);
-  const pickedDesks = freeDesks.filter((s) => picked.has(s.resourceId));
-  const pickedCabins = freeCabins.filter((s) => picked.has(s.resourceId));
+  const picked = new Set((input.resourceIds ?? []).filter((id) => freeIds.has(id)));
+  const pickedDesks = freeDesks.filter((s) => picked.has(s.resourceId)).slice(0, deskCount);
+  const pickedCabins = freeCabins.filter((s) => picked.has(s.resourceId)).slice(0, cabinCount);
   const idByCode = new Map(freeDesks.map((s) => [s.code, s.resourceId]));
   const cluster = (from: Slot[], n: number) =>
     autoAssignDesks(from.map((s) => s.code), n).map((c) => idByCode.get(c)!);
 
-  let fixedDesks: string[];
-  let flexiDesks: string[];
-  if (pickedDesks.length === deskCount) {
-    const ids = pickedDesks.map((s) => s.resourceId);
-    fixedDesks = ids.slice(0, fixedDeskCount);
-    flexiDesks = ids.slice(fixedDeskCount);
-  } else if (fixedDeskCount > 0 && pickedDesks.length === fixedDeskCount) {
-    fixedDesks = pickedDesks.map((s) => s.resourceId);
-    flexiDesks = cluster(freeDesks.filter((s) => !picked.has(s.resourceId)), deskCount - fixedDeskCount);
-  } else {
-    const ids = cluster(freeDesks, deskCount);
-    fixedDesks = ids.slice(0, fixedDeskCount);
-    flexiDesks = ids.slice(fixedDeskCount);
-  }
-  const cabins = (pickedCabins.length === cabinCount ? pickedCabins : freeCabins.slice(0, cabinCount)).map(
-    (s) => s.resourceId,
-  );
+  const deskIds = [
+    ...pickedDesks.map((s) => s.resourceId),
+    ...cluster(freeDesks.filter((s) => !picked.has(s.resourceId)), deskCount - pickedDesks.length),
+  ];
+  const fixedDesks = deskIds.slice(0, fixedDeskCount);
+  const flexiDesks = deskIds.slice(fixedDeskCount);
+  const cabins = [...pickedCabins, ...freeCabins.filter((s) => !picked.has(s.resourceId))]
+    .slice(0, cabinCount)
+    .map((s) => s.resourceId);
   if (fixedDesks.length + flexiDesks.length < deskCount) return { ok: false, error: "seat_unavailable" };
 
   // One reservation per space, each under its own plan.
