@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { bookableProduct, findTermPlan, money, productPriceMinor, termMonthlyMinor, type TermPlanKey } from "@/lib/tariff";
 // Starting prices for the space cards, straight from the tariff.
 const fromMonth = (k: TermPlanKey) => `From ${money(termMonthlyMinor(findTermPlan(k)!) / 100)} / month`;
+const fromDay = `From ${money(productPriceMinor(bookableProduct("day-half")!) / 100)} / half day`;
 const fromHour = `From ${money(productPriceMinor(bookableProduct("meeting-4")!) / 100)} / hour`;
 export const metadata: Metadata = {title: "Collabix \u00b7 Work Lounge \u00b7 Bengaluru"};
 export default function Page() { return <div className="home">
@@ -44,13 +45,13 @@ export default function Page() { return <div className="home">
       </div>
       <div className="spaces">
 
-        <Link className="space-card reveal" href="/spaces/hot-desk">
-          <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/openoffice.jpg" alt="Open-plan hot desk area" /></div>
+        <Link className="space-card reveal" href="/spaces/day-pass">
+          <div className="img"><Image width={1200} height={800} sizes="(max-width: 820px) 100vw, 50vw" src="/collabix/img/photos/openoffice.jpg" alt="Open-plan shared desks" /></div>
           <div className="body">
-            <span className="kicker">Flexible</span>
-            <h3>Hot Desk</h3>
-            <p>A seat in the open lounge — sit anywhere that&#39;s free, plug in and go.</p>
-            <div className="price"><span className="per">{fromMonth("hot-desk")}</span>
+            <span className="kicker">Pay as you go</span>
+            <h3>Day Pass</h3>
+            <p>A shared desk for a full day or a 4-hour block — no membership needed.</p>
+            <div className="price"><span className="per">{fromDay}</span>
               <span className="book">Learn more <span className="arw">→</span></span></div>
           </div>
         </Link>
