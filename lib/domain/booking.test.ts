@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   MAX_DURATION,
   PRESET_DURATIONS,
+  ROOM_FULL_DAY,
   nightHours,
   priceBooking,
   productWindow,
@@ -125,6 +126,15 @@ describe("priceBooking", () => {
       { label: "Meeting Room (4-seater) · after hours (+20%)", qty: 6, unitMinor: 42000, amountMinor: 252000 },
     ]);
     expect(q.subtotalMinor).toBe(252000);
+  });
+
+  test("a room for the full day is 12 hours (08:00–20:00) at the hourly rate, no after-hours charge", () => {
+    expect(ROOM_FULL_DAY).toEqual({ start: 8, duration: 12 });
+    const room = priceBooking(bookableProduct("meeting-4")!, { date: "2026-10-27", ...ROOM_FULL_DAY }, 1, LATER);
+    expect(room.subtotalMinor).toBe(420000); // ₹350 × 12
+    expect(room.lines).toHaveLength(1);
+    const board = priceBooking(bookableProduct("boardroom")!, { date: "2026-10-27", ...ROOM_FULL_DAY }, 1, LATER);
+    expect(board.subtotalMinor).toBe(900000); // ₹750 × 12
   });
 
   test("rooms ignore the people count", () => {
