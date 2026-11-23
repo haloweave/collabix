@@ -56,7 +56,7 @@ describe("migrateToTariff on the old production inventory", () => {
     const enabled = resources.filter((r) => r.enabled);
     expect(enabled.filter((r) => r.kind === "desk")).toHaveLength(28);
     expect(enabled.filter((r) => r.kind === "room").map((r) => r.code).sort())
-      .toEqual(["C-01", "C-02", "C-03", "C-04", "M-01", "M-02"]);
+      .toEqual(["C-01", "C-02", "C-03", "C-04", "C-05", "M-01"]);
     // Nothing is deleted: the 16 surplus desks are only switched off.
     expect(resources).toHaveLength(44 + 3 + 3);
 

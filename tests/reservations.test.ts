@@ -37,7 +37,8 @@ beforeEach(async () => {
 const guest = { customerName: "Test Guest", customerEmail: "guest@example.com" };
 const DATE = "2026-12-01";
 const dayPass = { productKey: "day-full", date: DATE };
-const room = (start: number, duration: number, productKey = "meeting-4") => ({
+// The boardroom is the one single-room product; "meeting-4" is any cabin by the hour.
+const room = (start: number, duration: number, productKey = "boardroom") => ({
   productKey,
   date: DATE,
   start,
@@ -84,24 +85,24 @@ describe("day passes", () => {
 });
 
 describe("availability reports every other space too", () => {
-  test("a day pass gets the rooms and cabins with their state for the window", async () => {
+  test("a day pass gets the cabins and the boardroom with their state for the window", async () => {
     await holdReservation(db, { ...room(10, 2), ...guest });
     const r = await getAvailability(db, dayPass);
     if (!r.ok) throw new Error(r.error);
-    expect(r.others.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04", "M-01", "M-02"]);
-    expect(r.others.find((c) => c.code === "M-02")!.available).toBe(false);
-    expect(r.others.find((c) => c.code === "M-01")!.available).toBe(true);
+    expect(r.others.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04", "C-05", "M-01"]);
+    expect(r.others.find((c) => c.code === "M-01")!.available).toBe(false);
+    expect(r.others.find((c) => c.code === "C-05")!.available).toBe(true);
     expect(r.resources.every((c) => c.code.startsWith("D-"))).toBe(true);
   });
 
-  test("a room gets the desks, cabins and the other room", async () => {
+  test("the boardroom gets the desks and cabins as the others", async () => {
     const r = await getAvailability(db, room(10, 1));
     if (!r.ok) throw new Error(r.error);
-    expect(r.resources.map((c) => c.code)).toEqual(["M-02"]);
+    expect(r.resources.map((c) => c.code)).toEqual(["M-01"]);
     const codes = r.others.map((c) => c.code);
-    expect(codes).toContain("M-01");
+    expect(codes).toContain("C-05");
     expect(codes).toContain("D-01");
-    expect(codes).not.toContain("M-02");
+    expect(codes).not.toContain("M-01");
   });
 });
 
@@ -153,21 +154,38 @@ describe("staff picking exact desks", () => {
 });
 
 describe("rooms", () => {
-  test("a room product only ever reserves its own room", async () => {
-    const m02 = (await slots(room(10, 2, "meeting-4")))[0];
+  test("a room product only ever reserves its own rooms", async () => {
+    const cabin = (await slots(room(10, 2, "meeting-4")))[0];
     const held = await holdReservation(db, {
       ...room(10, 2, "boardroom"),
-      resourceIds: [m02.resourceId],
+      resourceIds: [cabin.resourceId],
       ...guest,
     });
     expect(held.ok).toBe(true);
-    // The boardroom (M-01) is taken; the 4-seater (M-02) is still free.
+    // The boardroom (M-01) is taken; the cabin the guest named is still free.
     expect((await slots(room(10, 2, "boardroom")))[0]).toMatchObject({ code: "M-01", available: false });
-    expect((await slots(room(10, 2, "meeting-4")))[0]).toMatchObject({ code: "M-02", available: true });
+    expect((await slots(room(10, 2, "meeting-4")))[0]).toMatchObject({ code: cabin.code, available: true });
   });
 
-  test("a 4-seater booking into the evening carries the after-hours charge", async () => {
-    const held = await holdReservation(db, { ...room(19, 3), ...guest });
+  test("an hourly cabin is any of the five cabins", async () => {
+    const cabins = await slots(room(10, 2, "meeting-4"));
+    expect(cabins.map((c) => c.code)).toEqual(["C-01", "C-02", "C-03", "C-04", "C-05"]);
+  });
+
+  test("an hourly cabin takes the cabin the guest tapped, else the first free one", async () => {
+    const c05 = (await slots(room(10, 2, "meeting-4"))).find((c) => c.code === "C-05")!;
+    const picked = await holdReservation(db, { ...room(10, 2, "meeting-4"), resourceIds: [c05.resourceId], ...guest });
+    expect(picked.ok).toBe(true);
+    const after = await slots(room(10, 2, "meeting-4"));
+    expect(after.find((c) => c.code === "C-05")!.available).toBe(false);
+    // C-05 is now taken, so naming it again falls back to the first free cabin.
+    const again = await holdReservation(db, { ...room(10, 2, "meeting-4"), resourceIds: [c05.resourceId], ...guest });
+    expect(again.ok).toBe(true);
+    expect((await slots(room(10, 2, "meeting-4"))).find((c) => c.code === "C-01")!.available).toBe(false);
+  });
+
+  test("an hourly cabin booking into the evening carries the after-hours charge", async () => {
+    const held = await holdReservation(db, { ...room(19, 3, "meeting-4"), ...guest });
     if (!held.ok) throw new Error("hold failed");
     // 1 h × ₹350 + 2 h × ₹420, + 18% GST.
     expect(held.quote.totalMinor).toBe(140420);

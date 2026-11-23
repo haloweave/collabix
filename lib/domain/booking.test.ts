@@ -123,7 +123,7 @@ describe("priceBooking", () => {
   test("an overnight meeting room booking is all after-hours", () => {
     const q = priceBooking(bookableProduct("meeting-4")!, { date: "2026-10-27", start: 22, duration: 6 }, 1, LATER);
     expect(q.lines).toEqual([
-      { label: "Meeting Room (4-seater) · after hours (+20%)", qty: 6, unitMinor: 42000, amountMinor: 252000 },
+      { label: "Cabin (hourly) · after hours (+20%)", qty: 6, unitMinor: 42000, amountMinor: 252000 },
     ]);
     expect(q.subtotalMinor).toBe(252000);
   });

@@ -42,11 +42,13 @@ describe("holdSeries", () => {
   });
 
   test("all or nothing: one clash releases every hold and names the date", async () => {
-    const blocker = await holdReservation(ctx.db, { ...room, date: "2026-12-15", customerEmail: "other@example.com" }, NOW);
+    // The boardroom is a single room, so one booking blocks it.
+    const board = { ...room, productKey: "boardroom" };
+    const blocker = await holdReservation(ctx.db, { ...board, date: "2026-12-15", customerEmail: "other@example.com" }, NOW);
     expect(blocker.ok).toBe(true);
     const before = await ctx.db.select().from(schema.booking);
 
-    const res = await holdSeries(ctx.db, { ...room, every: "week", count: 4 }, NOW);
+    const res = await holdSeries(ctx.db, { ...board, every: "week", count: 4 }, NOW);
     expect(res).toEqual({ ok: false, error: "seat_unavailable", date: "2026-12-15" });
     const after = await ctx.db.select().from(schema.booking);
     expect(after).toHaveLength(before.length);

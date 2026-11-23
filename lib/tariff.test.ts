@@ -25,10 +25,10 @@ describe("bookable catalogue", () => {
     expect(BOOKABLE.map((p) => p.name)).toEqual([
       "Full Day Pass",
       "Half Day Pass",
-      "Meeting Room (4-seater)",
+      "Cabin (hourly)",
       "The Boardroom",
     ]);
-    expect(BOOKABLE.map((p) => p.roomCode)).toEqual([null, null, "M-02", "M-01"]);
+    expect(BOOKABLE.map((p) => p.roomCodes)).toEqual([null, null, ["C-01", "C-02", "C-03", "C-04", "C-05"], ["M-01"]]);
   });
 
   test("productPriceMinor uses early bird only while open", () => {
@@ -43,12 +43,12 @@ describe("bookable catalogue", () => {
 });
 
 describe("rateForCode (interim extended-booking hints)", () => {
-  test("desks use a twelfth of the Full Day Pass, rooms their hourly price, cabins nothing", () => {
+  test("desks use a twelfth of the Full Day Pass; cabins and the boardroom their hourly price", () => {
     const LATER = new Date("2026-10-26T06:00:00Z");
     expect(rateForCode("D-01", "desk", LATER)).toBe(3325);
     expect(rateForCode("M-01", "room", LATER)).toBe(75000);
-    expect(rateForCode("M-02", "room", LATER)).toBe(35000);
-    expect(rateForCode("C-01", "room", LATER)).toBe(0);
+    expect(rateForCode("C-05", "room", LATER)).toBe(35000);
+    expect(rateForCode("C-01", "room", LATER)).toBe(35000);
   });
 });
 

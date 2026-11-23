@@ -205,8 +205,8 @@ describe("display copy", () => {
     expect(ticketSeats({ seats: 1, resourceCodes: ["D-09"], planKey: "day-half" }))
       .toBe("1 person · Any shared desk");
     expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"], planKey: "boardroom" })).toBe("The Boardroom");
-    expect(ticketSeats({ seats: 1, resourceCodes: ["M-02"], planKey: "meeting-4" }))
-      .toBe("Meeting Room (4-seater)");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["C-05"], planKey: "meeting-4" }))
+      .toBe("Cabin (hourly) · Cabin 5");
   });
 });
 

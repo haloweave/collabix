@@ -84,18 +84,19 @@ describe("floor geometry", () => {
     expect(roomSeats.length).toBe(rooms.length);
   });
 
-  test("inventory matches the tariff: 28 desks, 4 cabins, 2 meeting rooms", () => {
+  test("inventory: 28 desks, 5 cabins (Cabin 5 was the 4-seater meeting room), the boardroom", () => {
     expect(seats().filter((s) => s.kind === "desk").length).toBe(28);
-    expect(rooms.map((r) => r.code)).toEqual(["M-01", "M-02", "C-01", "C-02", "C-03", "C-04"]);
+    expect(rooms.map((r) => r.code)).toEqual(["M-01", "C-05", "C-01", "C-02", "C-03", "C-04"]);
     expect(rooms.find((r) => r.code === "M-01")).toMatchObject({ label: "The Boardroom", capacity: 8 });
-    expect(rooms.find((r) => r.code === "M-02")).toMatchObject({ label: "Meeting Room (4-seater)", capacity: 4 });
+    expect(rooms.find((r) => r.code === "C-05")).toMatchObject({ label: "Cabin 5", capacity: 4 });
+    expect(rooms.find((r) => r.code === "C-04")).toMatchObject({ label: "Cabin 4" });
   });
 
   test("registryKeyFor names the registry row a held resource books under", () => {
     expect(registryKeyFor({ code: "D-07", kind: "desk" })).toBe("desk-membership");
     expect(registryKeyFor({ code: "C-03", kind: "room" })).toBe("cabin-membership");
     expect(registryKeyFor({ code: "M-01", kind: "room" })).toBe("boardroom");
-    expect(registryKeyFor({ code: "M-02", kind: "room" })).toBe("meeting-4");
+    expect(registryKeyFor({ code: "C-05", kind: "room" })).toBe("cabin-membership");
   });
 
   test("desk count matches the declared banks", () => {

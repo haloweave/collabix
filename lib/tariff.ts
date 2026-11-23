@@ -68,10 +68,10 @@ export const tariff: TariffSection[] = [
   },
   {
     id: "meeting",
-    title: "Meeting Rooms",
+    title: "Cabins & Boardroom by the hour",
     unit: "hour",
     rows: [
-      { name: "Meeting Room (4-seater)", includes: "Compact meeting room + TV + whiteboard", standard: 350, earlyBird: 300 },
+      { name: "Cabin (hourly)", includes: "Private cabin for 4 + TV + whiteboard", standard: 350, earlyBird: 300 },
       { name: "The Boardroom", includes: "8 seats, integrated VC, interactive panel", standard: 750, earlyBird: 700 },
     ],
   },
@@ -144,7 +144,8 @@ export type BookableProduct = {
   unit: "person" | "hour";
   priceMinor: number;
   earlyBirdMinor: number | null;
-  roomCode: "M-01" | "M-02" | null;
+  /** The rooms a room product books (any free one); null for passes. */
+  roomCodes: readonly string[] | null;
 };
 
 function tariffRow(sectionId: string, name: string): TariffRow {
@@ -157,7 +158,7 @@ function product(
   key: ProductKey,
   sectionId: string,
   rowName: string,
-  rest: Pick<BookableProduct, "kind" | "unit" | "roomCode">,
+  rest: Pick<BookableProduct, "kind" | "unit" | "roomCodes">,
 ): BookableProduct {
   const row = tariffRow(sectionId, rowName);
   return {
@@ -171,10 +172,16 @@ function product(
 }
 
 export const BOOKABLE: readonly BookableProduct[] = [
-  product("day-full", "passes", "Full Day Pass", { kind: "pass", unit: "person", roomCode: null }),
-  product("day-half", "passes", "Half Day Pass", { kind: "pass", unit: "person", roomCode: null }),
-  product("meeting-4", "meeting", "Meeting Room (4-seater)", { kind: "room", unit: "hour", roomCode: "M-02" }),
-  product("boardroom", "meeting", "The Boardroom", { kind: "room", unit: "hour", roomCode: "M-01" }),
+  product("day-full", "passes", "Full Day Pass", { kind: "pass", unit: "person", roomCodes: null }),
+  product("day-half", "passes", "Half Day Pass", { kind: "pass", unit: "person", roomCodes: null }),
+  // Meeting rooms and cabins are the same thing: any free cabin by the hour.
+  // The key stays "meeting-4" so existing bookings and links keep working.
+  product("meeting-4", "meeting", "Cabin (hourly)", {
+    kind: "room",
+    unit: "hour",
+    roomCodes: ["C-01", "C-02", "C-03", "C-04", "C-05"],
+  }),
+  product("boardroom", "meeting", "The Boardroom", { kind: "room", unit: "hour", roomCodes: ["M-01"] }),
 ];
 
 export function bookableProduct(key: string): BookableProduct | undefined {
@@ -290,10 +297,10 @@ export const REGISTRY_PLANS: {
 ];
 
 /** Interim per-hour hint for staff extended bookings (replaced in the staff
- * billing project): desks a twelfth of the Full Day Pass, the two meeting rooms
- * their hourly price, cabins none (they are monthly-only in the tariff). */
+ * billing project): desks a twelfth of the Full Day Pass, cabins and the
+ * boardroom their hourly price. */
 export function rateForCode(code: string, kind: "desk" | "room", now = new Date()): number {
   if (kind === "desk") return Math.round(productPriceMinor(bookableProduct("day-full")!, now) / 12);
-  const room = BOOKABLE.find((p) => p.roomCode === code);
+  const room = BOOKABLE.find((p) => p.roomCodes?.includes(code));
   return room ? productPriceMinor(room, now) : 0;
 }

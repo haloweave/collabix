@@ -34,7 +34,12 @@ export function ticketSeats(v: {
   const product = v.planKey ? bookableProduct(v.planKey) : undefined;
   // A day pass is any free shared desk, so no desk number is printed.
   if (product?.kind === "pass") return `${v.seats} ${v.seats === 1 ? "person" : "people"} · Any shared desk`;
-  if (product?.kind === "room") return product.name;
+  // An hourly cabin says which cabin ("Cabin (hourly) · Cabin 5"); the
+  // boardroom is just its name.
+  if (product?.kind === "room") {
+    const cabins = v.resourceCodes.filter((c) => c.startsWith("C-")).map((c) => `Cabin ${Number(c.slice(2))}`);
+    return cabins.length ? `${product.name} · ${cabins.join(", ")}` : product.name;
+  }
   // A monthly or annual pass: the plan and the desk or cabin it holds. A
   // booking that mixes plans names them all ("Cabin · Base + Dedicated Desk").
   const term = v.planKey ? findTermPlan(v.planKey) : undefined;

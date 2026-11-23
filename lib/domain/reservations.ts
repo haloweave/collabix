@@ -157,7 +157,7 @@ async function productSlots(db: Db, product: BookableProduct, window: WindowInpu
         eq(schema.resource.enabled, true),
         product.kind === "pass"
           ? eq(schema.resource.kind, "desk")
-          : eq(schema.resource.code, product.roomCode!),
+          : inArray(schema.resource.code, [...product.roomCodes!]),
       ),
     )
     .orderBy(schema.resource.code);
@@ -254,7 +254,7 @@ export async function holdReservation(
     }
   }
 
-  // Pick the resources server-side: a room product only ever gets its room;
+  // Pick the resources server-side: a room product only ever gets its rooms;
   // a pass gets one free desk per person (the guest's free picks, then auto).
   const slots = await productSlots(db, product, window);
   const free = slots.filter((s) => s.available);
@@ -262,7 +262,10 @@ export async function holdReservation(
   const people = product.kind === "pass" ? Math.max(1, input.people ?? 1) : 1;
   if (product.kind === "room") {
     if (free.length === 0) return { ok: false, error: "seat_unavailable" };
-    resourceIds = [free[0].resourceId];
+    // An hourly cabin can be any free cabin: the one the guest tapped if it's
+    // still free, otherwise the first free one.
+    const tapped = free.find((s) => input.resourceIds?.includes(s.resourceId));
+    resourceIds = [(tapped ?? free[0]).resourceId];
   } else {
     const picked = [...new Set(input.resourceIds ?? [])];
     const freeIds = new Set(free.map((s) => s.resourceId));
