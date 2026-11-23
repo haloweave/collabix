@@ -352,7 +352,8 @@ export type TermHoldInput = TermInput & {
   couponCode?: string;
 };
 
-/** The plans asked for, one entry per plan in tariff order, or null if any is unknown. */
+/** The plans asked for, one entry per plan in tariff order, or null if any is
+ * unknown or no longer sold. */
 function termItems(input: TermHoldInput): TermItem[] | null {
   const asked = input.items?.length
     ? input.items
@@ -361,7 +362,7 @@ function termItems(input: TermHoldInput): TermItem[] | null {
       : [];
   const spacesByKey = new Map<string, number>();
   for (const a of asked) {
-    if (!findTermPlan(a.planKey)) return null;
+    if (!findTermPlan(a.planKey)?.onSale) return null;
     spacesByKey.set(a.planKey, (spacesByKey.get(a.planKey) ?? 0) + Math.max(1, a.spaces ?? 1));
   }
   const items = TERM_PLANS.filter((p) => spacesByKey.has(p.key)).map((plan) => ({

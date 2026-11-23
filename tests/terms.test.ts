@@ -51,13 +51,13 @@ async function heldCode(reservationId: string) {
 
 describe("monthly & annual passes", () => {
   test("a desk term holds one desk for the whole term at the tariff price", async () => {
-    const held = await holdTerm(db, { ...months("hot-desk", 3), ...guest });
+    const held = await holdTerm(db, { ...months("dedicated-desk", 3), ...guest });
     if (!held.ok) throw new Error(held.error);
     expect(held.reservationIds).toHaveLength(1);
     expect(await heldCode(held.reservationIds[0])).toMatch(/^D-/);
-    // ₹6,000 × 3 + 18% GST.
-    expect(held.quote.totalMinor).toBe(2124000);
-    expect(await free(months("hot-desk", 1))).toBe(27);
+    // ₹8,500 × 3 + 18% GST.
+    expect(held.quote.totalMinor).toBe(3009000);
+    expect(await free(months("dedicated-desk", 1))).toBe(27);
   });
 
   test("a cabin term takes a cabin, never a meeting room", async () => {
@@ -68,14 +68,14 @@ describe("monthly & annual passes", () => {
   });
 
   test("a team term holds one desk per space, all for the whole term", async () => {
-    const held = await holdTerm(db, { ...months("hot-desk", 3), spaces: 3, ...guest });
+    const held = await holdTerm(db, { ...months("dedicated-desk", 3), spaces: 3, ...guest });
     if (!held.ok) throw new Error(held.error);
     expect(held.reservationIds).toHaveLength(3);
     const codes = await Promise.all(held.reservationIds.map(heldCode));
     expect(new Set(codes).size).toBe(3);
-    // ₹6,000 × 3 months × 3 desks + 18% GST.
-    expect(held.quote.totalMinor).toBe(6372000);
-    expect(await free(months("hot-desk", 1))).toBe(25);
+    // ₹8,500 × 3 months × 3 desks + 18% GST.
+    expect(held.quote.totalMinor).toBe(9027000);
+    expect(await free(months("dedicated-desk", 1))).toBe(25);
   });
 
   test("a cabin term can take several cabins, but not more than are free", async () => {
@@ -96,7 +96,7 @@ describe("monthly & annual passes", () => {
   test("a day pass inside the term cannot take the held desk", async () => {
     const day = addMonths(START, 1);
     for (let i = 0; i < 28; i++) {
-      const r = await holdTerm(db, { ...months("hot-desk", 2), ...guest });
+      const r = await holdTerm(db, { ...months("dedicated-desk", 2), ...guest });
       expect(r.ok).toBe(true);
     }
     const pass = await holdReservation(db, { productKey: "day-full", date: day, people: 1, ...guest });
@@ -107,10 +107,10 @@ describe("monthly & annual passes", () => {
     const day = addMonths(START, 2);
     const pass = await holdReservation(db, { productKey: "day-full", date: day, people: 28, ...guest });
     expect(pass.ok).toBe(true);
-    expect(await free(months("hot-desk", 3))).toBe(0);
-    expect(await holdTerm(db, { ...months("hot-desk", 3), ...guest })).toEqual({ ok: false, error: "seat_unavailable" });
+    expect(await free(months("dedicated-desk", 3))).toBe(0);
+    expect(await holdTerm(db, { ...months("dedicated-desk", 3), ...guest })).toEqual({ ok: false, error: "seat_unavailable" });
     // A term ending before that day is unaffected.
-    expect(await free(months("hot-desk", 1))).toBe(28);
+    expect(await free(months("dedicated-desk", 1))).toBe(28);
   });
 
   test("back-to-back terms on the same cabin do not overlap", async () => {
@@ -132,8 +132,20 @@ describe("monthly & annual passes", () => {
 
   test("unknown plans and invalid terms are refused", async () => {
     expect(await holdTerm(db, { ...months("day-full", 1), ...guest })).toEqual({ ok: false, error: "unknown_plan" });
-    const r = await holdTerm(db, { ...months("hot-desk", 12), ...guest });
+    const r = await holdTerm(db, { ...months("dedicated-desk", 12), ...guest });
     expect(r.ok).toBe(false);
+  });
+
+  test("Hot Desk Flexi is no longer sold, alone or in a mix", async () => {
+    expect(await holdTerm(db, { ...months("hot-desk", 1), ...guest })).toEqual({ ok: false, error: "unknown_plan" });
+    const mixed = await holdTerm(db, {
+      items: [{ planKey: "dedicated-desk", spaces: 1 }, { planKey: "hot-desk", spaces: 1 }],
+      date: START,
+      unit: "month",
+      count: 1,
+      ...guest,
+    });
+    expect(mixed).toEqual({ ok: false, error: "unknown_plan" });
   });
 
   test("meeting-room availability ignores cabin terms", async () => {
@@ -176,7 +188,7 @@ describe("a mix of plans in one booking", () => {
       mix([
         { planKey: "cabin-base", spaces: 1 },
         { planKey: "dedicated-desk", spaces: 2 },
-        { planKey: "hot-desk", spaces: 1 },
+        { planKey: "dedicated-desk-pro", spaces: 1 },
       ]),
     );
     if (!held.ok) throw new Error(held.error);
@@ -185,13 +197,13 @@ describe("a mix of plans in one booking", () => {
     expect(byPlan["cabin-base"]).toHaveLength(1);
     expect(byPlan["cabin-base"][0]).toMatch(/^C-0[1-4]$/);
     expect(byPlan["dedicated-desk"]).toHaveLength(2);
-    expect(byPlan["hot-desk"]).toHaveLength(1);
+    expect(byPlan["dedicated-desk-pro"]).toHaveLength(1);
     expect(new Set(Object.values(byPlan).flat()).size).toBe(4);
-    // (₹6,000 + ₹8,500 × 2 + ₹24,000) × 3 months, + 18% GST.
-    expect(held.quote.subtotalMinor).toBe(14100000);
-    expect(held.quote.totalMinor).toBe(16638000);
+    // (₹10,000 + ₹8,500 × 2 + ₹24,000) × 3 months, + 18% GST.
+    expect(held.quote.subtotalMinor).toBe(15300000);
+    expect(held.quote.totalMinor).toBe(18054000);
     expect(held.quote.lines).toHaveLength(3);
-    expect(await free(months("hot-desk", 1))).toBe(25);
+    expect(await free(months("dedicated-desk", 1))).toBe(25);
     expect(await free(months("cabin-base", 1))).toBe(3);
     expect((await confirmBooking(db, { bookingId: held.bookingId })).ok).toBe(true);
   });
@@ -200,7 +212,6 @@ describe("a mix of plans in one booking", () => {
     const picks = await Promise.all(["D-11", "D-12", "C-03"].map(idOf));
     const held = await holdTerm(db, {
       ...mix([
-        { planKey: "hot-desk", spaces: 2 },
         { planKey: "dedicated-desk", spaces: 1 },
         { planKey: "dedicated-desk-pro", spaces: 1 },
         { planKey: "cabin-pro", spaces: 1 },
@@ -211,9 +222,6 @@ describe("a mix of plans in one booking", () => {
     const byPlan = await heldByPlan(held.bookingId);
     expect([...byPlan["dedicated-desk"], ...byPlan["dedicated-desk-pro"]].sort()).toEqual(["D-11", "D-12"]);
     expect(byPlan["cabin-pro"]).toEqual(["C-03"]);
-    expect(byPlan["hot-desk"]).toHaveLength(2);
-    expect(byPlan["hot-desk"]).not.toContain("D-11");
-    expect(byPlan["hot-desk"]).not.toContain("D-12");
   });
 
   test("the whole mix is refused if any part of it is not free", async () => {
@@ -221,19 +229,19 @@ describe("a mix of plans in one booking", () => {
     const held = await holdTerm(
       db,
       mix([
-        { planKey: "hot-desk", spaces: 2 },
+        { planKey: "dedicated-desk", spaces: 2 },
         { planKey: "cabin-base", spaces: 1 },
       ], 1),
     );
     expect(held).toEqual({ ok: false, error: "seat_unavailable" });
-    expect(await free(months("hot-desk", 1))).toBe(28);
+    expect(await free(months("dedicated-desk", 1))).toBe(28);
   });
 
   test("desk plans share the 28 desks", async () => {
     const held = await holdTerm(
       db,
       mix([
-        { planKey: "hot-desk", spaces: 15 },
+        { planKey: "dedicated-desk-pro", spaces: 15 },
         { planKey: "dedicated-desk", spaces: 14 },
       ]),
     );
@@ -241,11 +249,11 @@ describe("a mix of plans in one booking", () => {
   });
 
   test("the same plan listed twice is added up, and an unknown plan refuses the lot", async () => {
-    const twice = await holdTerm(db, mix([{ planKey: "hot-desk", spaces: 1 }, { planKey: "hot-desk", spaces: 2 }]));
+    const twice = await holdTerm(db, mix([{ planKey: "dedicated-desk", spaces: 1 }, { planKey: "dedicated-desk", spaces: 2 }]));
     if (!twice.ok) throw new Error(twice.error);
     expect(twice.reservationIds).toHaveLength(3);
     expect(twice.quote.lines).toHaveLength(1);
-    const bad = await holdTerm(db, mix([{ planKey: "hot-desk", spaces: 1 }, { planKey: "day-full", spaces: 1 }]));
+    const bad = await holdTerm(db, mix([{ planKey: "dedicated-desk", spaces: 1 }, { planKey: "day-full", spaces: 1 }]));
     expect(bad).toEqual({ ok: false, error: "unknown_plan" });
   });
 });
