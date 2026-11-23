@@ -17,36 +17,42 @@ const shortCode = (code: string) =>
 export const pickedText = (codes: string[], noun: Noun) =>
   `${noun}${codes.length === 1 ? "" : "s"} ${codes.join(", ")}`;
 
-/** "2 desks and a cabin": what is still to be chosen, or was. */
-const countText = (limits: PickLimits) =>
-  (["desk", "cabin"] as const)
-    .filter((noun) => limits[noun] > 0)
-    .map((noun) => (limits[noun] === 1 ? `a ${noun}` : `${limits[noun]} ${noun}s`))
-    .join(" and ");
-
-/** Spaces are chosen for the guest unless they untick the box and pick on the
- * floor map. Picks are tagged with the window they were made for, so a change
- * of day, time or term starts them afresh. `count` is a number of desks, or
- * how many desks and cabins when a booking takes both. */
+/** The floor map is a primary way to choose: every free space on it can be
+ * tapped. Tapping fills a place the booking already has; when every place of
+ * that kind is picked, `grow` adds one more to the booking (a desk or a
+ * cabin), and untapping a pick that grew the booking shrinks it again. Places
+ * left unpicked are assigned by the server. Picks are tagged with the window
+ * they were made for, so a change of day, time or term starts them afresh.
+ * `count` is a number of desks, or how many desks and cabins when a booking
+ * takes both. */
 export function useSeatPicks(
   availKey: string | null,
   slots: Slot[],
   count: number | PickLimits,
-  allowed = true,
+  {
+    allowed = true,
+    grow,
+    shrink,
+  }: {
+    allowed?: boolean;
+    /** Add one more of this kind to the booking; false if it can't. */
+    grow?: (noun: Noun) => boolean;
+    /** Take one of this kind back out of the booking. */
+    shrink?: (noun: Noun) => void;
+  } = {},
 ) {
   const limits: PickLimits = typeof count === "number" ? { desk: count, cabin: 0 } : count;
-  const total = limits.desk + limits.cabin;
-  const [auto, setAuto] = useState(true);
   const [picks, setPicks] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
-  const choosing = allowed && total > 0 && !auto;
+  const choosing = allowed && slots.length > 0;
   const nounById = new Map(slots.map((s) => [s.resourceId, nounOf(s.code)]));
+  const ofNoun = (ids: string[], noun: Noun) => ids.filter((id) => nounById.get(id) === noun).length;
 
-  // Never more of a kind than was asked for: the latest picks win.
-  const trim = (ids: string[]) =>
+  // Never more of a kind than the booking has: the latest picks win.
+  const trim = (ids: string[], lim: PickLimits = limits) =>
     ids.filter((id, i) => {
       const noun = nounById.get(id)!;
       const later = ids.slice(i + 1).filter((other) => nounById.get(other) === noun).length;
-      return later < limits[noun];
+      return later < lim[noun];
     });
 
   // Only picks that are still free.
@@ -62,17 +68,27 @@ export function useSeatPicks(
   const deskCodes = codesOf("desk");
   const cabinCodes = codesOf("cabin");
 
-  // Tap a space to take it, tap again to release it. Once enough of a kind are
-  // chosen, a new one replaces the earliest pick of that kind.
   function toggle(id: string) {
     if (!availKey) return;
-    const ids = picked.includes(id) ? picked.filter((p) => p !== id) : trim([...picked, id]);
-    setPicks({ key: availKey, ids });
+    const noun = nounById.get(id)!;
+    if (picked.includes(id)) {
+      // A pick that filled the last place of its kind came from a tap that
+      // grew the booking, so releasing it shrinks the booking back.
+      if (shrink && ofNoun(picked, noun) === limits[noun]) shrink(noun);
+      setPicks({ key: availKey, ids: picked.filter((p) => p !== id) });
+      return;
+    }
+    if (ofNoun(picked, noun) < limits[noun]) {
+      setPicks({ key: availKey, ids: [...picked, id] });
+    } else if (grow?.(noun)) {
+      setPicks({ key: availKey, ids: [...picked, id] });
+    } else {
+      // Can't grow: the new pick replaces the earliest of its kind.
+      setPicks({ key: availKey, ids: trim([...picked, id]) });
+    }
   }
 
   return {
-    auto,
-    setAuto,
     choosing,
     limits,
     picked,
@@ -83,14 +99,14 @@ export function useSeatPicks(
     text: [deskCodes.length ? pickedText(deskCodes, "desk") : "", cabinCodes.length ? pickedText(cabinCodes, "cabin") : ""]
       .filter(Boolean)
       .join(" and "),
+    /** How many places of the booking are left for the server to assign. */
+    unpicked: limits.desk + limits.cabin - picked.length,
     toggle,
-    /** True when nothing more needs choosing before continuing. */
-    complete: !choosing || (deskCodes.length === limits.desk && cabinCodes.length === limits.cabin),
     reset: () => setPicks({ key: "", ids: [] }),
   };
 }
 
-/** The "pick for me" checkbox and, when it is unticked, the floor map. */
+/** The floor map, always shown: tap free spaces to choose them. */
 export function SeatPicker({
   picks,
   slots,
@@ -101,30 +117,18 @@ export function SeatPicker({
   /** Spaces to show free or booked without being pickable. */
   shown?: Slot[];
 }) {
-  const { limits } = picks;
-  const total = limits.desk + limits.cabin;
-  if (total === 0) return null;
-  const nouns = (["desk", "cabin"] as const).filter((noun) => limits[noun] > 0);
-  const label =
-    total === 1
-      ? `Pick a ${nouns[0]} for me`
-      : `Pick our ${nouns.map((noun) => (limits[noun] === 1 ? noun : `${noun}s`)).join(" and ")} for us`;
+  if (!picks.choosing) return null;
+  const kinds = (["desk", "cabin"] as const).filter((noun) => slots.some((s) => nounOf(s.code) === noun));
+  const tapWhat = kinds.map((noun) => `a ${noun}`).join(" or ");
+  const status = picks.picked.length
+    ? `You've chosen ${picks.text}.${picks.unpicked > 0 ? ` We'll pick the other ${picks.unpicked} for you.` : ""}`
+    : `Tap ${tapWhat} on the map to choose it, or leave it to us and we'll pick for you.`;
   return (
     <>
-      <label className="auto-toggle">
-        <input type="checkbox" checked={picks.auto} onChange={(e) => picks.setAuto(e.target.checked)} />
-        {label}
-      </label>
-      {picks.choosing && (
-        <>
-          <FloorMap slots={slots} shown={shown} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
-          <p className="avail-hint" role="status">
-            {picks.complete
-              ? `You've chosen ${picks.text}.`
-              : `Tap ${countText(limits)} on the map. ${picks.picked.length} of ${total} chosen.`}
-          </p>
-        </>
-      )}
+      <FloorMap slots={slots} shown={shown} selectedResourceIds={picks.picked} onSelect={picks.toggle} />
+      <p className="avail-hint" role="status">
+        {status}
+      </p>
     </>
   );
 }

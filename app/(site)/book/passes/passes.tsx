@@ -61,7 +61,9 @@ type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
 
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
-    cart: { [openingPlan(initialPlan)]: 1 },
+    // A plan link opens with that plan; otherwise start empty and let the
+    // guest choose from the plans or straight from the floor map.
+    cart: initialPlan ? { [openingPlan(initialPlan)]: 1 } : {},
     unit: "month",
     count: DEFAULT_MONTHS,
     date: istDay(),
@@ -92,9 +94,26 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
         cabin: live.cabins.filter((s) => s.available).length,
       }
     : null;
-  // The map offers only what the booking has to choose: fixed desks and cabins.
-  const slots = live ? [...(fixedDesks ? live.desks : []), ...(wanted.cabin ? live.cabins : [])] : [];
-  const picks = useSeatPicks(availKey, slots, { desk: fixedDesks, cabin: wanted.cabin });
+  // Every desk and cabin is on the map. A kind with a plan on sale can be
+  // tapped (which adds it to the booking); a sold-out kind is shown only.
+  const growPlan = (space: "desk" | "cabin") =>
+    items.find((i) => i.plan.space === space && !isFlexi(i.plan))?.plan ??
+    SALE_TERM_PLANS.find((p) => p.space === space && !isFlexi(p));
+  const canPick = { desk: !!growPlan("desk"), cabin: !!growPlan("cabin") };
+  const slots = live ? [...(canPick.desk ? live.desks : []), ...(canPick.cabin ? live.cabins : [])] : [];
+  const shownOnly = live ? [...(canPick.desk ? [] : live.desks), ...(canPick.cabin ? [] : live.cabins)] : [];
+  const picks = useSeatPicks(availKey, slots, { desk: fixedDesks, cabin: wanted.cabin }, {
+    grow: (space) => {
+      const plan = growPlan(space);
+      if (!plan || wanted[space] >= MAX_SPACES || (free && wanted[space] >= free[space])) return false;
+      setSpaces(plan.key, (choice.cart[plan.key] ?? 0) + 1);
+      return true;
+    },
+    shrink: (space) => {
+      const last = [...items].reverse().find((i) => i.plan.space === space && !isFlexi(i.plan));
+      if (last) setSpaces(last.plan.key, last.spaces - 1);
+    },
+  });
   useEffect(() => {
     if (step !== 0 || !availKey) return;
     let cancelled = false;
@@ -125,7 +144,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
   // What stops the booking as it stands: nothing chosen, or more than is free.
   const short = (["desk", "cabin"] as const).filter((space) => free != null && wanted[space] > free[space]);
   const fits = free != null && total > 0 && short.length === 0;
-  const canContinue = label === "Book" && !!win && fits && picks.complete;
+  const canContinue = label === "Book" && !!win && fits;
 
   function update(next: Partial<Omit<Choice, "cart">>) {
     setChoice((prev) => {
@@ -153,7 +172,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
       unit: choice.unit,
       count: choice.count,
       items: items.map((i) => ({ planKey: i.plan.key, spaces: i.spaces })),
-      ...(picks.choosing ? { resourceIds: picks.picked } : {}),
+      ...(picks.picked.length ? { resourceIds: picks.picked } : {}),
       customerName: co.name.trim(),
       customerEmail: co.email.trim(),
     });
@@ -347,7 +366,7 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
                       Please choose fewer, another start date or a shorter term.
                     </p>
                   ))}
-                {win && fits && <SeatPicker picks={picks} slots={slots} />}
+                {win && live && <SeatPicker picks={picks} slots={slots} shown={shownOnly} />}
                 <p className="avail-hint">
                   Once you&#39;ve paid, our team will be in touch about the agreement and
                   security deposit.

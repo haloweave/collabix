@@ -73,7 +73,19 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   const maxPeople = Math.max(1, Math.min(MAX_PEOPLE, free ?? MAX_PEOPLE));
   const slots = avail && avail.key === availKey ? avail.slots : [];
   const cabins = avail && avail.key === availKey ? avail.cabins : [];
-  const picks = useSeatPicks(availKey, slots, choice.people, isPass);
+  // Tapping a desk when everyone already has one adds a person; releasing
+  // that desk takes them off again (never below one).
+  const picks = useSeatPicks(availKey, slots, choice.people, {
+    allowed: isPass,
+    grow: () => {
+      if (choice.people >= maxPeople) return false;
+      updateChoice({ people: choice.people + 1 });
+      return true;
+    },
+    shrink: () => {
+      if (choice.people > 1) updateChoice({ people: choice.people - 1 });
+    },
+  });
   useEffect(() => {
     if (step !== 0 || !availKey) return;
     let cancelled = false;
@@ -115,8 +127,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     label === "Book" &&
     !!win &&
     free != null &&
-    (isPass ? free >= choice.people : free >= 1) &&
-    picks.complete;
+    (isPass ? free >= choice.people : free >= 1);
 
   // Changing product or date keeps the rest of the choice when it still makes
   // sense, otherwise moves to that product's first opening.
@@ -155,7 +166,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
       start: fresh.window.start,
       duration: fresh.window.duration,
       people: isPass ? choice.people : 1,
-      ...(picks.choosing ? { resourceIds: picks.picked } : {}),
+      ...(picks.picked.length ? { resourceIds: picks.picked } : {}),
       customerName: co.name.trim(),
       customerEmail: co.email.trim(),
     });
@@ -179,7 +190,9 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
     picks.reset();
   }
 
-  const deskText = picks.codes.length ? pickedText(picks.codes, "desk") : "any shared desk";
+  const deskText = picks.codes.length
+    ? `${pickedText(picks.codes, "desk")}${picks.unpicked > 0 ? ` + ${picks.unpicked} more` : ""}`
+    : "any shared desk";
   const whoWhere = isPass
     ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · ${deskText}`
     : product.name;
