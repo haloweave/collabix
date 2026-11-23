@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { BOOKABLE, money, productPriceMinor, type BookableProduct, type ProductKey } from "@/lib/tariff";
-import { HALF_DAY_HOURS, MAX_DURATION, PASS_DAY, productWindow } from "@/lib/domain/booking";
+import { HALF_DAY_HOURS, MAX_DURATION, PASS_DAY, ROOM_FULL_DAY, productWindow } from "@/lib/domain/booking";
 import DateStrip from "./date-strip";
 
 const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
@@ -39,6 +39,10 @@ export default function StepChoose({
     product.key === "day-half"
       ? Array.from({ length: PASS_DAY.end - HALF_DAY_HOURS - PASS_DAY.start + 1 }, (_, i) => PASS_DAY.start + i)
       : Array.from({ length: 24 }, (_, i) => i);
+  // A room for the whole day: 08:00–20:00 at 12 × the hourly rate.
+  const fullDay = choice.start === ROOM_FULL_DAY.start && choice.duration === ROOM_FULL_DAY.duration;
+  const fullDayOk = ok(product, { date: choice.date, ...ROOM_FULL_DAY });
+  const fullDayPrice = money((productPriceMinor(product) * ROOM_FULL_DAY.duration) / 100);
   const lengths = moreLengths
     ? Array.from({ length: MAX_DURATION }, (_, i) => i + 1)
     : QUICK_LENGTHS;
@@ -110,12 +114,22 @@ export default function StepChoose({
         <>
           <span className="filter-label">How long?</span>
           <div className="dur-toggle bk-chips">
+            <button
+              type="button"
+              className={fullDay ? "sel" : ""}
+              aria-pressed={fullDay}
+              disabled={!fullDayOk}
+              title={fullDayOk ? undefined : "The full day has already started; pick tomorrow or later."}
+              onClick={() => onChange({ ...ROOM_FULL_DAY })}
+            >
+              Full day · 08:00–20:00 · {fullDayPrice}
+            </button>
             {lengths.map((d) => (
               <button
                 key={d}
                 type="button"
-                className={choice.duration === d ? "sel" : ""}
-                aria-pressed={choice.duration === d}
+                className={choice.duration === d && !fullDay ? "sel" : ""}
+                aria-pressed={choice.duration === d && !fullDay}
                 onClick={() => onChange({ duration: d })}
               >
                 {d} {d === 1 ? "hour" : "hours"}
