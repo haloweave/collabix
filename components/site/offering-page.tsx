@@ -1,12 +1,21 @@
 import Image from "next/image";
 import { OfferingIcon } from "@/components/site/offering-icon";
 import { offeringGroups, offeringHref, offerings, type Offering } from "@/lib/offerings";
+import { findTermPlan } from "@/lib/tariff";
 
 const check = "M5 13l4 4L19 7";
 const mail = (o: Offering) => `mailto:connect@collabix.co.in?subject=${encodeURIComponent(`Enquiry: ${o.title}`)}`;
 
+/** True when the offering books a monthly plan that's sold out. */
+function soldOut(o: Offering): boolean {
+  const plan = o.book && new URL(o.book, "https://x").searchParams.get("plan");
+  return !!plan && findTermPlan(plan)?.onSale === false;
+}
+
 function Ctas({ o, light = false }: { o: Offering; light?: boolean }) {
   const ghost = light ? "btn-ghost-light" : "btn-ghost";
+  if (soldOut(o))
+    return <><span className="btn btn-sold" aria-disabled="true">Sold out</span><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>;
   return o.book
     ? <><a className="btn btn-gold" href={o.book}>Book now <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>
     : <><a className="btn btn-gold" href="tel:+919632771444">Call +91 96327 71444 <span className="arw">→</span></a><a className={`btn ${ghost}`} href={mail(o)}>Email us</a></>;

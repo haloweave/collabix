@@ -89,7 +89,7 @@ export const offerings: Offering[] = [
       { title: "30 pages of prints", text: "Printing included on every cabin plan." },
       { title: "Front desk", text: "A staffed reception to greet your visitors and handle your mail." },
     ],
-    book: "/book/passes?plan=cabin-base",
+    book: "/book/passes?plan=cabin-enterprise",
   },
   {
     slug: "monthly-annual-passes",

@@ -49,12 +49,19 @@ const isFlexi = (p: TermPlan) => p.key === "hot-desk";
 
 const AVAIL_ERROR = "Could not load availability. Please try again.";
 
+/** The plan a ?plan= link opens on: that plan, or if it's sold out the first
+ * plan on sale for the same kind of space (cabin for cabin, desk for desk). */
+function openingPlan(key?: string): TermPlanKey {
+  const asked = findTermPlan(key ?? "");
+  if (asked?.onSale) return asked.key;
+  return (SALE_TERM_PLANS.find((p) => p.space === (asked?.space ?? "desk")) ?? SALE_TERM_PLANS[0]).key;
+}
+
 type Avail = { key: string; desks: Slot[]; cabins: Slot[] };
 
 export default function Passes({ initialPlan }: { initialPlan?: string }) {
   const [choice, setChoice] = useState<Choice>(() => ({
-    // A link to a sold-out plan opens on the Dedicated Desk.
-    cart: { [(findTermPlan(initialPlan ?? "")?.onSale && initialPlan) || "dedicated-desk"]: 1 },
+    cart: { [openingPlan(initialPlan)]: 1 },
     unit: "month",
     count: DEFAULT_MONTHS,
     date: istDay(),

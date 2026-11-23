@@ -931,6 +931,7 @@
 .collabix-site .sold-badge { display:inline-block; margin-left:.6rem; padding:.18em .7em; border-radius:999px; background:var(--booked); color:#fff; font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; vertical-align:.15em; }
 .collabix-site .tf-soldout td.num { color:var(--graphite); opacity:.6; }
 .collabix-site .plan-row.soldout .pp { opacity:.55; }
+.collabix-site .btn-sold { background:var(--booked); color:#fff; border-color:var(--booked); cursor:default; }
 .collabix-site .stepper-sold { justify-self:end; padding:.45em 1em; border-radius:var(--radius); border:1.5px solid var(--booked); color:var(--booked); font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
 .collabix-site .tf-note { margin-top:.8rem; }
 .collabix-site .tf-notes { background:var(--ivory-dark); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:var(--radius); padding:1.4rem 1.6rem; }
