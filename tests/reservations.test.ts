@@ -184,6 +184,16 @@ describe("rooms", () => {
     expect((await slots(room(10, 2, "meeting-4"))).find((c) => c.code === "C-01")!.available).toBe(false);
   });
 
+  test("the quote (and so the invoice) names the cabin booked", async () => {
+    const c05 = (await slots(room(10, 2, "meeting-4"))).find((c) => c.code === "C-05")!;
+    const held = await holdReservation(db, { ...room(10, 2, "meeting-4"), resourceIds: [c05.resourceId], ...guest });
+    if (!held.ok) throw new Error(held.error);
+    expect(held.quote.lines[0].label).toBe("Cabin (hourly) · Nexus (4-Seater Meeting Room)");
+    const pass = await holdReservation(db, { ...dayPass, people: 1, ...guest });
+    if (!pass.ok) throw new Error(pass.error);
+    expect(pass.quote.lines[0].label).toMatch(/^Full Day Pass · Desk \d\d$/);
+  });
+
   test("an hourly cabin booking into the evening carries the after-hours charge", async () => {
     const held = await holdReservation(db, { ...room(19, 3, "meeting-4"), ...guest });
     if (!held.ok) throw new Error("hold failed");

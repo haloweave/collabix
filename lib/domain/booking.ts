@@ -98,8 +98,12 @@ export function priceBooking(
   window: WindowInput,
   people: number,
   now = new Date(),
+  /** The spaces held ("Nexus (4-Seater Meeting Room)"), named on each line so
+   * the invoice says what was booked. Estimates before a hold leave it out. */
+  where?: string,
 ): Quote {
   const unit = productPriceMinor(p, now);
+  const name = where ? `${p.name} · ${where}` : p.name;
   const line = (label: string, qty: number, unitMinor: number): QuoteLine => ({
     label,
     qty,
@@ -110,13 +114,13 @@ export function priceBooking(
   let seats: number;
   if (p.kind === "pass") {
     seats = people;
-    lines = [line(p.name, people, unit)];
+    lines = [line(name, people, unit)];
   } else {
     seats = 1;
     const night = nightHours(window.start, window.duration);
     lines = [
-      line(p.name, window.duration - night, unit),
-      line(`${p.name} · after hours (+20%)`, night, Math.round(unit * (1 + NIGHT_SURCHARGE))),
+      line(name, window.duration - night, unit),
+      line(`${name} · after hours (+20%)`, night, Math.round(unit * (1 + NIGHT_SURCHARGE))),
     ].filter((l) => l.qty > 0);
   }
   const subtotalMinor = lines.reduce((sum, l) => sum + l.amountMinor, 0);

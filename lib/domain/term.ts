@@ -79,6 +79,9 @@ export function priceTerms(
   items: TermItem[],
   input: Pick<TermInput, "unit" | "count">,
   now = new Date(),
+  /** Per plan key, the spaces held ("Desks 07, 08"), named on that plan's line
+   * so the invoice says what was booked. Estimates leave it out. */
+  whereByPlan?: Record<string, string>,
 ): Quote {
   const { unit, count } = input;
   const lines = items.map(({ plan, spaces }) => {
@@ -86,7 +89,9 @@ export function priceTerms(
     const word = plan.space === "desk" ? "desks" : "cabins";
     const qty = count * spaces;
     return {
-      label: `${plan.name} · ${unit === "year" ? "annual" : "monthly"}${spaces > 1 ? ` · ${spaces} ${word}` : ""}`,
+      label: `${plan.name} · ${unit === "year" ? "annual" : "monthly"}${spaces > 1 ? ` · ${spaces} ${word}` : ""}${
+        whereByPlan?.[plan.key] ? ` · ${whereByPlan[plan.key]}` : ""
+      }`,
       qty,
       unitMinor,
       amountMinor: unitMinor * qty,

@@ -13,6 +13,7 @@ import { applyCoupon, normalizeCouponCode, type Coupon } from "./coupon";
 import { TERM_PLANS, bookableProduct, findTermPlan, type BookableProduct, type TermPlan } from "../tariff";
 import { priceTerms, termWindow, type TermInput, type TermItem, type TermWindow } from "./term";
 import { autoAssignDesks, type Slot } from "../floorplan";
+import { spacesText } from "../space-names";
 import { getSettings } from "../settings";
 import { newTicketCode, newTicketToken } from "./ticket-codes";
 import { issueInvoiceNo } from "./invoice-number";
@@ -284,7 +285,9 @@ export async function holdReservation(
     }
   }
 
-  const priced = await withCoupon(db, priceBooking(product, window, people, now), input.couponCode);
+  const codeById = new Map(slots.map((s) => [s.resourceId, s.code]));
+  const where = spacesText(resourceIds.map((id) => codeById.get(id)!).filter(Boolean));
+  const priced = await withCoupon(db, priceBooking(product, window, people, now, where), input.couponCode);
   if (!priced.ok) return priced;
   const quote = priced.quote;
   const { startAt, endAt } = toUtcWindow(window);
@@ -454,12 +457,16 @@ export async function holdTerm(db: Db, input: TermHoldInput, now = new Date()): 
   if (fixedDesks.length + flexiDesks.length < deskCount) return { ok: false, error: "seat_unavailable" };
 
   // One reservation per space, each under its own plan.
+  const codeById = new Map([...freeDesks, ...freeCabins].map((s) => [s.resourceId, s.code]));
+  const whereByPlan: Record<string, string> = {};
   const spaces = items.flatMap(({ plan, spaces: n }) => {
     const pool = plan.space === "cabin" ? cabins : isFlexi(plan) ? flexiDesks : fixedDesks;
-    return pool.splice(0, n).map((resourceId) => ({ resourceId, ratePlanId: ratePlanIds.get(plan.key)! }));
+    const taken = pool.splice(0, n);
+    whereByPlan[plan.key] = spacesText(taken.map((id) => codeById.get(id)!).filter(Boolean));
+    return taken.map((resourceId) => ({ resourceId, ratePlanId: ratePlanIds.get(plan.key)! }));
   });
 
-  const priced = await withCoupon(db, priceTerms(items, input, now), input.couponCode);
+  const priced = await withCoupon(db, priceTerms(items, input, now, whereByPlan), input.couponCode);
   if (!priced.ok) return priced;
   const quote = priced.quote;
   const holdExpiresAt = new Date(Date.now() + (input.holdMinutes ?? 10) * 60_000);

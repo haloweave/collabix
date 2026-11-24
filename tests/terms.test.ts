@@ -87,6 +87,20 @@ describe("monthly & annual passes", () => {
     expect(await free(months("cabin-enterprise", 1))).toBe(3);
   });
 
+  test("the quote (and so the invoice) names the cabin and desks held", async () => {
+    const held = await holdTerm(db, {
+      items: [{ planKey: "cabin-enterprise", spaces: 1 }, { planKey: "dedicated-desk", spaces: 2 }],
+      date: START,
+      unit: "month",
+      count: 1,
+      ...guest,
+    });
+    if (!held.ok) throw new Error(held.error);
+    const labels = held.quote.lines.map((l) => l.label);
+    expect(labels.find((l) => l.startsWith("Dedicated Desk"))).toMatch(/^Dedicated Desk · monthly · 2 desks · Desks \d\d, \d\d$/);
+    expect(labels.find((l) => l.startsWith("Cabin · Enterprise"))).toMatch(/^Cabin · Enterprise · monthly · \w+ \((Executive Cabin|4-Seater Meeting Room)\)$/);
+  });
+
   test("an annual term is priced from the Annual column", async () => {
     const held = await holdTerm(db, { planKey: "dedicated-desk", date: START, unit: "year", count: 2, ...guest });
     if (!held.ok) throw new Error(held.error);
