@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import FloorMap from "./floor-map";
+import { spacesText } from "@/lib/space-names";
 
 export type Slot = { resourceId: string; code: string; available: boolean };
 type Noun = "desk" | "cabin";
@@ -9,13 +10,6 @@ export type PickLimits = Record<Noun, number>;
 
 const nounOf = (code: string): Noun => (code.startsWith("C-") ? "cabin" : "desk");
 
-// "D-07" reads as desk 07, "C-01" as cabin 1.
-const shortCode = (code: string) =>
-  code.startsWith("C-") ? String(Number(code.slice(2))) : code.replace("D-", "");
-
-/** "desk 07" or "cabins 1, 2" for the picked codes. */
-export const pickedText = (codes: string[], noun: Noun) =>
-  `${noun}${codes.length === 1 ? "" : "s"} ${codes.join(", ")}`;
 
 /** The floor map is a primary way to choose: every free space on it can be
  * tapped. Tapping fills a place the booking already has; when every place of
@@ -73,7 +67,7 @@ export function useSeatPicks(
   const codesOf = (noun: Noun) =>
     picked
       .filter((id) => nounById.get(id) === noun)
-      .map((id) => shortCode(slots.find((s) => s.resourceId === id)!.code))
+      .map((id) => slots.find((s) => s.resourceId === id)!.code)
       .sort();
   const deskCodes = codesOf("desk");
   const cabinCodes = codesOf("cabin");
@@ -109,10 +103,8 @@ export function useSeatPicks(
     codes: [...deskCodes, ...cabinCodes],
     deskCodes,
     cabinCodes,
-    /** "desks 07, 08 and cabin 1" for what has been picked, or "" if nothing. */
-    text: [deskCodes.length ? pickedText(deskCodes, "desk") : "", cabinCodes.length ? pickedText(cabinCodes, "cabin") : ""]
-      .filter(Boolean)
-      .join(" and "),
+    /** "Desks 07, 08, Origin (Executive Cabin)" for what's picked, or "". */
+    text: spacesText([...deskCodes, ...cabinCodes]),
     /** How many places of the booking are left for the server to assign. */
     unpicked: limits.desk + limits.cabin - picked.length,
     toggle,

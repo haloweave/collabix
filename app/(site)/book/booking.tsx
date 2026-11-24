@@ -4,7 +4,8 @@ import { BOOKABLE, bookableProduct, type BookableProduct } from "@/lib/tariff";
 import { priceBooking, productWindow, type WindowInput } from "@/lib/domain/booking";
 import StepChoose, { type Choice } from "./step-choose";
 import { BookTabs } from "./book-tabs";
-import { SeatPicker, pickedText, useSeatPicks, type Slot } from "./seat-picker";
+import { SeatPicker, useSeatPicks, type Slot } from "./seat-picker";
+import { spaceLabel } from "@/lib/space-names";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "./checkout";
 
 // Per-booking cap on people for a pass, matching the server's limit.
@@ -224,11 +225,18 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
   }
 
   const deskText = picks.codes.length
-    ? `${pickedText(picks.codes, "desk")}${picks.unpicked > 0 ? ` + ${picks.unpicked} more` : ""}`
+    ? `${picks.text}${picks.unpicked > 0 ? ` + ${picks.unpicked} more` : ""}`
     : "any shared desk";
-  const whoWhere = isPass
-    ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · ${deskText}`
-    : product.name;
+  // The room by its name and kind: the cabin picked ("Nexus (4-Seater Meeting
+  // Room)"), any free cabin, or the boardroom.
+  const roomText = multiRoom
+    ? picks.codes.length
+      ? picks.text
+      : "Any free cabin"
+    : product.roomCodes?.[0]
+      ? spaceLabel(product.roomCodes[0])
+      : product.name;
+  const whoWhere = isPass ? `${choice.people} ${choice.people === 1 ? "person" : "people"} · ${deskText}` : roomText;
   const holding = !isPass ? "your room" : choice.people > 1 ? "your desks" : "your desk";
 
   return (
@@ -315,7 +323,7 @@ export default function Booking({ initialProduct }: { initialProduct?: string })
               ["Booking", product.name],
               ["Date", shownWin?.date ?? choice.date],
               ["Time", shownWin ? timeRange(shownWin) : "Choose a time"],
-              [isPass ? "People" : "Room", isPass ? `${choice.people} · ${deskText}` : product.name],
+              [isPass ? "People" : "Room", isPass ? `${choice.people} · ${deskText}` : roomText],
               ...(shown?.lines ?? []).map((l): [string, ReactNode] => [
                 l.qty > 1 || product.kind === "room" ? `${l.label} × ${l.qty}` : l.label,
                 rupees(l.amountMinor),

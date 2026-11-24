@@ -4,7 +4,8 @@ import { BOOKABLE, SALE_TERM_PLANS, TERM_PLANS, findTermPlan, money, termMonthly
 import { MAX_MONTHS, MAX_START_DAYS, MAX_YEARS, priceTerms, termWindow, type TermUnit } from "@/lib/domain/term";
 import DateStrip from "../date-strip";
 import { BookTabs } from "../book-tabs";
-import { SeatPicker, pickedText, useSeatPicks, type Slot } from "../seat-picker";
+import { SeatPicker, useSeatPicks, type Slot } from "../seat-picker";
+import { spacesText } from "@/lib/space-names";
 import { BookingProgress, BookingSummary, CheckoutSteps, COUPON_ERRORS, STEPS, rupees, useCheckout } from "../checkout";
 
 /** How many of each plan are in the booking; a plan left out is zero. */
@@ -217,12 +218,12 @@ export default function Passes({ initialPlan }: { initialPlan?: string }) {
     [
       flexiDesks ? (flexiDesks === 1 ? "Any shared desk" : `${flexiDesks} people · any shared desks`) : "",
       picks.deskCodes.length
-        ? `Fixed ${pickedText(picks.deskCodes, "desk")}`
+        ? `Fixed ${spacesText(picks.deskCodes)}`
         : fixedDesks
           ? fixedDesks === 1 ? "Your own fixed desk" : `${fixedDesks} fixed desks`
           : "",
       picks.cabinCodes.length
-        ? `Private ${pickedText(picks.cabinCodes, "cabin")}`
+        ? spacesText(picks.cabinCodes)
         : wanted.cabin
           ? wanted.cabin === 1 ? "A private cabin for 4" : `${wanted.cabin} private cabins for 4 each`
           : "",
