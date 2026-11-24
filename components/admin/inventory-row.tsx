@@ -11,6 +11,7 @@ import {
   setResourceCapacity,
 } from "@/app/admin/(dash)/inventory/actions";
 import type { InventoryResource } from "@/lib/admin/queries";
+import { spaceType, staffSpace } from "@/lib/space-names";
 
 export function InventoryRow({ resource }: { resource: InventoryResource }) {
   const router = useRouter();
@@ -56,7 +57,9 @@ export function InventoryRow({ resource }: { resource: InventoryResource }) {
   return (
     <div className="flex items-center gap-2 py-2 sm:flex-wrap sm:gap-3 sm:py-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[120px]">
-        <span className="font-medium whitespace-nowrap">{resource.code}</span>
+        <span className="font-medium whitespace-nowrap" title={spaceType(resource.code) || undefined}>
+          {staffSpace(resource.code)}
+        </span>
         <Badge variant="outline" className="hidden text-xs capitalize sm:inline-flex">
           {resource.kind}
         </Badge>

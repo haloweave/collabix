@@ -7,6 +7,7 @@ import { TextSkeleton } from "@/components/admin/skeletons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { spaceName, staffSpace } from "@/lib/space-names";
 
 export const dynamic = "force-dynamic";
 
@@ -157,8 +158,11 @@ async function CalendarGrid({
           <div className="space-y-1">
             {rows.map((row) => (
               <div key={row.resourceId} className="flex items-center">
-                <div className="sticky left-0 z-10 w-14 shrink-0 bg-card pr-1 text-xs font-medium">
-                  {row.code}
+                <div
+                  className="sticky left-0 z-10 w-20 shrink-0 truncate bg-card pr-1 text-xs font-medium"
+                  title={staffSpace(row.code)}
+                >
+                  {row.code.startsWith("D-") ? row.code : spaceName(row.code)}
                 </div>
                 <div className="relative h-7 flex-1 rounded bg-muted/60">
                   {row.blocks.map((b) => {

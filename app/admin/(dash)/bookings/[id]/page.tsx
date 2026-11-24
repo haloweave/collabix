@@ -30,6 +30,7 @@ import { walletBalance } from "@/lib/domain/wallet";
 import { paymentMethodLabel } from "@/lib/invoice/payment-method";
 import { owesRefund } from "@/lib/domain/refunds";
 import { isManager, requireAdminAccess } from "@/lib/admin/auth";
+import { staffSpace } from "@/lib/space-names";
 
 export const dynamic = "force-dynamic";
 
@@ -291,7 +292,7 @@ export default async function BookingDetailPage({
               <div key={r.id} className="flex items-start justify-between gap-3 py-3">
                 <div className="min-w-0">
                   <p className="font-medium">
-                    {r.code}
+                    {staffSpace(r.code)}
                     <span className="ml-2 text-xs font-normal text-muted-foreground">
                       {r.plan}
                     </span>
@@ -323,7 +324,7 @@ export default async function BookingDetailPage({
             <TableBody>
               {booking.reservations.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.code}</TableCell>
+                  <TableCell className="font-medium">{staffSpace(r.code)}</TableCell>
                   <TableCell className="text-sm">{r.plan}</TableCell>
                   <TableCell className="text-sm">{istDateTime(r.startAt)}</TableCell>
                   <TableCell className="text-sm">{istDateTime(r.endAt)}</TableCell>

@@ -10,6 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { staffSpace } from "@/lib/space-names";
+
+// "C-01, D-02" → "Origin (C-01), D-02".
+const spaces = (codes: string) => codes.split(", ").map(staffSpace).join(", ");
 
 // Monthly and annual passes are the memberships: one row per pass, linking to
 // its booking. Shared by /admin/memberships and a member's profile.
@@ -66,7 +70,7 @@ export function MembershipTable({
             <div className="min-w-0">
               {showMember && <p className="truncate font-medium">{m.customerName}</p>}
               <p className={showMember ? "mt-0.5 text-xs text-muted-foreground" : "text-sm font-medium"}>
-                {m.planName} · {m.space} · {termLabel(m.months)}
+                {m.planName} · {spaces(m.space)} · {termLabel(m.months)}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {istDate(m.startAt)} – {istDate(m.endAt)} · {remaining(m, now)}
@@ -119,7 +123,7 @@ export function MembershipTable({
                   {m.planName}
                 </Link>
               </TableCell>
-              <TableCell className="font-mono text-sm">{m.space}</TableCell>
+              <TableCell className="text-sm">{spaces(m.space)}</TableCell>
               <TableCell className="text-sm">{termLabel(m.months)}</TableCell>
               <TableCell className="text-sm">
                 {istDate(m.startAt)} – {istDate(m.endAt)}
