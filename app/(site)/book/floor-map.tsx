@@ -1,6 +1,18 @@
 "use client";
 import { FLOOR, FLOOR_OUTLINE, contextShapes, furniture, renderSeats, roomSeating } from "@/lib/floorplan";
 import type { RenderSeat } from "@/lib/floorplan";
+import { POD_NAMES, POD_TYPE, SPACE_NAMES, spaceLabel } from "@/lib/space-names";
+
+// "Origin, Axis, Summit" → "Executive Cabins", grouped for the key under the map.
+const KEY = [
+  ...Object.entries(
+    Object.values(SPACE_NAMES).reduce<Record<string, string[]>>((acc, s) => {
+      (acc[s.type] ??= []).push(s.name);
+      return acc;
+    }, {}),
+  ).map(([type, names]) => ({ type: names.length > 1 ? `${type}s` : type, names })),
+  { type: `${POD_TYPE}s`, names: [...POD_NAMES] },
+];
 
 type Slot = { resourceId: string; code: string; available: boolean };
 
@@ -93,6 +105,14 @@ export default function FloorMap({
         <span className="lg lg-sel">Selected</span>
         <span className="lg lg-taken">Booked</span>
       </div>
+      <dl className="floor-key">
+        {KEY.map((k) => (
+          <div key={k.type}>
+            <dt>{k.names.join(", ")}</dt>
+            <dd>{k.type}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -111,7 +131,7 @@ function interactiveProps(
     "aria-pressed": bookable ? seat.state === "selected" : undefined,
     "aria-disabled": bookable && !enabled ? true : undefined,
     "aria-label": bookable
-      ? `${seat.label ?? seat.code}${
+      ? `${spaceLabel(seat.code)}${
           seat.state === "unavailable" ? ", booked" : ""
         }${priceLabel && enabled ? `, ${priceLabel}` : ""}`
       : undefined,
@@ -134,7 +154,7 @@ function seatTitle(seat: RenderSeat, priceLabel?: string) {
     seat.state === "unavailable" ? " — booked" : seat.state === "view" ? " — free · book on Monthly & annual passes" : "";
   const price =
     priceLabel && (seat.state === "available" || seat.state === "selected") ? ` · ${priceLabel}` : "";
-  return `${seat.label ?? seat.code}${taken}${price}`;
+  return `${spaceLabel(seat.code)}${taken}${price}`;
 }
 
 function DeskGlyph({

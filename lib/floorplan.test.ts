@@ -84,12 +84,12 @@ describe("floor geometry", () => {
     expect(roomSeats.length).toBe(rooms.length);
   });
 
-  test("inventory: 28 desks, 5 cabins (Cabin 5 was the 4-seater meeting room), the boardroom", () => {
+  test("inventory: 28 desks, 5 cabins (Nexus was the 4-seater meeting room), the boardroom", () => {
     expect(seats().filter((s) => s.kind === "desk").length).toBe(28);
     expect(rooms.map((r) => r.code)).toEqual(["M-01", "C-05", "C-01", "C-02", "C-03", "C-04"]);
     expect(rooms.find((r) => r.code === "M-01")).toMatchObject({ label: "The Boardroom", capacity: 8 });
-    expect(rooms.find((r) => r.code === "C-05")).toMatchObject({ label: "Cabin 5", capacity: 4 });
-    expect(rooms.find((r) => r.code === "C-04")).toMatchObject({ label: "Cabin 4" });
+    expect(rooms.find((r) => r.code === "C-05")).toMatchObject({ label: "Nexus", capacity: 4 });
+    expect(rooms.find((r) => r.code === "C-04")).toMatchObject({ label: "Vertex" });
   });
 
   test("registryKeyFor names the registry row a held resource books under", () => {

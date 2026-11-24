@@ -893,6 +893,11 @@
 .collabix-site .fm-context .fm-room-label {fill:rgba(11,31,58,.38);font-weight:500;}
 /* Legend. */
 .collabix-site .floor-legend {display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:.8rem;font-size:.8rem;color:var(--graphite);}
+.collabix-site .floor-key {display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.35rem 1.2rem;margin:.8rem 0 0;font-size:.82rem;}
+.collabix-site .floor-key div {display:flex;gap:.45rem;align-items:baseline;flex-wrap:wrap;}
+.collabix-site .floor-key dt {font-weight:600;color:var(--navy);}
+.collabix-site .floor-key dd {margin:0;color:var(--graphite);}
+.collabix-site .floor-key dd::before {content:"— ";}
 .collabix-site .floor-legend .lg {display:inline-flex;align-items:center;gap:.45rem;}
 .collabix-site .floor-legend .lg::before {content:"";width:14px;height:14px;border-radius:4px;}
 .collabix-site .floor-legend .lg-avail::before {border:2px solid var(--avail-line);background:var(--avail-fill);}

@@ -92,9 +92,9 @@ export const contextShapes: ContextShape[] = [
   { kind: "lift", label: "Lift", x: 295, y: 693, w: 165, h: 170 },
   { kind: "stairs", label: "Stairs", x: 280, y: 878, w: 315, h: 162 },
   { kind: "restroom", label: "Restrooms", x: 610, y: 878, w: 190, h: 255 },
-  { kind: "booth", label: "Pod", x: 1570, y: 673, w: 112, h: 110, labelDy: -30 },
-  { kind: "booth", label: "Pod", x: 1570, y: 795, w: 112, h: 110, labelDy: -30 },
-  { kind: "booth", label: "Pod", x: 1570, y: 917, w: 112, h: 110, labelDy: -30 },
+  { kind: "booth", label: "Focus", x: 1570, y: 673, w: 112, h: 110, labelDy: -30 },
+  { kind: "booth", label: "Pulse", x: 1570, y: 795, w: 112, h: 110, labelDy: -30 },
+  { kind: "booth", label: "Spark", x: 1570, y: 917, w: 112, h: 110, labelDy: -30 },
   { kind: "server", label: "Server", x: 1535, y: 18, w: 147, h: 75 },
   { kind: "ups", label: "UPS", x: 1535, y: 1048, w: 147, h: 77 },
 ];
@@ -112,17 +112,17 @@ export const deskBanks: DeskBank[] = [
   { id: "center-bottom", zone: "Open desks", layout: "columns", anchor: { x: 1293, y: 700 }, rows: 4, cols: 2, dx: 80, dy: 105 },
 ];
 
-// Enclosed rooms, as drawn: the boardroom in the left wing, Cabin 5 beside the
-// lift (it was the 4-seater meeting room; meeting rooms and cabins are the same
-// thing), two cabins top-right and two bottom-centre.
+// Enclosed rooms, as drawn: the boardroom in the left wing, Nexus beside the
+// lift (it was the 4-seater meeting room), Origin and Axis top-right, Summit and
+// Vertex bottom-centre. Labels are the client's names (lib/space-names.ts).
 // Capacity is the number of chairs the plan draws in the room (roomSeating).
 export const rooms: Room[] = [
   { code: "M-01", kind: "room", zone: "Meeting", label: "The Boardroom", capacity: 8, x: 13, y: 90, w: 285, h: 380 },
-  { code: "C-05", kind: "room", zone: "Cabins", label: "Cabin 5", capacity: 4, x: 475, y: 673, w: 325, h: 190 },
-  { code: "C-01", kind: "room", zone: "Cabins", label: "Cabin 1", capacity: 3, x: 1155, y: 18, w: 215, h: 240 },
-  { code: "C-02", kind: "room", zone: "Cabins", label: "Cabin 2", capacity: 4, x: 1155, y: 263, w: 215, h: 245 },
-  { code: "C-03", kind: "room", zone: "Cabins", label: "Cabin 3", capacity: 4, x: 925, y: 673, w: 255, h: 225 },
-  { code: "C-04", kind: "room", zone: "Cabins", label: "Cabin 4", capacity: 4, x: 925, y: 903, w: 255, h: 222 },
+  { code: "C-05", kind: "room", zone: "Cabins", label: "Nexus", capacity: 4, x: 475, y: 673, w: 325, h: 190 },
+  { code: "C-01", kind: "room", zone: "Cabins", label: "Origin", capacity: 3, x: 1155, y: 18, w: 215, h: 240 },
+  { code: "C-02", kind: "room", zone: "Cabins", label: "Axis", capacity: 4, x: 1155, y: 263, w: 215, h: 245 },
+  { code: "C-03", kind: "room", zone: "Cabins", label: "Summit", capacity: 4, x: 925, y: 673, w: 255, h: 225 },
+  { code: "C-04", kind: "room", zone: "Cabins", label: "Vertex", capacity: 4, x: 925, y: 903, w: 255, h: 222 },
 ];
 
 export type Box = { x: number; y: number; w: number; h: number };
