@@ -815,15 +815,17 @@
 .collabix-site .auto-toggle input {width:16px;height:16px;accent-color:var(--gold);}
 /* Interactive floor map (app/(site)/book/floor-map.tsx). */
 .collabix-site .floor-map {margin-top:16px;container-type:inline-size;}
-.collabix-site .floor-scroll {overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--ivory-dark);padding:10px;}
-.collabix-site .floor-svg {display:block;width:100%;height:auto;}
-.collabix-site .floor-swipe {display:none;margin:0 0 .5rem;font-size:.8rem;color:var(--graphite);}
-/* Where the panel is too narrow to show the whole plan with desks big enough
-   to tap (phones, a tablet's two-column layout), it scrolls sideways instead. */
-@container (max-width:540px){
-  .collabix-site .floor-svg {min-width:600px;}
-  .collabix-site .floor-swipe {display:block;}
-}
+.collabix-site .floor-scroll {overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:1px solid var(--line);border-radius:12px;background:var(--ivory-dark);padding:10px;}
+/* Zoomed in (phones open this way): a screen-high window you drag around. */
+.collabix-site .floor-scroll.zoomed {max-height:min(62vh,560px);}
+.collabix-site .floor-svg {display:block;width:100%;max-width:none;height:auto;}
+.collabix-site .floor-tools {display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin:0 0 .5rem;}
+.collabix-site .floor-swipe {margin:0;font-size:.8rem;color:var(--graphite);}
+.collabix-site .floor-zoom {display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff;flex-shrink:0;}
+.collabix-site .floor-zoom button {min-width:40px;height:36px;padding:0 .7rem;border:0;background:none;font-size:1rem;font-weight:600;color:var(--navy);cursor:pointer;}
+.collabix-site .floor-zoom button + button {border-left:1px solid var(--line);}
+.collabix-site .floor-zoom button:last-child {font-size:.78rem;letter-spacing:.04em;}
+.collabix-site .floor-zoom button:disabled {color:rgba(11,31,58,.28);cursor:default;}
 .collabix-site .fm-shell {fill:#fff;stroke:rgba(11,31,58,.28);stroke-width:5;stroke-linejoin:round;}
 /* Context (non-bookable) shapes — orientation only. */
 .collabix-site .fm-ctx rect {fill:rgba(11,31,58,.035);stroke:rgba(11,31,58,.10);stroke-width:1.5;}

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import { FLOOR, FLOOR_OUTLINE, contextShapes, furniture, renderSeats, roomSeating } from "@/lib/floorplan";
 import type { RenderSeat } from "@/lib/floorplan";
 import { POD_NAMES, POD_TYPE, SPACE_NAMES, spaceLabel } from "@/lib/space-names";
@@ -15,6 +16,12 @@ const KEY = [
 ];
 
 type Slot = { resourceId: string; code: string; available: boolean };
+
+// Zoom steps, as multiples of "the whole floor fits the width". A phone opens
+// zoomed in so desks and rooms are big enough to read and tap.
+const ZOOMS = [1, 1.5, 2, 2.5, 3] as const;
+const PHONE_WIDTH = 640;
+const PHONE_ZOOM = 2.5;
 
 // An interactive floor map: seat and room glyphs placed where the architect's
 // plan puts them, colour-coded from live availability. Only resources
@@ -35,14 +42,63 @@ export default function FloorMap({
   shown?: Slot[];
 }) {
   const seats = renderSeats(slots, selectedResourceIds, shown);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState<number>(1);
+
+  // Phones open zoomed in (checked after mount, so server and client agree).
+  // It's the screen that matters: the map's own column is narrow on desktop too.
+  useEffect(() => {
+    if (window.matchMedia(`(max-width: ${PHONE_WIDTH}px)`).matches) setZoom(PHONE_ZOOM);
+  }, []);
+
+  // Keep the picked space (or, failing that, the first free one) in view when
+  // the zoom or the pick changes.
+  const focusKey = `${zoom}|${selectedResourceIds.join(",")}`;
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box || zoom === 1) return;
+    const target =
+      box.querySelector<SVGGraphicsElement>(".fm-selected") ??
+      box.querySelector<SVGGraphicsElement>(".fm-available");
+    if (!target) return;
+    const b = box.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    box.scrollTo({
+      left: box.scrollLeft + t.left - b.left - (b.width - t.width) / 2,
+      top: box.scrollTop + t.top - b.top - (b.height - t.height) / 2,
+      behavior: "smooth",
+    });
+  }, [focusKey, zoom]);
+
+  const step = (dir: 1 | -1) => {
+    const i = ZOOMS.findIndex((z) => z >= zoom);
+    const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (i === -1 ? ZOOMS.length - 1 : i) + dir))];
+    setZoom(next);
+  };
 
   return (
     <div className="floor-map">
-      <p className="floor-swipe">Swipe sideways to see the whole floor.</p>
-      <div className="floor-scroll">
+      <div className="floor-tools">
+        <p className="floor-swipe">
+          {zoom > 1 ? "Drag the map to look around." : "The whole floor."} Use − / + to zoom.
+        </p>
+        <div className="floor-zoom" role="group" aria-label="Zoom the floor map">
+          <button type="button" onClick={() => step(-1)} disabled={zoom <= ZOOMS[0]} aria-label="Zoom out">
+            −
+          </button>
+          <button type="button" onClick={() => step(1)} disabled={zoom >= ZOOMS[ZOOMS.length - 1]} aria-label="Zoom in">
+            +
+          </button>
+          <button type="button" onClick={() => setZoom(1)} disabled={zoom === 1}>
+            Fit
+          </button>
+        </div>
+      </div>
+      <div className={`floor-scroll ${zoom > 1 ? "zoomed" : ""}`} ref={scrollRef}>
         <svg
           viewBox={`0 0 ${FLOOR.width} ${FLOOR.height}`}
           className="floor-svg"
+          style={{ width: `${zoom * 100}%` }}
           role="group"
           aria-label="Floor plan — choose a spot"
         >
