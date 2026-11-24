@@ -5,6 +5,7 @@
 import { istDate, istTime, rupees } from "../admin/format";
 import { isMultiDay } from "./ticket";
 import { bookableProduct, findTermPlan } from "../tariff";
+import { spacesText } from "../space-names";
 
 export const PAY_AT_DESK = "Pay at desk";
 export const PAID = "Paid";
@@ -32,17 +33,17 @@ export function ticketSeats(v: {
   planKey?: string | null;
 }): string {
   const product = v.planKey ? bookableProduct(v.planKey) : undefined;
-  // A day pass is any free shared desk, so no desk number is printed.
-  if (product?.kind === "pass") return `${v.seats} ${v.seats === 1 ? "person" : "people"} · Any shared desk`;
-  // An hourly cabin says which cabin ("Cabin (hourly) · Cabin 5"); the
-  // boardroom is just its name.
-  if (product?.kind === "room") {
-    const cabins = v.resourceCodes.filter((c) => c.startsWith("C-")).map((c) => `Cabin ${Number(c.slice(2))}`);
-    return cabins.length ? `${product.name} · ${cabins.join(", ")}` : product.name;
+  // Spaces by the client's names with what they are: "Desks 03, 04",
+  // "Nexus (4-Seater Meeting Room)", "Axis (Executive Cabin)".
+  const where = spacesText(v.resourceCodes);
+  if (product?.kind === "pass") {
+    const who = `${v.seats} ${v.seats === 1 ? "person" : "people"}`;
+    return where ? `${who} · ${where}` : `${who} · Any shared desk`;
   }
+  if (product?.kind === "room") return where || product.name;
   // A monthly or annual pass: the plan and the desk or cabin it holds. A
   // booking that mixes plans names them all ("Cabin · Base + Dedicated Desk").
   const term = v.planKey ? findTermPlan(v.planKey) : undefined;
-  if (term) return `${v.plan?.includes(" + ") ? v.plan : term.name} · ${v.resourceCodes.join(", ")}`;
-  return `${v.seats} seat${v.seats === 1 ? "" : "s"} · ${v.resourceCodes.join(", ")}`;
+  if (term) return `${v.plan?.includes(" + ") ? v.plan : term.name} · ${where}`;
+  return `${v.seats} seat${v.seats === 1 ? "" : "s"} · ${where}`;
 }

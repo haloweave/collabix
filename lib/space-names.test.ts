@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { spaceLabel, spaceName, spaceType, spacesText } from "./space-names";
+import { spaceLabel, spaceName, spaceType, spacesText, staffSpace } from "./space-names";
 
 describe("space names", () => {
   test("every room has the client's name and what kind of space it is", () => {
@@ -12,9 +12,9 @@ describe("space names", () => {
   });
 
   test("a label says both, so a first-timer knows what they booked", () => {
-    expect(spaceLabel("C-01")).toBe("Origin · Executive Cabin");
-    expect(spaceLabel("C-05")).toBe("Nexus · 4-Seater Meeting Room");
-    expect(spaceLabel("M-01")).toBe("The Boardroom · 8-Seater Conference Room");
+    expect(spaceLabel("C-01")).toBe("Origin (Executive Cabin)");
+    expect(spaceLabel("C-05")).toBe("Nexus (4-Seater Meeting Room)");
+    expect(spaceLabel("M-01")).toBe("The Boardroom (8-Seater Conference Room)");
   });
 
   test("desks keep their number", () => {
@@ -23,13 +23,18 @@ describe("space names", () => {
     expect(spaceLabel("D-07")).toBe("Desk 07");
   });
 
+  test("staff see the name with the code they know", () => {
+    expect(staffSpace("C-01")).toBe("Origin (C-01)");
+    expect(staffSpace("D-07")).toBe("D-07");
+  });
+
   test("an unknown code falls back to itself", () => {
     expect(spaceLabel("X-99")).toBe("X-99");
   });
 
   test("a list of spaces reads naturally, desks grouped", () => {
-    expect(spacesText(["D-12", "D-14", "C-02"])).toBe("Desks 12, 14 · Axis · Executive Cabin");
-    expect(spacesText(["C-04"])).toBe("Vertex · 4-Seater Meeting Room");
+    expect(spacesText(["D-12", "D-14", "C-02"])).toBe("Desks 12, 14, Axis (Executive Cabin)");
+    expect(spacesText(["C-04"])).toBe("Vertex (4-Seater Meeting Room)");
     expect(spacesText(["D-03"])).toBe("Desk 03");
     expect(spacesText([])).toBe("");
   });

@@ -1,6 +1,6 @@
 /** The client's names for each space (2026-11-24), with what kind of space it
  * is, so anyone reading a booking, ticket or invoice knows what they booked:
- * "Origin · Executive Cabin", not just "Origin" or "C-01". Codes stay the
+ * "Origin (Executive Cabin)", not just "Origin" or "C-01". Codes stay the
  * internal keys; change a name here and every page follows. */
 
 type Named = { name: string; type: string };
@@ -32,14 +32,20 @@ export function spaceType(code: string): string {
   return SPACE_NAMES[code]?.type ?? "";
 }
 
-/** "Origin · Executive Cabin"; a desk is just "Desk 07". */
+/** "Origin (Executive Cabin)"; a desk is just "Desk 07". */
 export function spaceLabel(code: string): string {
   const named = SPACE_NAMES[code];
-  return named ? `${named.name} · ${named.type}` : spaceName(code);
+  return named ? `${named.name} (${named.type})` : spaceName(code);
+}
+
+/** For staff, who also know the codes: "Origin (C-01)", or "D-07" for a desk. */
+export function staffSpace(code: string): string {
+  const named = SPACE_NAMES[code];
+  return named ? `${named.name} (${code})` : code;
 }
 
 /** Several spaces in one line: desks grouped ("Desks 12, 14"), then each room
- * by its label. */
+ * by its label, joined with commas. */
 export function spacesText(codes: string[]): string {
   const desks = codes.filter((c) => c.startsWith("D-")).map(deskNo).sort();
   const rooms = codes.filter((c) => !c.startsWith("D-")).sort();
@@ -47,5 +53,5 @@ export function spacesText(codes: string[]): string {
     desks.length ? `${desks.length === 1 ? "Desk" : "Desks"} ${desks.join(", ")}` : "",
     ...rooms.map(spaceLabel),
   ];
-  return parts.filter(Boolean).join(" · ");
+  return parts.filter(Boolean).join(", ");
 }

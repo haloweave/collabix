@@ -181,13 +181,13 @@ describe("display copy", () => {
     expect(ticketAmount({ totalMinor: 28320, paid: true })).toBe("₹283 · Paid");
     expect(ticketAmount({ totalMinor: null })).toBe("Included in membership");
     expect(ticketAmount({ totalMinor: null, paid: true })).toBe("Included in membership");
-    expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"] })).toBe("2 seats · D-03, D-04");
-    expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"] })).toBe("1 seat · M-01");
+    expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"] })).toBe("2 seats · Desks 03, 04");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"] })).toBe("1 seat · The Boardroom (8-Seater Conference Room)");
   });
 
   test("monthly and annual passes show the plan and the space it holds", () => {
-    expect(ticketSeats({ seats: 1, resourceCodes: ["D-07"], planKey: "dedicated-desk" })).toBe("Dedicated Desk · D-07");
-    expect(ticketSeats({ seats: 1, resourceCodes: ["C-02"], planKey: "cabin-pro" })).toBe("Cabin · Pro · C-02");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["D-07"], planKey: "dedicated-desk" })).toBe("Dedicated Desk · Desk 07");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["C-02"], planKey: "cabin-pro" })).toBe("Cabin · Pro · Axis (Executive Cabin)");
     // A booking that mixes plans names every plan it holds.
     expect(
       ticketSeats({
@@ -196,17 +196,18 @@ describe("display copy", () => {
         plan: "Cabin · Pro + Dedicated Desk",
         planKey: "cabin-pro",
       }),
-    ).toBe("Cabin · Pro + Dedicated Desk · C-02, D-07, D-08");
+    ).toBe("Cabin · Pro + Dedicated Desk · Desks 07, 08, Axis (Executive Cabin)");
   });
 
   test("day passes say any shared desk; rooms show the room's name", () => {
     expect(ticketSeats({ seats: 2, resourceCodes: ["D-03", "D-04"], planKey: "day-full" }))
-      .toBe("2 people · Any shared desk");
+      .toBe("2 people · Desks 03, 04");
     expect(ticketSeats({ seats: 1, resourceCodes: ["D-09"], planKey: "day-half" }))
-      .toBe("1 person · Any shared desk");
-    expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"], planKey: "boardroom" })).toBe("The Boardroom");
+      .toBe("1 person · Desk 09");
+    expect(ticketSeats({ seats: 1, resourceCodes: ["M-01"], planKey: "boardroom" }))
+      .toBe("The Boardroom (8-Seater Conference Room)");
     expect(ticketSeats({ seats: 1, resourceCodes: ["C-05"], planKey: "meeting-4" }))
-      .toBe("Cabin (hourly) · Cabin 5");
+      .toBe("Nexus (4-Seater Meeting Room)");
   });
 });
 
@@ -216,12 +217,12 @@ describe("ticketIcs", () => {
     startAt: ist("2026-12-01T08:00"),
     endAt: ist("2026-12-01T20:00"),
   };
-  test("a day-pass calendar entry never names a desk", () => {
+  test("a day-pass calendar entry names the desks, never by raw code", () => {
     const ics = ticketIcs(
       { ...base, seats: 2, resourceCodes: ["D-03", "D-04"], plan: "Full Day Pass", planKey: "day-full" } as TicketView,
       "https://collabix.co.in/t/x",
     );
-    expect(ics).toContain("SUMMARY:Collabix · Full Day Pass · 2 people · Any shared desk");
+    expect(ics).toContain("SUMMARY:Collabix · Full Day Pass · 2 people · Desks 03\\, 04");
     expect(ics).not.toContain("D-03");
   });
 });
